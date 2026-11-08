@@ -48,6 +48,21 @@ General guide tripwire). On 2026-11-07 a row-markup change took the Twins
 page 470 bytes over the cap and it was found only after the next deploy,
 because the battery was not run after the first one.
 
+## Merge rules
+
+Any diff touching src/components/ or a page route under src/app/
+runs the ux-review agent before merge, on the branch dev server,
+against every page type the diff touches, in baseline mode against
+production. The report is committed with the change at
+docs/ux-review/. Every defect in the report is fixed, deferred with a
+known-issues entry, or waived with a reason written in the report.
+A merge without a report for a qualifying diff is a process defect.
+
+The agent is `.claude/agents/ux-review.md`. It takes URLs or a page type
+(promo, team, venue, aggregator, home), each type bound to a fixed sample
+path recorded in the agent file; baseline mode needs the branch dev
+server (`PROMO_PAGES_LIVE=true PORT=3100 npm run dev`) and production.
+
 ## Anything on a Firestore doc that reaches a client component is published
 
 A server component passing a doc to a client component serializes **every**
