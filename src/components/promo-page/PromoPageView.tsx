@@ -5,12 +5,13 @@ import { TrackedAppLink } from '@/components/analytics-events';
 import { PromoShareImageButton, PromoShareRowButton, ShareLandingCapture, type PromoShareProps } from '@/components/promo-page/PromoShare';
 import { PromoShort } from '@/components/promo-page/PromoShort';
 import { shortJsonLd } from '@/lib/youtube-shorts';
-import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
+import { AFFILIATE_DISCLOSURE_TEXT, AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
+import { EbayListingLink } from '@/components/promo-page/EbayListingLink';
 import { getLeagueHub } from '@/lib/league-hubs';
 import { buildSpotHeroUrl, buildTicketmasterUrl, buildTicketNetworkLink, ticketNetworkForGame, ticketNetworkLinkLevel } from '@/lib/affiliates';
 import { resolveHotelLink } from '@/lib/hotel-link';
 import { promoDownloadHref } from '@/lib/app-link';
-import { teamDisplayName } from '@/lib/promo-helpers';
+import { synthPromoId, teamDisplayName } from '@/lib/promo-helpers';
 import { PROMO_TYPE_LABELS } from '@/lib/types';
 import { TICKET_PACKAGE_ROW_NOTE } from '@/lib/ticket-packages';
 import type { LinkedPromo, PromoPage, PromoPageContext } from '@/lib/promo-pages';
@@ -263,6 +264,9 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
   // offers, and the arrival question leaves the FAQ.
   const past = !removed && dates.length > 0 && dates.every((d) => d < venueToday);
   const nextPromoHref = ctx.nextTeamPromos[0]?.href ?? teamHref;
+  // eBay listings (step 5a): never beside a tier 1 photo on an upcoming
+  // page, never on a removed page; a played page shows them whatever its image.
+  const ebayListings = !removed && (past || image.kind !== 'photo') ? ctx.ebayListings : [];
   const aggregator = categoryAggregatorFor(primary, team.league);
   const removedOn = formatInstantDate(page.removedAt);
   // Stored-field FAQs first, the library's after, in the visible block. The
@@ -778,6 +782,39 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
           {sponsorLine ? <p className="m-0 text-[15px] leading-[1.55] text-rd-ink-soft">{sponsorLine}</p> : null}
           {sourceLine}
         </section>
+        ) : null}
+
+        {ebayListings.length ? (
+          // eBay listings (spec Visuals 6, step 5a, 2026-11-08): real photos
+          // of the item, under About, on a bobblehead page with no tier 1
+          // photo and on every played bobblehead page. The loader asked eBay
+          // only for those pages (src/lib/ebay-browse.ts); `ebayListings`
+          // above re-applies the rule, so a tier 1 upcoming page renders
+          // nothing from eBay whatever the context holds. Each listing is a
+          // sponsored external anchor firing promo_link_click with
+          // destination 'ebay'; the disclosure line is the site's own words.
+          <section className="mt-6 flex flex-col gap-2.5 rounded-2xl border border-rd-line bg-rd-card p-3.5">
+            <H2>On eBay</H2>
+            <p className="m-0 font-rd text-[12px] text-rd-ink-faint">{past ? 'Missed it? Resale listings for this bobblehead.' : 'Current listings for this bobblehead.'}</p>
+            <ul className="m-0 grid list-none grid-cols-3 gap-2.5 p-0">
+              {ebayListings.map((l) => (
+                <li key={l.itemId} className="min-w-0">
+                  <EbayListingLink href={l.href} teamSlug={team.id} promoId={synthPromoId(team.id, primary)} title={l.title} className="block no-underline">
+                    {/* The photo is decorative for assistive tech (alt ""): the
+                        title beside it is the same words, and the anchor's name
+                        is the price and the title once (ux-review D5). */}
+                    {/* eslint-disable-next-line @next/next/no-img-element -- a seller's photo on i.ebayimg.com, served at the size the URL names; next/image would add a remote-pattern entry and a second request for nothing. */}
+                    <img src={l.imageUrl} alt="" width={400} height={400} loading="lazy" decoding="async" className="aspect-square w-full rounded-xl border border-rd-line bg-[#ebe4d6] object-contain" />
+                    <span className="mt-1.5 block font-rd text-[14px] font-semibold text-rd-ink">{l.price}</span>
+                    {/* line-clamp sets display:-webkit-box; a `block` beside it
+                        would win the cascade and kill the clamp (ux-review D1). */}
+                    <span className="line-clamp-2 text-[12px] leading-[1.35] text-rd-ink-soft">{l.title}</span>
+                  </EbayListingLink>
+                </li>
+              ))}
+            </ul>
+            <p className="m-0 font-rd text-[11px] text-rd-ink-faint">{AFFILIATE_DISCLOSURE_TEXT}</p>
+          </section>
         ) : null}
 
         {thisGame.length ? (

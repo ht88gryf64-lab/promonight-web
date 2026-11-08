@@ -36,7 +36,9 @@ export function EbayResaleLink({
    *  display name's city prefix only dilutes eBay relevance ranking. */
   teamNickname: string;
   sport: string;
-  placement: EbayResalePlacement;
+  /** The search-link placements; the promo page's Browse API block (step
+   *  5a) is its own component and never renders this link. */
+  placement: Exclude<EbayResalePlacement, 'promo_page'>;
   surface: AnalyticsSurface;
   variant?: 'light' | 'dark';
 }) {

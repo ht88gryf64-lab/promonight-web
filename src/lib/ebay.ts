@@ -12,10 +12,17 @@ const EBAY_CAMPID = process.env.NEXT_PUBLIC_EBAY_CAMPID ?? '';
 // EPN rotation ID for ebay.com US.
 const EBAY_MKRID = '711-53200-19255-0';
 
-export type EbayResalePlacement = 'bobbleheads_hub' | 'team_page';
+// 'promo_page' (step 5a, 2026-11-08) tags the Browse API listings on a
+// per-promo page; the search-link placements are unchanged.
+export type EbayResalePlacement = 'bobbleheads_hub' | 'team_page' | 'promo_page';
 
 export function isEbayResaleActive(): boolean {
   return EBAY_CAMPID.length > 0;
+}
+
+/** The EPN campaign id, '' when unset (the Browse API header needs the value). */
+export function ebayCampId(): string {
+  return EBAY_CAMPID;
 }
 
 // Deliberately narrower than the /promos/bobbleheads inclusion filter (which
@@ -30,7 +37,9 @@ export function isBobbleheadGiveaway(promo: Pick<Promo, 'type' | 'title'>): bool
 // trailing "bobblehead" keyword already covers, so "Aaron Judge Bobblehead
 // Giveaway" searches as "2026 Yankees Aaron Judge bobblehead" rather than
 // repeating itself.
-function resaleQuery(promo: Pick<Promo, 'date' | 'title'>, teamNickname: string): string {
+// Exported for the Browse API block (step 5a): the listings query is this
+// query, so the block and the search link agree on what they look for.
+export function resaleQuery(promo: Pick<Promo, 'date' | 'title'>, teamNickname: string): string {
   const item = promo.title
     .replace(/bobbleheads?/gi, ' ')
     .replace(/giveaways?/gi, ' ')
@@ -51,6 +60,21 @@ export function ebayCustomId(placement: EbayResalePlacement, promoId: string): s
     .replace(/_+/g, '_')
     .replace(/^_|_$/g, '')
     .slice(0, 256);
+}
+
+/** An EPN-tagged View Item link from a Browse API `itemWebUrl`, carrying
+ *  the parameters the search link carries, for a response that came back
+ *  without `itemAffiliateWebUrl`. */
+export function ebayAffiliateItemUrl(itemWebUrl: string, customid: string): string {
+  const url = new URL(itemWebUrl);
+  url.searchParams.set('mkcid', '1');
+  url.searchParams.set('mkrid', EBAY_MKRID);
+  url.searchParams.set('siteid', '0');
+  url.searchParams.set('campid', EBAY_CAMPID);
+  url.searchParams.set('customid', customid);
+  url.searchParams.set('toolid', '10001');
+  url.searchParams.set('mkevt', '1');
+  return url.toString();
 }
 
 export function buildEbayResaleUrl(opts: {
