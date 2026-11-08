@@ -43,6 +43,9 @@ interface HubFacts {
   verified: boolean;
   leagues: Set<string>;
   teamIds: Set<string>;
+  /** Gates are per TENANT on the page (before-you-go-rows overlayFor): the teams whose own overlay has the gate rule rendered, and rendered with a read time. */
+  gatesTeams: Set<string>;
+  gatesDatedTeams: Set<string>;
   hasStateMap: boolean;
   /** Per class: any key in state rendered. */
   rendered: Record<Cls, boolean>;
@@ -101,6 +104,8 @@ async function main() {
       verified: d.verified === true,
       leagues: new Set(tenants.map((t) => str(t.league)).filter((x): x is string => !!x)),
       teamIds: new Set(tenants.map((t) => str(t.teamId)).filter((x): x is string => !!x)),
+      gatesTeams: new Set(),
+      gatesDatedTeams: new Set(),
       hasStateMap: Object.keys(states).length > 0,
       rendered: { bag: false, parking: false, gates: false, transit: false },
       renderedDated: { bag: false, parking: false, gates: false, transit: false },
@@ -130,7 +135,8 @@ async function main() {
       if (gateState === 'rendered') {
         tenantGatesRendered++;
         f.rendered.gates = true;
-        if (str(to.gatesOpen) || str(to['gatesOpen.ruleText'])) { f.renderedDated.gates = true; tenantGatesDated++; }
+        if (str(t.teamId)) f.gatesTeams.add(t.teamId as string);
+        if (str(to.gatesOpen) || str(to['gatesOpen.ruleText'])) { f.renderedDated.gates = true; tenantGatesDated++; if (str(t.teamId)) f.gatesDatedTeams.add(t.teamId as string); }
       } else if (gateState) f.otherStates.gates.add(gateState);
     }
     hubs.push(f);
@@ -193,7 +199,13 @@ async function main() {
   const pageList = [...pages.values()];
   const pageLeagues = [...new Set(pageList.map((p) => p.league))].sort();
   const pcount = (pred: (p: { teamId: string; league: string }, h: HubFacts | undefined) => boolean, league?: string) =>
-    pageList.filter((p) => (league ? p.league === league : true) && pred(p, hubByTeam.get(p.teamId))).length;
+    pageList.filter((p) => (league ? p.league === league : true) && pred(p, pageView(hubByTeam.get(p.teamId), p.teamId))).length;
+  // A page sees its building's classes, except gates, which is its own team's overlay
+  // (fixed 2026-11-08: a co-tenant's gate rule counted for every team in the building).
+  function pageView(h: HubFacts | undefined, teamId: string): HubFacts | undefined {
+    if (!h) return h;
+    return { ...h, rendered: { ...h.rendered, gates: h.gatesTeams.has(teamId) }, renderedDated: { ...h.renderedDated, gates: h.gatesDatedTeams.has(teamId) } };
+  }
   const prow = (label: string, pred: (p: { teamId: string; league: string }, h: HubFacts | undefined) => boolean) =>
     console.log(`${label.padEnd(44)} all ${String(pcount(pred)).padStart(4)}  ` + pageLeagues.map((l) => `${l} ${String(pcount(pred, l)).padStart(4)}`).join('  '));
 
