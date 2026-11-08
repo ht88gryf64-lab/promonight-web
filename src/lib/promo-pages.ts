@@ -29,8 +29,9 @@ import { getAllTeams, getGamesForTeam, getTeamPromos, getVenueForTeam, isTicketP
 import { applyGameDisplay, buildGameIndex, resolveTnEventUrl } from './promo-game-join';
 import { makeKeyedTtlCache, STATIC_TTL_MS } from './collection-cache';
 import { getVenueHub, getVenueHubForTeam, type TeamVenueHubLink } from './venue-hub';
-import { beforeYouGoRows } from './before-you-go-rows';
+import { beforeYouGoUnion } from './before-you-go-rows';
 import type { BeforeYouGoRow } from './before-you-go';
+import { buildCondensedLogistics, type CondensedLine } from './venue-hub-condensed';
 import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
 import { isVisiblePromo, promoDisplayOpponent, promoDisplayTime, teamDisplayName } from './promo-helpers';
 import { getShortForPromos } from './youtube-shorts-store';
@@ -305,8 +306,13 @@ export interface PromoPageContext {
   hub: TeamVenueHubLink | null;
   /** Before you go (spec item 8): the building's facts in state `rendered`
    *  with a read time, in the venue page's order (bag, gates, transit,
-   *  parking). Empty renders no block. */
+   *  parking). Empty, the view falls back to `quickFacts`. */
   beforeYouGo: BeforeYouGoRow[];
+  /** THE FALLBACK (ruling 2026-11-08): the quick facts card as it rendered
+   *  before step 4, the condensed lines the school pages print (bag, transit,
+   *  parking, outside food, gates), shown only when `beforeYouGo` is empty.
+   *  Retained until provenance coverage reaches 90% of upcoming promo pages. */
+  quickFacts: CondensedLine[];
   /** The Event location, from the hub (name, city, state) and the venue doc (street). */
   location: PromoPageLocation | null;
   /** The building's coordinates (the hub's, else the venue doc's) for parking. */
@@ -452,6 +458,8 @@ const loadTeamScanStamp = cache(async (league: string, teamId: string): Promise<
   }
 });
 
+const QUICK_FACT_KEYS: readonly CondensedLine['key'][] = ['bag', 'transit', 'parking', 'outsideFood', 'gates'];
+
 /** Everything the page links to and the building it names. */
 export const loadPromoPageContext = cache(async (page: PromoPage, today: string): Promise<PromoPageContext> => {
   const { team } = page;
@@ -538,11 +546,21 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
     if (count > 0) venueGiveaways = { count, month };
   }
 
+  // Quick facts: only for a verified building, through its published view
+  // (the condensed builder waives the verified flag for the college corpus by
+  // ruling; a pro building that nobody signed off shows nothing here).
+  // Computed as it was before step 4. The view shows the card itself only
+  // when `beforeYouGo` is empty; otherwise its classes join the block.
+  const quickFacts = building && building.verified
+    ? buildCondensedLogistics(building, team.id).filter((l) => QUICK_FACT_KEYS.includes(l.key))
+    : [];
   // Before you go (step 4, 2026-11-08): the building's published view, then
-  // the per-field state and read time on top (src/lib/before-you-go.ts). An
-  // unverified building has every claim nulled by the view; a legacy doc with
-  // no state map has no rendered field. Either way, no rows, no block.
-  const beforeYouGo = building ? beforeYouGoRows(building, team.id) : [];
+  // the per-field state and read time on top (src/lib/before-you-go.ts), and
+  // the union with the card's classes (ruling 2026-11-08). An unverified
+  // building has every claim nulled by the view; a legacy doc with no state
+  // map has no rendered field. Either way, no provenance row, so no block,
+  // and the view falls back to the quick facts card.
+  const beforeYouGo = building ? beforeYouGoUnion(building, team.id, quickFacts) : [];
 
   const location: PromoPageLocation | null = building
     ? { name: building.name, streetAddress: venue?.address ?? null, locality: building.city, region: building.state }
@@ -615,6 +633,7 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
     venue,
     hub,
     beforeYouGo,
+    quickFacts,
     location,
     coords,
     formerNames: building?.formerNames ?? [],

@@ -15,6 +15,7 @@ mock.module('server-only', { namedExports: {} });
 mock.module(new URL('../firebase.ts', import.meta.url).href, { namedExports: { db: {} } });
 
 import type { VenueHub, VenueHubTenantOverlay } from '../venue-hub';
+import type { CondensedLine } from '../venue-hub-condensed';
 import { renderedReadTime, BEFORE_YOU_GO_ORDER } from '../before-you-go';
 
 const rows = async (hub: VenueHub, teamId: string) => (await import('../before-you-go-rows')).beforeYouGoRows(hub, teamId);
@@ -115,4 +116,60 @@ test('gates are this team\'s overlay only; another tenant\'s rendered rule is no
   // An overlay whose source is not a URL links nothing but still prints the date.
   const unlinked = await rows(hub({ fieldStates: {}, tenantOverlays: [overlay({ sources: { gatesOpen: 'team press release' } })] }), 'minnesota-wild');
   assert.deepEqual(unlinked.map((r) => [r.key, r.sourceUrl, r.observedOn]), [['gates', null, 'Oct 10, 2026']]);
+});
+
+// ── the union (ruling 2026-11-08) ────────────────────────────────────────────
+const union = async (h: VenueHub, teamId: string, lines: CondensedLine[]) => (await import('../before-you-go-rows')).beforeYouGoUnion(h, teamId, lines);
+const line = (key: CondensedLine['key'], label: string, text: string, href: string | null = null): CondensedLine => ({ key, label, text, href, hrefLabel: href ? 'Official' : null });
+/** The card's lines for the default hub, in the condensed builder's order. */
+const CARD: CondensedLine[] = [
+  line('gates', 'Gates', 'Doors open 90 minutes before puck drop.'),
+  line('bag', 'Bag policy', 'Max bag 12" x 12" x 6".', 'https://x/bag-policy'),
+  line('parking', 'Parking', 'Lots: RiverCentre Ramp, Lawson Ramp.', 'https://x/official-parking'),
+  line('transit', 'Transit', 'Green Line to Central Station, two blocks east. Lines: Green Line.'),
+  line('outsideFood', 'Outside food', 'No outside food or drink.'),
+];
+
+test('union: provenance rows first in their order, then the card classes not already present, undated, with the card link or the record URL; a class in both is the provenance row only', async () => {
+  // Bag and parking dated; transit never stated; the overlay undated. The
+  // card shows all five classes.
+  const h = hub({
+    fieldStates: { bagMaxDimensions: 'rendered', clearBagRequired: 'rendered', parkingLots: 'rendered' },
+    observedAtByField: { bagMaxDimensions: '2026-10-07T14:30:16.621Z', clearBagRequired: '2026-10-07T14:30:16.621Z', parkingLots: '2026-10-08T09:00:00.000Z' },
+    tenantOverlays: [overlay({ observedAtByField: {} })],
+    sources: { bagMaxDimensions: 'https://x/bag', clearBagRequired: 'https://x/bag', parkingLots: 'https://x/parking', 'publicTransit.notes': 'https://x/transit', outsideFoodAllowed: 'https://x/food' },
+  });
+  const out = await union(h, 'minnesota-wild', CARD);
+  assert.deepEqual(out.map((r) => [r.key, r.observedOn, r.sourceUrl]), [
+    ['bag', 'Oct 7, 2026', 'https://x/bag'],
+    ['parking', 'Oct 8, 2026', 'https://x/parking'],
+    // The card's order for the rest: gates, transit, outside food.
+    ['gates', null, 'https://x/gates'],
+    ['transit', null, 'https://x/transit'],
+    ['outsideFood', null, 'https://x/food'],
+  ]);
+  assert.equal(new Set(out.map((r) => r.key)).size, out.length, 'nothing twice');
+  // The provenance row's text and date win over the card's line for the same class.
+  assert.equal(out[0].text, 'Max bag 12" x 12" x 6".');
+  assert.ok(out.slice(2).every((r) => r.observedAt === null && r.observedOn === null), 'union rows carry no read time');
+  assert.deepEqual(out.map((r) => r.label), ['Bag policy', 'Parking', 'Gates', 'Transit', 'Outside food']);
+});
+
+test('union: the card link stands when the card had one; a class with neither a card link nor a record URL links nothing; keys the block does not carry are dropped', async () => {
+  const h = hub({ fieldStates: { parkingLots: 'rendered' }, observedAtByField: { parkingLots: '2026-10-08T09:00:00.000Z' }, tenantOverlays: [], sources: { parkingLots: 'https://x/parking' } });
+  const out = await union(h, 'minnesota-wild', [
+    line('bag', 'Bag policy', 'See the official bag policy.', 'https://x/bag-policy'),
+    line('outsideFood', 'Outside food', 'No outside food or drink.'),
+    { key: 'rideshare', label: 'Rideshare', text: 'Drop-off on 7th.', href: null, hrefLabel: null },
+  ]);
+  assert.deepEqual(out.map((r) => [r.key, r.observedOn, r.sourceUrl, r.sourceHost]), [
+    ['parking', 'Oct 8, 2026', 'https://x/parking', 'x'],
+    ['bag', null, 'https://x/bag-policy', 'x'],
+    ['outsideFood', null, null, null],
+  ]);
+});
+
+test('union: no provenance row, no block, whatever the card shows (the view falls back to the card)', async () => {
+  assert.deepEqual(await union(hub({ fieldStates: {}, tenantOverlays: [] }), 'minnesota-wild', CARD), []);
+  assert.deepEqual(await union(hub({ fieldStates: { parkingLots: 'held', bagMaxDimensions: 'operator-conflict' }, tenantOverlays: [] }), 'minnesota-wild', CARD), []);
 });

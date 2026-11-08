@@ -1,18 +1,24 @@
 // "Before you go" (docs/per-promo-pages-v2-spec.md, page order item 8, build
 // order step 4, 2026-11-08): the building's game-day facts on a promo page,
-// from the venueHubs provenance record and nothing else. Replaces the quick
-// facts card, which printed any sourced field.
+// from the venueHubs provenance record. Replaces the quick facts card, which
+// printed any sourced field, wherever the record carries provenance.
 //
-// THE RULE. A row renders only for a field the pipeline marked `rendered` in
-// `fieldStates` (venuehubs-write-guard FIELD_STATES) AND whose own read time
-// is in `observedAtByField`; the row prints that date and links the operator
-// page the provenance record names. Any other state (operator-conflict, held,
-// no-operator-page) renders nothing here, pointer included: the venue page
-// explains a conflict in place, a promo page does not. A legacy doc with no
-// state map has no rendered field and renders no block, whatever its sources
-// map says: the state is what the renderer keys on (doctrine: "Venue facts
-// render only from provenance DB fields in state `rendered`, with the observed
-// date shown"). A building with nothing to show renders no block at all.
+// THE RULE. A PROVENANCE ROW renders for a field the pipeline marked
+// `rendered` in `fieldStates` (venuehubs-write-guard FIELD_STATES) AND whose
+// own read time is in `observedAtByField`; it prints that date and links the
+// operator page the record names. Any other state (operator-conflict, held,
+// no-operator-page) renders nothing, pointer included: the venue page
+// explains a conflict in place, a promo page does not.
+//
+// THE UNION (ruling 2026-11-08). When a building has at least one provenance
+// row, the block is the union of those rows, first, in the order below, and
+// then every class the quick facts card would have shown for this building
+// that is not already present, as a row with the operator link and no
+// "Source read" line. A class present in both uses the provenance row only,
+// so nothing appears twice. A building with no provenance row at all (a
+// legacy doc with no state map, or one nobody signed off, whose claims the
+// published view nulls) renders no block: the view falls back to the quick
+// facts card exactly as it rendered before step 4.
 //
 // This module is the dependency-free half (the row type, the labels, the
 // state-and-date test), so the view can import it without pulling the hub
@@ -20,26 +26,33 @@
 // reads a hub is src/lib/before-you-go-rows.ts.
 import type { VenueFieldState } from './venue-hub';
 
-export type BeforeYouGoKey = 'bag' | 'gates' | 'transit' | 'parking';
+/** The provenance classes (bag, gates, transit, parking) plus the one class
+ *  the quick facts card shows that only ever reaches the block through the
+ *  union (outside food). */
+export type BeforeYouGoKey = 'bag' | 'gates' | 'transit' | 'parking' | 'outsideFood';
 
 export interface BeforeYouGoRow {
   key: BeforeYouGoKey;
   label: string;
   /** The stored value, verbatim (dimensions, lot names) or its first sentence. */
   text: string;
-  /** The field's own read time, ISO, from observedAtByField. */
-  observedAt: string;
-  /** The same, formatted ("Oct 7, 2026"). */
-  observedOn: string;
-  /** The operator page the provenance record names, when it names one. */
+  /** The field's own read time, ISO, from observedAtByField. Null on a union
+   *  row: a class the quick facts card would have shown, with no dated
+   *  provenance record behind it, so no "Source read" line. */
+  observedAt: string | null;
+  /** The same, formatted ("Oct 7, 2026"); null on a union row. */
+  observedOn: string | null;
+  /** The operator page: the provenance record's URL, else the pointer the
+   *  card linked (the bag policy page, the official parking page). */
   sourceUrl: string | null;
   sourceHost: string | null;
 }
 
 export const BEFORE_YOU_GO_LABEL = 'Before you go';
-/** The venue page's order: bag capsule, Getting in (gates, transit), parking. */
-export const BEFORE_YOU_GO_ORDER: readonly BeforeYouGoKey[] = ['bag', 'gates', 'transit', 'parking'];
-export const BEFORE_YOU_GO_LABELS: Record<BeforeYouGoKey, string> = { bag: 'Bag policy', gates: 'Gates', transit: 'Transit', parking: 'Parking' };
+/** The provenance rows' order, the venue page's: bag capsule, Getting in
+ *  (gates, transit), parking. Union rows follow, in the card's order. */
+export const BEFORE_YOU_GO_ORDER: readonly Exclude<BeforeYouGoKey, 'outsideFood'>[] = ['bag', 'gates', 'transit', 'parking'];
+export const BEFORE_YOU_GO_LABELS: Record<BeforeYouGoKey, string> = { bag: 'Bag policy', gates: 'Gates', transit: 'Transit', parking: 'Parking', outsideFood: 'Outside food' };
 
 type StateMap = Record<string, VenueFieldState> | undefined;
 type DateMap = Record<string, string> | undefined;

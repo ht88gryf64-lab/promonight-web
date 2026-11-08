@@ -117,20 +117,15 @@ put('venueHubs/xcel-energy-center', {
   bagMaxDimensions: { unit: 'in', d: 6, w: 12, h: 12 }, clearBagRequired: false, outsideFoodAllowed: false,
   sources: { bagMaxDimensions: 'https://x/bag', clearBagRequired: 'https://x/bag', parkingLots: 'https://x/parking', 'publicTransit.notes': 'https://x/transit', 'publicTransit.lines': 'https://x/transit', outsideFoodAllowed: 'https://x/food' },
   // Step 4 (Before you go): the per-field state and read time the pipeline
-  // writes. Every claim rendered and dated, so the Wild page shows all four
-  // rows; outside food is sourced and rendered but is not one of the block's
-  // four classes.
-  fieldStates: { bagMaxDimensions: 'rendered', clearBagRequired: 'rendered', parkingLots: 'rendered', publicTransit: 'rendered', outsideFoodAllowed: 'rendered' },
-  observedAtByField: { bagMaxDimensions: '2026-10-07T14:30:16.621Z', clearBagRequired: '2026-10-07T14:30:16.621Z', parkingLots: '2026-10-08T09:00:00.000Z', publicTransit: '2026-10-09T09:00:00.000Z', outsideFoodAllowed: '2026-10-07T14:30:16.621Z' },
-});
-// The Wild's overlay: a sourced, dated gate rule in state rendered.
-put('venueHubs/xcel-energy-center/tenants/minnesota-wild', {
-  teamId: 'minnesota-wild', league: 'NHL', displayName: 'Minnesota Wild', verified: true,
-  gatesOpen: { ruleText: 'Doors open 90 minutes before puck drop', minutesBefore: 90 },
-  sources: { gatesOpen: 'https://x/gates' }, observedAtByField: { gatesOpen: '2026-10-10T12:00:00.000Z' }, fieldStates: { gatesOpen: 'rendered' },
+  // writes. Bag and parking rendered and dated (provenance rows); transit
+  // sourced with no state and outside food rendered but not a provenance
+  // class, so both reach the block through the union, undated.
+  fieldStates: { bagMaxDimensions: 'rendered', clearBagRequired: 'rendered', parkingLots: 'rendered', outsideFoodAllowed: 'rendered' },
+  observedAtByField: { bagMaxDimensions: '2026-10-07T14:30:16.621Z', clearBagRequired: '2026-10-07T14:30:16.621Z', parkingLots: '2026-10-08T09:00:00.000Z', outsideFoodAllowed: '2026-10-07T14:30:16.621Z' },
 });
 // The Ducks' building: verified and sourced like a legacy doc, with NO state
-// map. Zero rendered fields, so the Ducks pages get no Before you go block.
+// map. Zero rendered fields, so the Ducks pages get no Before you go block
+// and take the quick facts fallback (ruling 2026-11-08).
 put('venueHubs/honda-center', {
   slug: 'honda-center', name: 'Honda Center', formerNames: [], city: 'Anaheim', state: 'California', lat: 33.8078, lng: -117.8765, verified: true,
   tenants: [{ teamId: 'anaheim-ducks', league: 'NHL' }], parkingLots: [{ name: 'Lot 1' }], bagMaxDimensions: { unit: 'in', d: 6, w: 14, h: 14 },
@@ -146,6 +141,13 @@ put('venueHubs/gray-arena', {
   sources: { bagsProhibited: 'https://x/gray-bag', bagMaxDimensions: 'https://x/gray-bag', parkingLots: 'https://x/gray-parking', publicTransit: 'https://x/gray-transit' },
   fieldStates: { bagsProhibited: 'rendered', bagMaxDimensions: 'rendered', clearBagRequired: 'operator-conflict', parkingLots: 'rendered', publicTransit: 'held' },
   observedAtByField: { bagsProhibited: '2026-10-01T08:00:00.000Z', bagMaxDimensions: '2026-10-01T08:00:00.000Z' },
+});
+// The gray club's overlay: a sourced, dated gate rule in state rendered (the
+// gates provenance row).
+put('venueHubs/gray-arena/tenants/gray-club', {
+  teamId: 'gray-club', league: 'NHL', displayName: 'Gray Club', verified: true,
+  gatesOpen: { ruleText: 'Doors open 90 minutes before puck drop', minutesBefore: 90 },
+  sources: { gatesOpen: 'https://x/gates' }, observedAtByField: { gatesOpen: '2026-10-10T12:00:00.000Z' }, fieldStates: { gatesOpen: 'rendered' },
 });
 
 // ── the corpus ───────────────────────────────────────────────────────────────
@@ -381,12 +383,12 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   assert.ok(!h.includes('team_cta_'), 'no team_cta link on a promo page');
   // The read date is the team's scan stamp, never the row's updatedAt.
   assert.match(h, /Source: <a href="https:\/\/www\.nhl\.com\/wild\/fans\/giveaway-schedule"[^>]*>nhl\.com<\/a><span> · read Oct 23, 2026<\/span>/);
-  // Before you go (step 4): the building's rendered, dated claims; the quick
-  // facts card and its outside-food line are gone.
+  // Before you go (step 4): the dated provenance rows plus the card's other
+  // classes (the union, ruling 2026-11-08); the card itself is gone from
+  // this page.
   assert.match(h, />Before you go<\/h2>/);
   assert.ok(!h.includes('quick facts'));
-  for (const t of ['Max bag 12&quot; x 12&quot; x 6&quot;.', 'Doors open 90 minutes before puck drop.', 'Green Line to Central Station, two blocks east. Lines: Green Line.', 'Lots: RiverCentre Ramp, Lawson Ramp.']) assert.ok(h.includes(t), t);
-  assert.ok(!h.includes('No outside food or drink.'), 'outside food is not one of the four classes');
+  for (const t of ['Max bag 12&quot; x 12&quot; x 6&quot;.', 'Green Line to Central Station, two blocks east. Lines: Green Line.', 'Lots: RiverCentre Ramp, Lawson Ramp.', 'No outside food or drink.']) assert.ok(h.includes(t), t);
   // Also at this game: Pride Night, never the special-ticket row.
   assert.match(h, /Also at this game/);
   assert.match(h, /href="\/nhl\/minnesota-wild\/promos\/pride-night"/);
@@ -1086,10 +1088,11 @@ test('step 3: the rail replaces the same-team list (nothing below two cards), th
   assert.ok(!/role="listitem"[^>]*onclick/i.test(blaze.h));
 });
 
-test('step 4: Before you go renders rendered-and-dated fields only, in the venue page order, each with its read date; a conflicted or held field never renders; zero rendered fields, no block', async () => {
+test('step 4: Before you go is the union: provenance rows (rendered, dated) first, then the quick-facts classes not already present, undated; nothing twice; conflicted and held never render; zero provenance rows falls back to the quick-facts card', async () => {
   process.env.PROMO_PAGES_LIVE = 'true';
-  // The Wild: all four classes rendered and dated. One block, after the
-  // General guide and before the rail, in the venue page's order.
+  // The Wild: bag and parking rendered and dated; transit sourced with no
+  // state; outside food rendered and dated but not a provenance class. Four
+  // rows: the two dated first, then the card's two, undated.
   const { h } = await render('nhl', 'minnesota-wild', 'blaze-orange-hat');
   const start = h.indexOf('<section id="before-you-go"');
   assert.ok(start > 0, 'the block');
@@ -1097,45 +1100,53 @@ test('step 4: Before you go renders rendered-and-dated fields only, in the venue
   assert.match(block, />Before you go<\/h2>/);
   assert.match(block, /Grand Casino Arena<span>, formerly Xcel Energy Center<\/span>/);
   const labels = [...block.matchAll(/<dt [^>]*>([^<]+)<\/dt>/g)].map((m) => m[1]);
-  assert.deepEqual(labels, ['Bag policy', 'Gates', 'Transit', 'Parking']);
-  // Every row: the operator host linked, then this field's own read date.
+  assert.deepEqual(labels, ['Bag policy', 'Parking', 'Transit', 'Outside food']);
+  assert.equal(new Set(labels).size, labels.length, 'nothing twice');
   const rows = [...block.matchAll(/<dd class="m-0">([\s\S]*?)<\/dd>/g)].map((m) => m[1]);
   assert.equal(rows.length, 4);
-  const expected: [string, string, string][] = [
-    ['Max bag 12&quot; x 12&quot; x 6&quot;.', 'https://x/bag', 'Oct 7, 2026'],
-    ['Doors open 90 minutes before puck drop.', 'https://x/gates', 'Oct 10, 2026'],
-    ['Green Line to Central Station, two blocks east. Lines: Green Line.', 'https://x/transit', 'Oct 9, 2026'],
-    ['Lots: RiverCentre Ramp, Lawson Ramp.', 'https://x/parking', 'Oct 8, 2026'],
-  ];
-  rows.forEach((row, i) => {
-    const [text, url, date] = expected[i];
-    assert.ok(row.startsWith(text), `${labels[i]}: ${row}`);
-    assert.match(row, new RegExp(`<a href="${url}" target="_blank" rel="noopener noreferrer" class="[^"]*">x ›</a> · Source read ${date}</span>$`), `${labels[i]} provenance line`);
-  });
-  const guide = h.indexOf(`>${'General guide'}<`);
+  // Provenance rows: the text, the operator host linked, then this field's own read date.
+  assert.match(rows[0], /^Max bag 12&quot; x 12&quot; x 6&quot;\.<span class="[^"]*"><a href="https:\/\/x\/bag" target="_blank" rel="noopener noreferrer" class="[^"]*">x ›<\/a> · Source read Oct 7, 2026<\/span>$/, 'bag');
+  assert.match(rows[1], /^Lots: RiverCentre Ramp, Lawson Ramp\.<span class="[^"]*"><a href="https:\/\/x\/parking"[^>]*>x ›<\/a> · Source read Oct 8, 2026<\/span>$/, 'parking');
+  // Union rows: the card's text, the operator link, no read date.
+  assert.match(rows[2], /^Green Line to Central Station, two blocks east\. Lines: Green Line\.<span class="[^"]*"><a href="https:\/\/x\/transit"[^>]*>x ›<\/a><\/span>$/, 'transit');
+  assert.match(rows[3], /^No outside food or drink\.<span class="[^"]*"><a href="https:\/\/x\/food"[^>]*>x ›<\/a><\/span>$/, 'outside food');
+  assert.equal((block.match(/Source read/g) ?? []).length, 2, 'two dated rows');
+  const guide = h.indexOf('>General guide<');
   const rail = h.indexOf('role="listitem"');
   assert.ok(guide < start && start < rail, 'after the guide, before the rail');
-  // The former name is in the block, so not on the venue line: once on the page.
   assert.equal((h.match(/formerly Xcel Energy Center/g) ?? []).length, 1, 'the former name once');
 
-  // The gray club: the prohibition is rendered and dated; the clear-bag answer
-  // is in operator conflict, transit is held, the lots carry no read time.
-  // One row, and none of the withheld text anywhere on the page.
+  // The gray club: the prohibition rendered and dated; its overlay's gate rule
+  // rendered and dated; the lots rendered but never dated, so they reach the
+  // block through the union, undated; the clear-bag answer is in operator
+  // conflict and transit is held: neither renders anywhere on the page.
   const gray = await render('nhl', 'gray-club', 'gray-towel');
   const gs = gray.h.indexOf('<section id="before-you-go"');
   assert.ok(gs > 0, 'the gray block');
   const gblock = gray.h.slice(gs, gray.h.indexOf('</section>', gs));
-  assert.deepEqual([...gblock.matchAll(/<dt [^>]*>([^<]+)<\/dt>/g)].map((m) => m[1]), ['Bag policy']);
-  assert.match(gblock, /Bags are not allowed\.<span class="[^"]*"><a href="https:\/\/x\/gray-bag"[^>]*>x ›<\/a> · Source read Oct 1, 2026<\/span>/);
-  for (const withheld of ['5&quot; x 9&quot;', 'Clear bag', 'Light rail to Gray Station', 'Gray Line', 'Gray Lot A', 'operator', 'conflicting']) {
+  const grows = [...gblock.matchAll(/<dd class="m-0">([\s\S]*?)<\/dd>/g)].map((m) => m[1]);
+  assert.deepEqual([...gblock.matchAll(/<dt [^>]*>([^<]+)<\/dt>/g)].map((m) => m[1]), ['Bag policy', 'Gates', 'Parking']);
+  assert.match(grows[0], /^Bags are not allowed\.<span class="[^"]*"><a href="https:\/\/x\/gray-bag"[^>]*>x ›<\/a> · Source read Oct 1, 2026<\/span>$/, 'gray bag');
+  assert.match(grows[1], /^Doors open 90 minutes before puck drop\.<span class="[^"]*"><a href="https:\/\/x\/gates"[^>]*>x ›<\/a> · Source read Oct 10, 2026<\/span>$/, 'gray gates');
+  assert.match(grows[2], /^Lots: Gray Lot A\.<span class="[^"]*"><a href="https:\/\/x\/gray-parking"[^>]*>x ›<\/a><\/span>$/, 'gray parking, undated');
+  assert.equal((gblock.match(/Source read/g) ?? []).length, 2);
+  for (const withheld of ['5&quot; x 9&quot;', 'Clear bag', 'Light rail to Gray Station', 'Gray Line', 'operator', 'conflicting']) {
     assert.ok(!gray.h.includes(withheld), `withheld: ${withheld}`);
   }
 
-  // The Ducks: a verified, sourced building with no state map. Zero rendered
-  // fields, so no block; the venue line still names the building.
+  // The Ducks: a verified, sourced building with no state map. Zero provenance
+  // rows, so no Before you go heading; THE FALLBACK (ruling 2026-11-08) is
+  // the quick facts card exactly as it rendered before step 4: any sourced
+  // field, no date line, the two-column grid.
   const ducks = await render('nhl', 'anaheim-ducks', 'pride-night');
-  assert.ok(!ducks.h.includes('Before you go'), 'no block');
+  assert.ok(!ducks.h.includes('Before you go'), 'no Before you go heading');
   assert.ok(!ducks.h.includes('before-you-go'));
-  assert.match(ducks.h, /Honda Center/);
-  assert.ok(!ducks.h.includes('Lot 1') && !ducks.h.includes('14&quot;'), 'nothing from the building');
+  assert.match(ducks.h, /<h2 class="rd-display m-0 text-\[22px\] uppercase text-rd-ink"><span aria-hidden="true" class="[^"]*"><\/span>Honda Center, quick facts<\/h2><dl class="m-0 grid grid-cols-2 gap-2.5 text-\[14px\] text-rd-ink"><div><dt class="[^"]*">Bag policy<\/dt><dd class="m-0">Max bag 14&quot; x 14&quot; x 6&quot;\.<\/dd><\/div><div><dt class="[^"]*">Parking<\/dt><dd class="m-0">Lots: Lot 1\.<\/dd><\/div><\/dl>/);
+  assert.ok(!ducks.h.includes('Source read'), 'the card carries no date line');
+  // Never both: each page has exactly one of the two, or neither.
+  for (const [name, page] of [['wild', h], ['gray', gray.h], ['ducks', ducks.h]] as const) {
+    const byg = page.includes('>Before you go</h2>');
+    const qf = page.includes(', quick facts</h2>');
+    assert.ok(byg !== qf, `${name}: exactly one of Before you go (${byg}) and quick facts (${qf})`);
+  }
 });

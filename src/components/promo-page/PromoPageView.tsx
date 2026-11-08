@@ -553,8 +553,9 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
               {venueHref ? <Link href={venueHref} className="text-rd-red no-underline hover:underline">{venueName}</Link> : venueName}
               {ctx.hub?.city ? <span>{`, ${ctx.hub.city}`}</span> : null}
               {/* A renamed building names its former name in the Before you
-                  go block; when that block has nothing to show, here instead. */}
-              {ctx.formerNames.length && !ctx.beforeYouGo.length ? <span>{` · formerly ${ctx.formerNames.join(', ')}`}</span> : null}
+                  go block, or in the quick facts card it falls back to; when
+                  neither has anything to show, here instead. */}
+              {ctx.formerNames.length && !ctx.beforeYouGo.length && !ctx.quickFacts.length ? <span>{` · formerly ${ctx.formerNames.join(', ')}`}</span> : null}
             </p>
           ) : null}
           {!showAbout ? (
@@ -788,13 +789,49 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
                   <dd className="m-0">
                     {r.text}
                     {/* The provenance line, the venue page's words: the operator
-                        host as the link, then the read date. */}
-                    <span className="block font-rd text-[11px] text-rd-ink-faint">
-                      {r.sourceUrl && r.sourceHost ? (
-                        <a href={r.sourceUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-rd-red">{`${r.sourceHost} ›`}</a>
-                      ) : null}
-                      {`${r.sourceUrl ? ' · ' : ''}Source read ${r.observedOn}`}
-                    </span>
+                        host as the link, then the read date. A union row (a
+                        class the quick facts card would have shown, undated)
+                        keeps the link and has no "Source read". */}
+                    {r.sourceUrl || r.observedOn ? (
+                      <span className="block font-rd text-[11px] text-rd-ink-faint">
+                        {r.sourceUrl && r.sourceHost ? (
+                          <a href={r.sourceUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-rd-red">{`${r.sourceHost} ›`}</a>
+                        ) : null}
+                        {r.observedOn ? `${r.sourceUrl ? ' · ' : ''}Source read ${r.observedOn}` : null}
+                      </span>
+                    ) : null}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            {venueHref ? (
+              <Link href={venueHref} className="font-rd text-[14px] font-medium text-rd-red no-underline hover:underline">{`${venueName} gameday guide`}</Link>
+            ) : null}
+          </section>
+        ) : ctx.quickFacts.length && venueName ? (
+          // THE FALLBACK (ruling 2026-11-08): when Before you go has zero rows,
+          // the venue quick facts card renders exactly as it did before step 4
+          // (any sourced field through the published view, no state or date
+          // required). One or more rows and Before you go replaces it; never
+          // both. REMOVE THIS BRANCH, the `quickFacts` context field and its
+          // loader when provenance coverage (pages whose building has at least
+          // one verified, rendered, dated field) reaches 90% of upcoming promo
+          // pages; on 2026-11-08 it is 475 of 1,152 (scripts/audit-before-you-go.ts).
+          <section className="mt-6 flex flex-col gap-2.5 rounded-2xl border border-rd-line bg-rd-card p-3.5">
+            <H2>{`${venueName}, quick facts`}</H2>
+            {ctx.formerNames.length ? <p className="m-0 font-rd text-[12px] text-rd-ink-faint">{`Formerly ${ctx.formerNames.join(', ')}.`}</p> : null}
+            <dl className="m-0 grid grid-cols-2 gap-2.5 text-[14px] text-rd-ink">
+              {ctx.quickFacts.map((l) => (
+                <div key={l.key}>
+                  <dt className="font-rd text-[10px] uppercase tracking-[0.12em] text-rd-ink-faint">{l.label}</dt>
+                  <dd className="m-0">
+                    {l.text}
+                    {l.href && l.hrefLabel ? (
+                      <>
+                        {' '}
+                        <a href={l.href} target="_blank" rel="noopener noreferrer" className="text-rd-red">{l.hrefLabel}</a>
+                      </>
+                    ) : null}
                   </dd>
                 </div>
               ))}

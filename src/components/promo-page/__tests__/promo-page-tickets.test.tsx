@@ -36,7 +36,7 @@ function page(rows: PromoPageRow[], today: string, team: Team = TEAM): PromoPage
   const primary = rows.find((r) => r.date >= today) ?? rows[rows.length - 1];
   return { team, slug: rows[0].pageSlug, season: '2026-27', rows, removedRows: [], removedDates: [], state: 'live', primary, dates: rows.map((r) => r.date), updatedAt: null, removedAt: null, canonicalSlug: null };
 }
-const CTX: PromoPageContext = { game: null, timeline: null, venueGiveaways: null, venue: null, hub: null, beforeYouGo: [], location: null, coords: null, formerNames: [], observedAt: null, alsoAtGame: [], nextTeamPromos: [], crossTeam: null, previousEdition: null, short: null };
+const CTX: PromoPageContext = { game: null, timeline: null, venueGiveaways: null, venue: null, hub: null, beforeYouGo: [], quickFacts: [], location: null, coords: null, formerNames: [], observedAt: null, alsoAtGame: [], nextTeamPromos: [], crossTeam: null, previousEdition: null, short: null };
 const render = (rows: PromoPageRow[], today = '2026-11-02', team: Team = TEAM) => renderToStaticMarkup(<PromoPageView page={page(rows, today, team)} ctx={CTX} today={today} />).replace(/&amp;/g, '&');
 
 function anchor(html: string, text: string): string {
