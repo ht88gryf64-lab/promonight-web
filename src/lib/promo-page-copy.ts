@@ -673,6 +673,9 @@ export function promoFaqs(opts: {
   dates: readonly string[];
   removed: boolean;
   removedOn: string | null;
+  /** Every date on the page has been played (ruling 2026-11-08): the arrival
+   *  question is dropped, there is nothing left to arrive for. */
+  past?: boolean;
 }): PromoFaq[] {
   const { row, teamName, dates, removed } = opts;
   const title = cleanText(row.title);
@@ -712,7 +715,7 @@ export function promoFaqs(opts: {
   // game time alone does not answer "what time should I arrive".
   const doors = cleanText(row.gateOpenTime);
   const time = cleanText(row.displayTime);
-  if (doors) {
+  if (doors && !opts.past) {
     const parts: string[] = [`Doors open at ${doors}.`];
     if (time) parts.push(`Game time is ${time}.`);
     if (cap !== null) parts.push(`Only the first ${formatCount(cap)} fans receive one, so arrive early.`);
@@ -875,6 +878,10 @@ export interface PromoJsonLdInput {
    *  then emits its removed rows as cancelled events. */
   rows: readonly PromoPageRow[];
   removed: boolean;
+  /** Every date on the page has been played (ruling 2026-11-08). The Events
+   *  keep EventScheduled (the event happened) and drop their offers: there
+   *  is nothing left to sell. */
+  past?: boolean;
   /** Absolute image URL (the og:image). */
   imageUrl: string;
   location: PromoPageLocation | null;
@@ -933,7 +940,7 @@ export function promoPageJsonLd(input: PromoJsonLdInput): Schema[] {
       const doors = cleanText(r.gateOpenTime);
       if (doors) e.doorTime = doors;
       const offer = (input.ticketUrlFor ? input.ticketUrlFor(r) : null) ?? input.ticketUrl;
-      if (offer && !input.removed) e.offers = { '@type': 'Offer', url: offer, availability: 'https://schema.org/InStock' };
+      if (offer && !input.removed && !input.past) e.offers = { '@type': 'Offer', url: offer, availability: 'https://schema.org/InStock' };
       return e;
     });
 

@@ -209,6 +209,16 @@ promo('minnesota-wild', 'a9', { title: 'Postseason Row', pageSlug: 'postseason-r
 // A same-date, same-title twin under one slug: one game line, one Event.
 promo('minnesota-wild', 't1', { title: 'Twin Night', pageSlug: 'twin-night', type: 'theme', date: '2026-12-20', opponent: 'Flames' });
 promo('minnesota-wild', 't2', { title: 'Twin Night', pageSlug: 'twin-night', type: 'theme', date: '2026-12-20', opponent: 'Flames' });
+// A club for the played state (ruling 2026-11-08): one page dated yesterday
+// (a door time and a presenter stored, so the arrival and presenter FAQs
+// would both be answerable), one dated tomorrow with the same fields, and
+// the yesterday page's editions in the seasons either side.
+// Food deals, so the club joins no cross-team cascade another fixture asserts on.
+team('past-club', 'Past', 'Club');
+promo('past-club', 'y1', { title: 'Yesterday Towel', pageSlug: 'yesterday-towel', type: 'food', date: '2026-10-28', opponent: 'Wild', gateOpenTime: '5:30 PM', presentedBy: 'Towel Co', description: 'Dollar dogs and a towel.' });
+promo('past-club', 'y0', { title: 'Yesterday Towel', pageSlug: 'yesterday-towel-2025-26', pageSeason: '2025-26', type: 'food', date: '2026-03-02', opponent: 'Wild', updatedAt: ts('2026-02-01T00:00:00Z') });
+promo('past-club', 'y2', { title: 'Yesterday Towel', pageSlug: 'yesterday-towel-2027-28', pageSeason: '2027-28', type: 'food', date: '2027-10-20', opponent: 'Wild' });
+promo('past-club', 't1', { title: 'Tomorrow Towel', pageSlug: 'tomorrow-towel', type: 'food', date: '2026-10-30', opponent: 'Stars', gateOpenTime: '5:30 PM', presentedBy: 'Towel Co', description: 'Dollar dogs and a towel.' });
 // Outside NHL and NBA the stored flag is the extractor's guess: never a package.
 promo('houston-dynamo', 'm1', { title: 'Family 4-Pack', pageSlug: 'family-4-pack', type: 'kids', date: '2026-11-07', opponent: 'Austin FC', ticketPackageRequired: true, ticketPackageName: 'Family Pack', sourceUrl: 'https://www.houstondynamofc.com/promos', description: 'Four tickets, four hot dogs and four drinks.' });
 // The multi-date series on the Red Wings, and a Pride Night there.
@@ -897,14 +907,14 @@ test('content floor: the team colour on the article, the band, the badge and the
   // One source: the team doc's ARGB colours as mapTeamDoc turns them to hex,
   // the same two the tier 3 card route reads. Dark green takes white ink and
   // reads on the cream ground, so the numeral is the colour too.
-  assert.match(wild.h, /<article class="page-content[^"]*" data-ad-region="content" style="--pp-accent:#154734;--pp-accent-ink:#ffffff;--pp-accent-text:#154734">/);
+  assert.match(wild.h, /<article class="page-content[^"]*" data-ad-region="content" style="--pp-accent:#154734;--pp-accent-ink:#ffffff;--pp-accent-text:#154734;overflow-anchor:none">/);
   assert.match(wild.h, /<header class="[^"]*"><div aria-hidden="true" class="h-\[3px\] w-full rounded-full bg-\[var\(--pp-accent\)\]"><\/div>/, 'the band under the breadcrumb, inside the header');
   assert.match(wild.h, /class="rounded-md px-2 py-1 [^"]*bg-\[var\(--pp-accent\)\] text-\[var\(--pp-accent-ink\)\]">Giveaway<\/span>/, 'the badge');
   assert.match(wild.h, /class="flex h-\[52px\] min-w-0 flex-1 [^"]*bg-\[var\(--pp-accent\)\][^"]*text-\[var\(--pp-accent-ink\)\][^"]*"[^>]*>Get tickets<\/a>/, 'the CTA');
   assert.match(wild.h, /<h2 class="rd-display[^"]*"><span aria-hidden="true" class="[^"]*bg-\[var\(--pp-accent\)\]"><\/span>About this giveaway<\/h2>/, 'the section rule');
   // Mid-gray primary, white secondary: neither clears the gate, so the house red, with white ink.
   const gray = await render('nhl', 'gray-club', 'gray-towel');
-  assert.match(gray.h, /style="--pp-accent:#da2d20;--pp-accent-ink:#ffffff;--pp-accent-text:#[0-9a-f]{6}"/);
+  assert.match(gray.h, /style="--pp-accent:#da2d20;--pp-accent-ink:#ffffff;--pp-accent-text:#[0-9a-f]{6};overflow-anchor:none"/);
   assert.ok(!gray.h.includes('#808080') && !gray.h.includes('--pp-accent:#ffffff'), 'the failing colours never reach the page');
   // The article's direct children are unchanged in kind: the band adds no ad anchor.
   const kids = articleChildren(wild.h);
@@ -1149,4 +1159,52 @@ test('step 4: Before you go is the union: provenance rows (rendered, dated) firs
     const qf = page.includes(', quick facts</h2>');
     assert.ok(byg !== qf, `${name}: exactly one of Before you go (${byg}) and quick facts (${qf})`);
   }
+});
+
+test('played (ruling 2026-11-08): every date before today in the venue zone; the header says so, the way forward replaces the tickets, no affiliate link, Events keep EventScheduled without offers, no arrival question; tomorrow and a series with a future date are not played', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const { h } = await render('nhl', 'past-club', 'yesterday-towel');
+  const header = h.slice(h.indexOf('<header'), h.indexOf('</header>'));
+  assert.match(header, /<strong class="text-rd-ink">This game has been played<\/strong>/, 'the header line, under the date');
+  assert.ok(header.indexOf('Wednesday, Oct 28, 2026') < header.indexOf('This game has been played'));
+  // The way forward in place of the ticket row: the club's next upcoming
+  // promo page, Share beside it, then the editions either side.
+  assert.match(h, /<a [^>]*href="\/nhl\/past-club\/promos\/tomorrow-towel"[^>]*>Next Past Club promo<\/a>/);
+  assert.match(h, /<a [^>]*href="\/nhl\/past-club\/promos\/yesterday-towel-2025-26"[^>]*>Previous edition: Yesterday Towel 2025-26 · Monday, Mar 2, 2026<\/a>/);
+  assert.match(h, /<a [^>]*href="\/nhl\/past-club\/promos\/yesterday-towel-2027-28"[^>]*>Next edition: Yesterday Towel 2027-28 · Wednesday, Oct 20, 2027<\/a>/);
+  // Nothing to sell: no ticket, parking, hotel or reminder link, and no
+  // affiliate anchor of any kind.
+  for (const gone of ['>Get tickets<', 'Also on Ticketmaster', '>Parking</a>', '>Hotels</a>', '>Remind me<', 'rel="noopener noreferrer sponsored"', '/download?src=promo_cta']) {
+    assert.ok(!h.includes(gone), `played page still carries ${gone}`);
+  }
+  // The Event happened: EventScheduled, no offers.
+  const events = jsonLd(h).filter((s) => s['@type'] === 'Event');
+  assert.equal(events.length, 1);
+  assert.equal(events[0].eventStatus, 'https://schema.org/EventScheduled');
+  assert.ok(!('offers' in events[0]), 'no offers on a played Event');
+  // The arrival question is gone although a door time is stored; the
+  // presenter question stays.
+  assert.ok(!h.includes('What time should I arrive?'));
+  assert.match(h, /Who presents Yesterday Towel\?/);
+
+  // Tomorrow: not played. The ticket row, the offers and the arrival question are all there.
+  const next = await render('nhl', 'past-club', 'tomorrow-towel');
+  assert.ok(!next.h.includes('This game has been played'));
+  assert.match(next.h, />Get tickets<\/a>/);
+  assert.match(next.h, />Parking<\/a>/);
+  assert.match(next.h, />Remind me<\/a>/);
+  assert.ok(!next.h.includes('Next Past Club promo'));
+  const nextEvents = jsonLd(next.h).filter((s) => s['@type'] === 'Event');
+  assert.ok(nextEvents[0].offers?.url, 'offers on an upcoming Event');
+  assert.match(next.h, /What time should I arrive\?/);
+
+  // A series with two played dates and three to come is not played; a page
+  // dated today is not played.
+  const series = await render('nhl', 'pittsburgh-penguins', 'community-night');
+  assert.ok(!series.h.includes('This game has been played'));
+  assert.match(series.h, />Get tickets<\/a>/);
+  const todayPage = await render('nhl', 'minnesota-wild', 'blaze-orange-hat');
+  assert.ok(!todayPage.h.includes('This game has been played'));
+  // The article opts out of scroll anchoring (ux-review 2026-11-08, D1; live guard 9).
+  assert.match(todayPage.h, /<article class="page-content[^"]*" data-ad-region="content" style="[^"]*overflow-anchor:none[^"]*">/);
 });
