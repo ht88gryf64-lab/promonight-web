@@ -4276,3 +4276,15 @@ ux-review of `feature/promo-ebay-images` (D8, carried: production behaviour). On
 ## 90. The eBay block on upcoming bobblehead pages sits between two Raptive containers (logged 2026-11-08)
 
 ux-review of `feature/promo-ebay-images`, second run (docs/ux-review/2026-11-08-feature-promo-ebay-images-placement.md, P2). With the block after This game (ruling 2026-11-08), Raptive places a container after it as after every article child, so at 390 a fan crosses 888 px of ad, listings, ad between This game and the Fan guide (955 px at 768, 981 px at 1280), where production before the block had one 300 px ad. Read 2026-11-21: eBay `promo_link_click` (surface `web_promo_page_ebay`, destination `ebay`) and Raptive per-page RPM on bobblehead pages against the other promo pages. If the block does not justify the run, it becomes played-pages-only (the spec's archive case) and leaves upcoming pages.
+
+## 91. Browser back on team pages lands off the clicked card (deferred, logged 2026-11-08)
+
+ux-review of `fix/held-parking-faq` (docs/ux-review/2026-11-08-fix-held-parking-faq.md, T1). On `/nhl/minnesota-wild` at 390, back from an upcoming promo card lands 182 px off (reproduced twice); from a footer link +472 on the branch, +442 on production. The team-page sibling of known-issues 86 (venue pages); same remedy as the promo page's overflow-anchor fix, with a live guard.
+
+## 92. A promo listed twice under two spellings (MetLife, Giants, Nov 12) (deferred, logged 2026-11-08)
+
+ux-review M2: "Promos this week" on `/venues/metlife-stadium` shows "Light Bands" (Giveaways) and "Lightbands" (Theme Nights), both the Giants vs Commanders on Nov 12. A promo-data duplicate: two rows for one giveaway that the pipeline's de-duplication did not fold (spelling and category differ). Pipeline-side fix; present on production.
+
+## 93. Team page hero counts disagree with the filter chips, and zero chips stay tappable (deferred, logged 2026-11-08)
+
+ux-review (P3): on `/nhl/minnesota-wild` the hero tile reads "6 GIVEAWAYS" while the chip reads "Giveaways 4", three of five tiles read 0, and the zero-count chips still respond to taps. Present on production. The two counts should come from one count of the same set.
