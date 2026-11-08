@@ -485,3 +485,23 @@ test(`browser back from a rail card restores the scroll position within ${BACK_T
     await browser.close();
   }
 });
+
+// ── guard 11: the archive page (step 6, 2026-11-08) ─────────────────────────
+// Every team with a played page in the index window has an archive page in
+// the sitemap (/{league}/{team}/promos/past). The first one listed answers
+// 200, links at least one promo page and names itself as canonical. The
+// sitemap's archive entries are promo-family URLs, so guards 1 and 3 already
+// hold them to the team-page href and the meta-description rules; this one
+// reads the page itself.
+test(`the first archive page in the sitemap answers 200 with a /promos/ link and a self canonical (${HOST})`, async (t) => {
+  const archives = (await sitemap()).filter((p) => /^\/(?:mlb|nba|nhl|nfl|mls|wnba)\/[a-z0-9-]+\/promos\/past$/.test(p));
+  assert.ok(archives.length > 0, 'the sitemap lists no archive page; every club with a played page this season or last should have one');
+  const path = archives[0];
+  const html = await get(path);
+  const links = [...anchorHrefs(html)].filter((h) => /^\/(?:mlb|nba|nhl|nfl|mls|wnba)\/[a-z0-9-]+\/promos\/(?!past$)[a-z0-9-]+$/.test(h));
+  t.diagnostic(`${path}: ${archives.length} archive pages in the sitemap; ${links.length} promo links`);
+  assert.ok(links.length >= 1, `${path}: no /promos/ link in the served HTML`);
+  const canonical = /<link rel="canonical" href="([^"]+)"/.exec(html)?.[1];
+  assert.equal(canonical, `https://www.getpromonight.com${path}`, `${path}: canonical`);
+  assert.match(html, /<span aria-current="page"[^>]*>Past promos<\/span>/, `${path}: the breadcrumb's current crumb`);
+});
