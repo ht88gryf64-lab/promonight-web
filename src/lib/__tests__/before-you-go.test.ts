@@ -95,8 +95,10 @@ test('(c) a rendered field with no read time yields no row; a read time that doe
 });
 
 test('bag precedence and links: a prohibition first, then the size (clear bag only when that claim is rendered), then the boolean, then the notes; the class pointer when the field has no source', async () => {
+  // Ruling 2026-11-08: a prohibition with a rendered, dated size names the clutch
+  // exception (this assertion read "Bags are not allowed." before the ruling).
   const prohibited = await rows(hub({ bagsProhibited: true, fieldStates: { bagsProhibited: 'rendered', bagMaxDimensions: 'rendered' }, observedAtByField: { bagsProhibited: '2026-10-01T00:00:00.000Z', bagMaxDimensions: '2026-10-07T00:00:00.000Z' }, sources: {}, tenantOverlays: [] }), 'minnesota-wild');
-  assert.deepEqual(prohibited.map((r) => [r.text, r.observedOn, r.sourceUrl]), [['Bags are not allowed.', 'Oct 1, 2026', 'https://x/bag-policy']]);
+  assert.deepEqual(prohibited.map((r) => [r.text, r.observedOn, r.sourceUrl]), [['No bags, except clutches up to 12" x 12" x 6".', 'Oct 1, 2026', 'https://x/bag-policy']]);
   const clear = await rows(hub({ clearBagRequired: true, fieldStates: { bagMaxDimensions: 'rendered', clearBagRequired: 'rendered' } }), 'minnesota-wild');
   assert.equal(clear[0].text, 'Clear bag 12" x 12" x 6".');
   // The clear-bag claim in conflict (the value is nulled upstream): the size alone.
@@ -172,4 +174,28 @@ test('union: the card link stands when the card had one; a class with neither a 
 test('union: no provenance row, no block, whatever the card shows (the view falls back to the card)', async () => {
   assert.deepEqual(await union(hub({ fieldStates: {}, tenantOverlays: [] }), 'minnesota-wild', CARD), []);
   assert.deepEqual(await union(hub({ fieldStates: { parkingLots: 'held', bagMaxDimensions: 'operator-conflict' }, tenantOverlays: [] }), 'minnesota-wild', CARD), []);
+});
+
+test('clutch-only buildings (ruling 2026-11-08): true with a size names the clutch, two numbers when two are stored; true with no size keeps "Bags are not allowed."', async () => {
+  const base: Partial<VenueHub> = { bagsProhibited: true, sources: {}, tenantOverlays: [] };
+  // keybank-center shape: three numbers.
+  const three = await rows(hub({ ...base, bagMaxDimensions: { w: 4, h: 6, d: 1.5, unit: 'in' }, fieldStates: { bagsProhibited: 'rendered', bagMaxDimensions: 'rendered' }, observedAtByField: { bagsProhibited: '2026-11-08T16:11:34.657Z', bagMaxDimensions: '2026-11-08T16:11:34.657Z' } }), 'buffalo-sabres');
+  assert.equal(three[0].text, 'No bags, except clutches up to 4" x 6" x 1.5".');
+  // capital-one-arena shape: the page prints two numbers, depth is null.
+  const two = await rows(hub({ ...base, bagMaxDimensions: { w: 4, h: 6, d: null, unit: 'in' } as VenueHub['bagMaxDimensions'], fieldStates: { bagsProhibited: 'rendered', bagMaxDimensions: 'rendered' }, observedAtByField: { bagsProhibited: '2026-11-08T16:10:23.047Z', bagMaxDimensions: '2026-11-08T16:10:23.047Z' } }), 'washington-capitals');
+  assert.equal(two[0].text, 'No bags, except clutches up to 4" x 6".');
+  // The joint row carries the older of the two reads.
+  const older = await rows(hub({ ...base, bagMaxDimensions: { w: 4, h: 6, d: null, unit: 'in' } as VenueHub['bagMaxDimensions'], fieldStates: { bagsProhibited: 'rendered', bagMaxDimensions: 'rendered' }, observedAtByField: { bagsProhibited: '2026-11-08T16:10:23.047Z', bagMaxDimensions: '2026-10-07T14:19:32.256Z' } }), 'washington-capitals');
+  assert.equal(older[0].observedOn, 'Oct 7, 2026');
+  // No size stored: the plain prohibition.
+  const none = await rows(hub({ ...base, bagMaxDimensions: null, fieldStates: { bagsProhibited: 'rendered' }, observedAtByField: { bagsProhibited: '2026-11-08T16:10:23.047Z' } }), 'washington-capitals');
+  assert.equal(none[0].text, 'Bags are not allowed.');
+  // A size with no read time of its own is not named: the plain prohibition.
+  const undated = await rows(hub({ ...base, bagMaxDimensions: { w: 4, h: 6, d: 1.5, unit: 'in' }, fieldStates: { bagsProhibited: 'rendered', bagMaxDimensions: 'rendered' }, observedAtByField: { bagsProhibited: '2026-11-08T16:10:23.047Z' } }), 'washington-capitals');
+  assert.equal(undated[0].text, 'Bags are not allowed.');
+});
+
+test('two-number bag limits render (ruling 2026-11-08, enterprise-center 16 x 16): "Max bag 16" x 16"."', async () => {
+  const r = await rows(hub({ bagsProhibited: false, clearBagRequired: null, bagMaxDimensions: { w: 16, h: 16, d: null, unit: 'in' } as VenueHub['bagMaxDimensions'], fieldStates: { bagMaxDimensions: 'rendered', bagsProhibited: 'rendered' }, observedAtByField: { bagMaxDimensions: '2026-11-08T16:10:54.473Z', bagsProhibited: '2026-11-08T16:10:54.473Z' }, sources: {}, tenantOverlays: [] }), 'st-louis-blues');
+  assert.equal(r[0].text, 'Max bag 16" x 16".');
 });
