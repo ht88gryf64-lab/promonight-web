@@ -18,6 +18,9 @@ const SOURCE = resolve(PIPELINE, 'config', 'team-short.json');
 
 test('the team map is fresh against promo-video\'s config/team-short.json', (t) => {
   if (!existsSync(SOURCE)) {
+    // A scratch worktree has no sibling checkout (CLAUDE.md, worktrees): say
+    // so in red and skip, never pass.
+    process.stderr.write(`\x1b[31mSKIPPED team-map freshness: ${SOURCE} is absent; set PROMO_VIDEO_DIR to the promo-video checkout (CLAUDE.md, worktrees)\x1b[0m\n`);
     t.skip(`promo-video checkout not found at ${PIPELINE}; set PROMO_VIDEO_DIR to check the map's source`);
     return;
   }
