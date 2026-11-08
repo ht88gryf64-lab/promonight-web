@@ -1,3 +1,4 @@
+import { vendorParkingSentence } from '../../lib/parking-vendor';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { CondensedLine } from '@/lib/venue-hub-condensed';
@@ -253,6 +254,9 @@ export function GettingInCard({ rows }: { rows: GettingInRow[] }) {
  *  card would not render. */
 export interface ParkingLotsModel {
   lots: VenueHub['parkingLots'];
+  /** "No venue lots; {Arena} directs fans to {vendor}." where the operator names no
+   *  lots and sends fans to a vendor (ruling 2026-11-08); null otherwise. */
+  vendorSentence: string | null;
   sourceUrl: string | null;
   verifiedOn: string | null;
   officialUrls: string[];
@@ -273,12 +277,16 @@ export function parkingLotsModel(hub: VenueHub): ParkingLotsModel | null {
   // Card renders when there is lot prose OR an official link: a doc whose only
   // parking fact is the official page (no per-lot breakdown) still surfaces
   // the link instead of silently dropping the field it exists to render.
-  const hasLotContent = lotsWithNotes.some((l) => l.notes) || officialUrls.length > 0;
+  // Vendor direction: only where there are no lots (lots always win), with its own
+  // provenance; the sentence is the one the promo page prints (parking-vendor.ts).
+  const vendor = lotsWithNotes.length === 0 && verified && !parkingOff && hub.parkingNotes && hasProvenance(hub.sources, 'parkingNotes') ? hub.parkingNotes : null;
+  const hasLotContent = lotsWithNotes.some((l) => l.notes) || officialUrls.length > 0 || !!vendor;
   if (!(verified && hasLotContent)) return null;
   return {
     lots: lotsWithNotes.slice(0, 12),
-    sourceUrl: lotsWithNotes.length > 0 ? claimSourceUrl(hub, 'parkingLots') : null,
-    verifiedOn: lotsWithNotes.length > 0 ? claimSourceReadOn(hub, 'parkingLots') : null,
+    vendorSentence: vendor ? vendorParkingSentence(hub.name, vendor.vendor) : null,
+    sourceUrl: lotsWithNotes.length > 0 ? claimSourceUrl(hub, 'parkingLots') : vendor ? claimSourceUrl(hub, 'parkingNotes') : null,
+    verifiedOn: lotsWithNotes.length > 0 ? claimSourceReadOn(hub, 'parkingLots') : vendor ? claimSourceReadOn(hub, 'parkingNotes') : null,
     officialUrls: officialUrls.slice(0, 3),
   };
 }
@@ -298,6 +306,8 @@ export function ParkingLotsCard({ hub }: { hub: VenueHub }) {
               </div>
             ))}
           </div>
+        ) : m.vendorSentence ? (
+          <p className="m-0 font-rd text-[13px] leading-[1.5] text-rd-ink">{m.vendorSentence}</p>
         ) : null}
         <ClaimLine sourceUrl={m.sourceUrl} verifiedOn={m.verifiedOn} />
         {m.officialUrls.length > 0 ? (

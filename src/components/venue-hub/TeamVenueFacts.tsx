@@ -97,6 +97,8 @@ export function teamVenueRows(hub: VenueHub, teamId: string): Row[] {
                 </li>
               ))}
             </ul>
+          ) : parking.vendorSentence ? (
+            <p>{parking.vendorSentence}</p>
           ) : null}
           <ClaimLine sourceUrl={parking.sourceUrl} verifiedOn={parking.verifiedOn} />
           {parking.officialUrls.length > 0 ? (

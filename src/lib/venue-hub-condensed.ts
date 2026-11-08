@@ -30,6 +30,7 @@
 // Text is never paraphrased: gate times and bag dimensions are the stored
 // values, prose fields are their first stored sentence (leadSentences), lots
 // are their stored names.
+import { vendorParkingSentence } from './parking-vendor';
 import { type VenueHub, leadSentences, dimsString, stripTrailingPeriod } from './venue-hub';
 import { transitSuppressed } from './venue-transit-suppression';
 import { isReachableUrl } from './venue-field-exclusions';
@@ -134,8 +135,14 @@ export function buildCondensedLogistics(gatedHub: VenueHub, tenantId: string): C
     const mapHref = isReachableUrl(hub.parkingLotMapUrl) ? hub.parkingLotMapUrl : null;
     const officialHref = !mapHref && !excludedSub(hub.slug, 'parking', 'officialParkingUrls') ? (hub.officialParkingUrls.find(isReachableUrl) ?? null) : null;
     const href = mapHref ?? officialHref;
-    const text = lots.length ? `Lots: ${lots.join(', ')}.` : href ? 'See the official parking page.' : null;
-    if (text) lines.push({ key: 'parking', label: 'Parking', text, href, hrefLabel: href ? (mapHref ? 'Official lot map' : 'Official parking') : null });
+    // Vendor direction (ruling 2026-11-08): no lots, a sourced direction to a vendor;
+    // the same sentence as the Before you go row and the venue page (parking-vendor.ts),
+    // linked to the operator page that carries it. Lots always win.
+    const vendor = !lots.length && hub.parkingNotes && prov(s, 'parkingNotes') ? hub.parkingNotes : null;
+    const vendorHref = vendor ? ([] as unknown[]).concat((s as Record<string, unknown>).parkingNotes ?? []).find((u): u is string => isReachableUrl(u as string | null)) ?? href : null;
+    const text = lots.length ? `Lots: ${lots.join(', ')}.` : vendor ? vendorParkingSentence(hub.name, vendor.vendor) : href ? 'See the official parking page.' : null;
+    const lineHref = vendor ? vendorHref : href;
+    if (text) lines.push({ key: 'parking', label: 'Parking', text, href: lineHref, hrefLabel: lineHref ? (vendor ? 'Official parking' : mapHref ? 'Official lot map' : 'Official parking') : null });
   }
 
   // Tailgating: the allowed flag, the first sentence of the rules and of the

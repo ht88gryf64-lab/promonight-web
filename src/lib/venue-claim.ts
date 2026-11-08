@@ -18,6 +18,7 @@ import type { VenueFieldState, VenueHub } from './venue-hub';
 /** The hub fields this module answers for. Pointer fields are not claims. */
 export type ClaimField =
   | 'parkingLots'
+  | 'parkingNotes'
   | 'rideshareDropoff'
   | 'publicTransit'
   | 'bagMaxDimensions'

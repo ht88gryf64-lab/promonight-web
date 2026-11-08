@@ -4,6 +4,7 @@ import type { Team } from '@/lib/types';
 import type { HubFaqItem } from '@/components/hub/HubFaq';
 import { transitSuppressed } from '@/lib/venue-transit-suppression';
 import { subFieldExcluded, fieldExcluded, hasProvenance, isReachableUrl } from '@/lib/venue-field-exclusions';
+import { vendorParkingSentence } from '@/lib/parking-vendor';
 import { HubFaq } from '@/components/hub/HubFaq';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
@@ -227,9 +228,15 @@ export function VenueHubView({
   // chase-center's lots were excluded and its names kept rendering here.
   const lotsUsable = hasProvenance(hub.sources, 'parkingLots')
     && !subFieldExcluded(hub.slug, 'parking', 'parkingLots');
+  // Vendor direction (ruling 2026-11-08): no usable lots and a sourced direction to a
+  // vendor. The FAQ then says what the parking card says (parking-vendor.ts) and never
+  // "has on-site lots": that sentence claimed lots on a building whose only parking
+  // fact was a lot map, and beside a vendor direction it would contradict the card.
+  const lotsShown = hub.parkingLots.length > 0 && lotsUsable;
+  const vendorParking = !lotsShown && hub.parkingNotes && hasProvenance(hub.sources, 'parkingNotes') ? hub.parkingNotes : null;
   const parkingFactsOk =
     verified && !fieldExcluded(hub.slug, 'parking') &&
-    ((hub.parkingLots.length > 0 && lotsUsable) || isReachableUrl(hub.parkingLotMapUrl));
+    (lotsShown || isReachableUrl(hub.parkingLotMapUrl) || !!vendorParking);
   if (parkingFactsOk) {
     const lotNames = lotsUsable ? hub.parkingLots.slice(0, 8).map((l) => l.name).join(', ') : '';
     faqs.push({
@@ -240,7 +247,9 @@ export function VenueHubView({
       question: primaryTenant
         ? `Where do you park for ${indefiniteArticleFor(primaryTenant)} ${primaryTenant} game?`
         : `Where do you park at ${short}?`,
-      answer: `${short} has on-site lots${lotNames ? ` including ${lotNames}` : ''}. Reserve a nearby spot in advance through SpotHero on this page.`,
+      answer: vendorParking
+        ? `${vendorParkingSentence(hub.name, vendorParking.vendor)} Reserve a nearby spot in advance through SpotHero on this page.`
+        : `${short} has on-site lots${lotNames ? ` including ${lotNames}` : ''}. Reserve a nearby spot in advance through SpotHero on this page.`,
     });
   }
 
