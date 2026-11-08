@@ -606,11 +606,14 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
 
   // Editions (archive pass, step 6, 2026-11-08): the same promotion in
   // other seasons, by theme or by normalized name (src/lib/promo-editions.ts).
+  // A special-ticket row is not a promotion anywhere the site lists
+  // promotions (WEB6 G2), so it is no edition either (ux-review D3).
+  const promoRows = teamRows.filter((r) => !isPackageRow(r, team.league));
   const editionHref = (slug: string) => promoPagePath(team.sportSlug, team.id, slug);
   const editionPage = { slug: page.slug, season: page.season, themeKey: page.primary.themeKey, title: page.primary.title };
-  const previousEditions = previousEditionsFor(teamRows, editionPage, today, editionHref);
+  const previousEditions = previousEditionsFor(promoRows, editionPage, today, editionHref);
   const previousEdition = previousEditions[0] ?? null;
-  const nextEdition = nextEditionFor(teamRows, editionPage, team.league, today, editionHref);
+  const nextEdition = nextEditionFor(promoRows, editionPage, team.league, today, editionHref);
 
   // Cross-team (section 10): the same theme at other clubs, else the cascade
   // documented on PromoPageContext. On a removed page too: a reader who came
@@ -676,9 +679,17 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
 /** The team's played editions by season, newest first, for
  *  /{league}/{team}/promos/past. Empty when the team has no played row. */
 export const getPastPromoEditions = cache(async (team: Team, today: string): Promise<ArchiveSeason[]> => {
-  const rows = await loadTeamPageRows(team);
+  // Promotions only: an NHL or NBA special-ticket row is left out, as the
+  // team page leaves it out of its completed count (ux-review D3: the link
+  // said 8 and the archive listed 14 until the packs left).
+  const rows = (await loadTeamPageRows(team)).filter((r) => !isPackageRow(r, team.league));
   return archiveSeasons(rows, today, (slug) => promoPagePath(team.sportSlug, team.id, slug));
 });
+
+/** An NHL or NBA special-ticket row (WEB6 G2): not a promotion. */
+function isPackageRow(r: Pick<PromoPageRow, 'ticketPackageRequired'>, league: string): boolean {
+  return isTicketPackageLeague(league) && r.ticketPackageRequired === true;
+}
 
 /** The archive page's path. */
 export function pastPromosPath(sportSlug: string, teamId: string): string {

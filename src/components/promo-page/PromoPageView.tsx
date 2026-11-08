@@ -795,7 +795,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
             <ul className="m-0 flex list-none flex-col gap-2 p-0">
               {ctx.previousEditions.map((e) => (
                 <li key={e.href}>
-                  <Link href={e.href} className="flex items-center gap-3 rounded-xl text-rd-ink no-underline hover:underline">
+                  <Link href={e.href} className="flex min-h-11 items-center gap-3 rounded-xl text-rd-ink no-underline hover:underline">
                     {e.thumbnailUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element -- the stored tier 1 photo, like the hero's; no remote pattern, no second request.
                       <img src={e.thumbnailUrl} alt="" width={56} height={56} loading="lazy" decoding="async" className="h-14 w-14 shrink-0 rounded-lg border border-rd-line bg-[#ebe4d6] object-contain" />

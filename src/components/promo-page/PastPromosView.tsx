@@ -32,6 +32,18 @@ export function pastPromosHead(team: Team, seasons: readonly ArchiveSeason[]) {
   return { teamName, title, description, canonical, count };
 }
 
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const monthYear = (ymd: string) => `${MONTHS[Number(ymd.slice(5, 7)) - 1] ?? ''} ${ymd.slice(0, 4)}`.trim();
+
+/** "October 2025 to January 2026", or the one month when the rows share it. */
+export function seasonSpanLabel(dates: readonly string[]): string {
+  const sorted = [...dates].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+  if (!sorted.length) return '';
+  const first = monthYear(sorted[0]);
+  const last = monthYear(sorted[sorted.length - 1]);
+  return first === last ? first : `${first} to ${last}`;
+}
+
 export function PastPromosView({ team, seasons }: { team: Team; seasons: readonly ArchiveSeason[] }) {
   const { teamName, title, canonical, count } = pastPromosHead(team, seasons);
   const teamHref = `/${team.sportSlug}/${team.id}`;
@@ -66,13 +78,16 @@ export function PastPromosView({ team, seasons }: { team: Team; seasons: readonl
             <span aria-hidden="true" className="mb-1.5 block h-[3px] w-10 rounded-full bg-[var(--pp-accent)]" />
             {`${s.season} season`}
           </h2>
+          {/* The months the season's rows span, so a day tile under a
+              two-year season label reads as a date (ux-review D9). */}
+          <p className="m-0 font-rd text-[12px] text-rd-ink-faint">{seasonSpanLabel(s.editions.map((e) => e.date))}</p>
           {s.editions.map((e) => (
             <PromoCard key={e.href} p={{ href: e.href, title: cleanText(e.title), date: e.date, teamName, displayOpponent: e.displayOpponent, displayTime: '' }} showTeam={false} />
           ))}
         </section>
       ))}
       <p className="mt-6 flex flex-wrap gap-x-4 gap-y-1 font-rd text-[14px] font-medium">
-        <Link href={teamHref} className="text-rd-link no-underline hover:underline">{`All ${teamName} promos`}</Link>
+        <Link href={teamHref} className="inline-flex min-h-11 items-center text-rd-link no-underline hover:underline">{`All ${teamName} promos`}</Link>
       </p>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
     </article>

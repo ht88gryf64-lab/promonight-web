@@ -212,6 +212,8 @@ promo('gray-club', 'gc1', { title: 'Gray Towel', pageSlug: 'gray-towel', date: '
 promo('minnesota-wild', 'a4', { title: 'Tombstoned Past Hat', pageSlug: 'tombstoned-past-hat', date: '2026-10-20', tombstoned: true, tombstonedAt: ts('2026-10-21T12:00:00Z') });
 promo('minnesota-wild', 'a5', { title: 'Removed Future Poster', pageSlug: 'removed-future-poster', date: '2026-11-30', tombstoned: true, tombstonedAt: ts('2026-10-05T21:46:46Z'), attendanceCap: 5000, description: 'First 5,000 fans receive a poster.' });
 promo('minnesota-wild', 'a6', { title: 'Pride Night', pageSlug: 'pride-night-2025-26', pageSeason: '2025-26', type: 'theme', themeKey: 'pride', date: '2026-03-10', updatedAt: ts('2026-03-01T00:00:00Z') });
+// A played special-ticket row (step 6, ux-review D3): not a promotion, so neither the archive nor the team page's count sees it.
+promo('minnesota-wild', 'a7p', { title: 'Played Puck Package', pageSlug: 'played-puck-package', date: '2026-10-15', opponent: 'Flames', ticketPackageRequired: true, ticketPackageName: 'Puck Package', updatedAt: ts('2026-10-01T00:00:00Z') });
 promo('minnesota-wild', 'a7', { title: 'Scout Pack', pageSlug: 'scout-pack', ticketPackageRequired: true, ticketPackageName: 'Scout Pack' });
 // Two more package rows (2026-10-31): one with no stored name, one whose name
 // already ends in "Ticket Package" (the shape that used to read "... Ticket
@@ -1334,7 +1336,7 @@ test('sitemap-past: played pages inside the window only, one per page, never a t
   const { getPastPromoSitemap } = await import('@/lib/promo-pages');
   const { pages, archives } = await getPastPromoSitemap(TODAY);
   const paths = pages.map((e) => e.path);
-  for (const p of ['/nhl/past-club/promos/yesterday-towel', '/nhl/past-club/promos/yesterday-towel-2025-26', '/nhl/minnesota-wild/promos/pride-night-2025-26', '/nba/phoenix-suns/promos/rally-towel', '/nba/phoenix-suns/promos/ring-night']) assert.ok(paths.includes(p), `listed: ${p}`);
+  for (const p of ['/nhl/past-club/promos/yesterday-towel', '/nhl/past-club/promos/yesterday-towel-2025-26', '/nhl/minnesota-wild/promos/pride-night-2025-26', '/nba/phoenix-suns/promos/rally-towel', '/nba/phoenix-suns/promos/ring-night', '/nhl/minnesota-wild/promos/played-puck-package']) assert.ok(paths.includes(p), `listed: ${p}`);
   for (const p of ['/nhl/past-club/promos/ancient-towel', '/nhl/minnesota-wild/promos/tombstoned-past-hat', '/nhl/minnesota-wild/promos/blaze-orange-hat', '/nhl/minnesota-wild/promos/pride-night', '/nhl/past-club/promos/tomorrow-towel']) assert.ok(!paths.includes(p), `not listed: ${p}`);
   assert.equal(new Set(paths).size, paths.length, 'one URL per page');
   for (const e of pages) assert.ok(!e.path.endsWith('/promos/past'), 'the archive pages are not in the past file');
@@ -1375,6 +1377,19 @@ test('the archive page: 404 for a club with nothing played; otherwise the season
   assert.equal(ld!.itemListElement[ld!.itemListElement.length - 1].name, 'Past promos');
   assert.equal((h.match(/<article /g) ?? []).length, 1, 'one article');
   assert.match(h, /<article class="page-content[^"]*" data-ad-region="content"/);
+});
+
+test('the archive and the team page agree on what a past promo is: a played special-ticket row counts in neither (ux-review D3)', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const { default: PastPage } = await import('../../past/page');
+  const h = await html(await PastPage(archiveParams('nhl', 'minnesota-wild')));
+  assert.ok(!h.includes('href="/nhl/minnesota-wild/promos/played-puck-package"'), 'the pack is not an archive row');
+  assert.match(h, /href="\/nhl\/minnesota-wild\/promos\/pride-night-2025-26"/, 'the played theme night is');
+  assert.match(h, /1 promotion already played, newest first\./);
+  assert.match(h, /<p class="m-0 font-rd text-\[12px\] text-rd-ink-faint">March 2026<\/p>/, 'the season span line');
+  assert.match(h, /<time dateTime="2026-03-10"/, 'the row date is machine-readable');
+  const wild = (await teamPageHtml('minnesota-wild')).html;
+  assert.match(wild, /<a [^>]*href="\/nhl\/minnesota-wild\/promos\/past"[^>]*>All 1 past promo<\/a>/, 'the team page counts the same one');
 });
 
 test('team page: the server HTML carries the five most recent completed rows, the rest behind the expander, and the archive link with the full count', async () => {

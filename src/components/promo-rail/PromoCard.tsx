@@ -13,10 +13,10 @@ export function PromoCard({ p, showTeam }: { p: Pick<LinkedPromo, 'href' | 'titl
   const sub = showTeam ? p.teamName : [p.displayOpponent ? `vs ${p.displayOpponent}` : null, p.displayTime || null].filter(Boolean).join(' · ');
   return (
     <Link href={p.href} className="flex items-center gap-3 rounded-xl border border-rd-line bg-rd-card p-2.5 text-rd-ink no-underline transition-colors hover:border-rd-line-strong">
-      <span className="w-11 shrink-0 text-center leading-none">
+      <time dateTime={p.date} className="w-11 shrink-0 text-center leading-none">
         <span className="block font-rd text-[10px] uppercase tracking-[0.1em] text-rd-ink-faint">{d.month}</span>
         <span className="rd-numerals block text-[20px]">{d.day}</span>
-      </span>
+      </time>
       <span className="min-w-0 flex-1 text-[14px]">
         <span className="block font-semibold">{p.title}</span>
         {sub ? <span className="block text-[12px] text-rd-ink-faint">{sub}</span> : null}

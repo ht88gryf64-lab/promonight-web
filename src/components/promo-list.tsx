@@ -632,9 +632,10 @@ export function PromoList({
         No upcoming {teamName} promos scheduled right now. See completed {pastPointerYears}promos below.
       </p>
     );
+    // A 44px target, the size of the expander pill above it (ux-review D4).
     const archiveLink = (
       <p className="mt-4 font-rd text-[14px] font-medium">
-        <Link href={`/${sport}/${teamSlug}/promos/past`} className="text-rd-link no-underline hover:underline">{`All ${past.length} past ${past.length === 1 ? 'promo' : 'promos'}`}</Link>
+        <Link href={`/${sport}/${teamSlug}/promos/past`} className="inline-flex min-h-11 items-center text-rd-link no-underline hover:underline">{`All ${past.length} past ${past.length === 1 ? 'promo' : 'promos'}`}</Link>
       </p>
     );
     return (
