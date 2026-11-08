@@ -1,8 +1,10 @@
 // The date tile's state line (docs/per-promo-pages-v2-spec.md, Visuals 2):
 // "Tonight · gates 5:30 PM" when the game is today in the venue's zone and a
-// door time is stored, "Tonight" when none is, "In N days" inside two weeks,
-// else the weekday. Pure: the caller supplies the instant (the route's one
-// clock read) and the zone (the game's, else the building's, else the site's).
+// door time is stored, "Tonight" when none is, "Tomorrow", else "In N days"
+// however far out (ruling 2026-11-08: never the weekday, which the tile
+// already prints). A played date has no state line; the header says so.
+// Pure: the caller supplies the instant (the route's one clock read) and the
+// zone (the game's, else the building's, else the site's).
 
 import { SITE_TIME_ZONE } from './site-today';
 
@@ -35,17 +37,15 @@ export function weekdayName(ymd: string): string {
 }
 
 export interface DateTileState {
-  kind: 'tonight' | 'soon' | 'later' | 'past';
+  kind: 'tonight' | 'tomorrow' | 'soon';
   label: string;
 }
-
-/** Inside two weeks the line counts days; beyond that the weekday says enough. */
-const SOON_DAYS = 14;
 
 export function dateTileState(ymd: string, venueToday: string, doors: string | null): DateTileState | null {
   if (!YMD.test(ymd) || !YMD.test(venueToday)) return null;
   const d = daysBetweenYmd(venueToday, ymd);
+  if (d < 0) return null;
   if (d === 0) return { kind: 'tonight', label: doors ? `Tonight · gates ${doors}` : 'Tonight' };
-  if (d > 0 && d <= SOON_DAYS) return { kind: 'soon', label: `In ${d} day${d === 1 ? '' : 's'}` };
-  return { kind: d < 0 ? 'past' : 'later', label: weekdayName(ymd) };
+  if (d === 1) return { kind: 'tomorrow', label: 'Tomorrow' };
+  return { kind: 'soon', label: `In ${d} days` };
 }

@@ -4224,3 +4224,15 @@ and the CTA section above the image).
 ## 77. The hat glyph in the promo type icon set is weak at 16px (open follow-up, logged 2026-11-07)
 
 The side-profile cap in `src/lib/promo-type-icons.ts` reads at 24px and above but loses its bill at 16px, where it is a small arc with a tail. Redraw it when the icon set reaches the aggregators at 24px (spec Visuals 5); the rail is its only 16px consumer today.
+
+## 78. Sub-44px tap targets on promo pages: breadcrumb, footer and figcaption links (deferred, logged 2026-11-08)
+
+ux-review measured at 390px the breadcrumb crumbs (24x18 to 84x18), the figcaption "source" link (33x12), the source host link under About (43x14) and the footer's twenty links (15px tall) under the 44x44 target size. Deferred: they are inline text links shared with every page, so enlarging them is a layout pass on the header, figcaption and footer, not a promo page change.
+
+## 79. The promo page is the 390px single column at 768 and 1280 (deferred, logged 2026-11-08)
+
+The article is one 640px column (768px from lg) at every width; at 1280 there is 256px of cream either side and the CTA row's text link floats centred under an 810px button. Deferred until a wider layout is designed; the single column is the content-floor layout and nothing on the page is lost by it.
+
+## 80. The image Share button on promo pages is 40x40 (deferred, logged 2026-11-08)
+
+The share control on the tier 1 photo's corner is 40x40 at every width, under the 44x44 target. Deferred: enlarging it where it sits over the photo needs a visual pass together with #78.

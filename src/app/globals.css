@@ -64,6 +64,7 @@
   --color-rd-line: rgba(33, 29, 24, 0.10);
   --color-rd-line-strong: rgba(33, 29, 24, 0.16);
   --color-rd-red: #da2d20;          /* brand red ticket CTA */
+  --color-rd-link: #c62a1e;         /* text links on the cream ground: 5.06:1 where brand red is 4.33:1 (ruling 2026-11-08); buttons and the wordmark keep rd-red */
   --color-rd-red-dark: #b21d12;
   --color-rd-cat-giveaway: #f97316; /* orange (live = green) */
   --color-rd-cat-theme: #7c3aed;    /* purple */

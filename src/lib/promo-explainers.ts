@@ -47,7 +47,7 @@ export const EXPLAINERS_DIR = join(process.cwd(), 'content', 'promo-explainers')
 export const EXPLAINER_WORDS = { min: 80, max: 160 } as const;
 export const EXPLAINER_FAQS = { min: 2, max: 4 } as const;
 /** The small-caps label every rendered guide sits under (spec: decided yes). */
-export const EXPLAINER_LABEL = 'General guide';
+export const EXPLAINER_LABEL = 'Fan guide';
 
 const unquote = (s: string): string => {
   const t = s.trim();

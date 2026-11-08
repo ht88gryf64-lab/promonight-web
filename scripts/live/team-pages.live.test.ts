@@ -34,7 +34,8 @@
 //    checks the checkout's src/lib/robots-txt.ts instead of the served file,
 //    so a branch can be checked against production pages before it deploys.
 // 8. A live promo page whose themeKey has an explainer entry renders the
-//    "General guide" block (per-promo pages v2 content floor, 2026-11-07).
+//    "Fan guide" block (per-promo pages v2 content floor, 2026-11-07; the
+//    eyebrow read "General guide" until 2026-11-08).
 //    The explainer files are read with fs at request time and reach the
 //    serverless bundle only through next.config.ts outputFileTracingIncludes;
 //    if they ever fall out, every page silently renders no guide, and this is
@@ -377,10 +378,10 @@ const GUIDE_PAGES = [
   '/mlb/san-francisco-giants/promos/star-wars-day',
   '/nba/san-antonio-spurs/promos/fan-appreciation-night',
 ];
-const GUIDE_LABEL = 'General guide';
+const GUIDE_LABEL = 'Fan guide';
 const GUIDE_TITLE_RE = /<h2 class="rd-display[^"]*">(?:<span[^>]*><\/span>)?What to expect /;
 
-test(`a promo page with an explainer match renders the General guide block (${HOST})`, async () => {
+test(`a promo page with an explainer match renders the Fan guide block (${HOST})`, async () => {
   for (const path of GUIDE_PAGES) {
     let html: string;
     try {
