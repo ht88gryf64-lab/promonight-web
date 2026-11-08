@@ -6,7 +6,7 @@ import { getAllMatchupSlugs } from '@/lib/cfb/matchups';
 import { isCfbHubLive, LEAGUE_HUBS } from '@/lib/league-hubs';
 import { getIndexableVenueHubSitemapEntries } from '@/lib/venue-hub';
 import { ABOUT_LAST_REVIEWED } from '@/lib/about-copy';
-import { getPromoPageSitemapEntries } from '@/lib/promo-pages';
+import { getPastPromoSitemap, getPromoPageSitemapEntries } from '@/lib/promo-pages';
 import { siteTodayYmd } from '@/lib/site-today';
 
 const BASE_URL = 'https://www.getpromonight.com';
@@ -200,6 +200,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: 'weekly' as const,
     priority: 0.7,
   }));
+  // The archive pages (step 6, 2026-11-08): /{league}/{team}/promos/past for
+  // every team with a played page inside the index window. The played pages
+  // themselves are in /sitemap-past.xml (the index references both), so this
+  // file keeps listing only pages linked from their team page. Fail loud,
+  // like the promo read.
+  const { archives } = await getPastPromoSitemap(siteTodayYmd(now)).catch((err) => {
+    console.error('[sitemap] past promos read failed; refusing to serve a sitemap missing the archive pages', err);
+    throw err;
+  });
+  const archivePages = archives.map((e) => ({
+    url: `${BASE_URL}${e.path}`,
+    ...(e.lastModified ? { lastModified: e.lastModified } : {}),
+    changeFrequency: 'weekly' as const,
+    priority: 0.5,
+  }));
 
   return [
     {
@@ -238,6 +253,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...cfbMatchupPages,
     ...venuePages,
     ...promoPages,
+    ...archivePages,
     {
       url: `${BASE_URL}/about`,
       // Bound to the same editorial constant the page renders as its visible

@@ -39,6 +39,18 @@
  * NFL "seasonComplete2026" archive line drops "this season" because its April
  * rows sit before the lead-in. The RULED PromoList keys were left as recorded.
  *
+ * 2026-11-08, feature/promo-archive (step 6): twelve PromoList LIGHT keys
+ * moved ON A BRANCH, by ruling (the team page's completed section
+ * server-renders the five most recent rows, no resale lift, no season-scoped
+ * eight, and closes with an "All {N} past promos" link to the archive page).
+ * The shapes with played rows moved and nothing else: crossing,
+ * seasonComplete2026 and upcomingPlusPast2026 on MLB, NFL, MLS and WNBA. A
+ * sentence diff of main's HTML against the branch's showed, per key, the
+ * completed rows cut to five (or, where none was server-rendered before, five
+ * appearing), the expander label's count moving with it, and the archive
+ * link; the empty shape and every dark key are untouched. The RULED keys were
+ * left as recorded.
+ *
  * Re-record ONLY from main, never from a branch:
  *   GOLDEN_RECORD=<file> node --import tsx --experimental-test-module-mocks --test <this file>
  */

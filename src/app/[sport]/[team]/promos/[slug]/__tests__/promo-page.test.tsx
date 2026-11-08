@@ -61,6 +61,7 @@ function query(match: (path: string) => boolean, label: string): any {
           if (op === '==') return x === v;
           if (op === '>=') return typeof x === 'string' && x >= (v as string);
           if (op === '<=') return typeof x === 'string' && x <= (v as string);
+          if (op === '<') return typeof x === 'string' && x < (v as string);
           if (op === '!=') return x !== v;
           throw new Error(`unsupported op ${op}`);
         });
@@ -235,6 +236,8 @@ promo('past-club', 't1', { title: 'Tomorrow Towel', pageSlug: 'tomorrow-towel', 
 // An all-played series: two dates under one slug, both before today.
 promo('past-club', 's1', { title: 'Two Nights', pageSlug: 'two-nights', type: 'food', date: '2026-10-20', opponent: 'Wild' });
 promo('past-club', 's2', { title: 'Two Nights', pageSlug: 'two-nights', type: 'food', date: '2026-10-27', opponent: 'Stars' });
+// A towel two seasons back (step 6): outside the index window, served noindex, in the archive.
+promo('past-club', 'pc-ancient', { title: 'Ancient Towel', pageSlug: 'ancient-towel', pageSeason: '2023-24', type: 'food', date: '2024-03-01', opponent: 'Wild', updatedAt: ts('2024-03-02T00:00:00Z') });
 // Outside NHL and NBA the stored flag is the extractor's guess: never a package.
 promo('houston-dynamo', 'm1', { title: 'Family 4-Pack', pageSlug: 'family-4-pack', type: 'kids', date: '2026-11-07', opponent: 'Austin FC', ticketPackageRequired: true, ticketPackageName: 'Family Pack', sourceUrl: 'https://www.houstondynamofc.com/promos', description: 'Four tickets, four hot dogs and four drinks.' });
 // The multi-date series on the Red Wings, and a Pride Night there.
@@ -286,6 +289,14 @@ for (const [i, [title, date]] of ([
 // A Suns bobblehead with no stored image (step 5a, 2026-11-08): the eBay
 // block's page. Its own date, so the canonical rule leaves it alone.
 suns('s9', { title: 'Devin Booker Bobblehead', pageSlug: 'devin-booker-bobblehead', date: '2026-12-20', opponent: 'Mavericks', attendanceCap: 5000, description: 'The first 5,000 fans receive a Devin Booker bobblehead.' });
+// Seven played Suns nights (archive pass, step 6, 2026-11-08): the team page
+// server-renders five of them and links the archive page for all seven.
+for (const [i, [title, date]] of ([
+  ['Ring Night', '2026-10-01'], ['Opening Night', '2026-10-03'], ['Legends Night', '2026-10-05'], ['Hispanic Heritage Night', '2026-10-07'],
+  ['Pink Out', '2026-10-09'], ['Military Night', '2026-10-11'], ['Rally Towel', '2026-10-13'],
+] as const).entries()) {
+  suns(`sp${i}`, { title, pageSlug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'), type: 'theme', date, opponent: 'Jazz' });
+}
 // Predators Nov 7: a theme night whose title contains the tier 1 giveaway's;
 // the giveaway is the canonical.
 promo('nashville-predators', 'n1', { title: 'Hometown Remix & Catfish Gravy Boat', pageSlug: 'hometown-remix-catfish-gravy-boat', type: 'theme', date: '2026-11-07', opponent: 'Blues', sourceUrl: 'https://www.nhl.com/predators/fans/promotions' });
@@ -564,8 +575,11 @@ test('theme match: the same promo at other clubs (3 to 5), one per club, and the
   assert.match(h, /Pride at other clubs this season/);
   for (const t of ['detroit-red-wings', 'anaheim-ducks', 'pittsburgh-penguins', 'dallas-stars']) assert.match(h, new RegExp(`href="/nhl/${t}/promos/pride-night"`));
   assert.ok(!h.includes('More NHL theme nights coming up'));
-  assert.match(h, /Previous edition/);
-  assert.match(h, /href="\/nhl\/minnesota-wild\/promos\/pride-night-2025-26"[^>]*>Pride Night 2025-26</);
+  // The editions block (archive pass, step 6): one row per prior edition, the
+  // name and season on the row, after This game.
+  assert.match(h, /Previous editions/);
+  assert.match(h, /href="\/nhl\/minnesota-wild\/promos\/pride-night-2025-26"[^>]*>(?:<img[^>]*>)?<span[^>]*><span[^>]*>Pride Night 2025-26</);
+  assert.ok(h.indexOf('>This game</h2>') < h.search(/>Previous editions<\/h2>/), 'after This game');
   // Also at this game: the Blaze Orange Hat, never the special-ticket row.
   assert.match(h, /href="\/nhl\/minnesota-wild\/promos\/blaze-orange-hat"/);
   guard(h, 'pride-night');
@@ -810,7 +824,9 @@ test('team page: the extra upcoming rows and packages sit in closed <details>, r
   assert.match(details.replace(/<!-- -->/g, ''), /Show all 16 upcoming promos/);
   assert.match(details, /href="\/nba\/phoenix-suns\/promos\/fireworks-night"/, 'the last row is in the HTML');
   assert.match(details, /id="promo-2027-04-10-fireworks-night"/, 'with its deep-link anchor');
-  assert.ok(!suns.includes('aria-expanded="false"'), 'no click-to-mount expander for upcoming rows');
+  // The completed archive keeps its click-to-mount expander (step 6: the rows
+  // past the five are behind it); the upcoming rows have none.
+  assert.ok(!suns.slice(0, suns.indexOf('Already happened')).includes('aria-expanded="false"'), 'no click-to-mount expander for upcoming rows');
   const wild = (await teamPageHtml('minnesota-wild')).html;
   const group = wild.slice(wild.indexOf('aria-labelledby="ticket-packages-heading"'), wild.indexOf('</section>', wild.indexOf('aria-labelledby="ticket-packages-heading"')));
   for (const slug of ['puck-package-night', 'wizard-night']) {
@@ -1205,7 +1221,9 @@ test('played (ruling 2026-11-08): every date before today in the venue zone; the
   // The way forward in place of the ticket row: the club's next upcoming
   // promo page, Share beside it, then the editions either side.
   assert.match(h, /<a [^>]*href="\/nhl\/past-club\/promos\/tomorrow-towel"[^>]*>Next Past Club promo<\/a>/);
-  assert.match(h, /<a [^>]*href="\/nhl\/past-club\/promos\/yesterday-towel-2025-26"[^>]*>Previous edition: Yesterday Towel 2025-26 · Monday, Mar 2, 2026<\/a>/);
+  // The previous edition is a row of the editions block (step 6), not a CTA line.
+  assert.ok(!h.includes('Previous edition:'), 'no previous-edition CTA line');
+  assert.match(h, /href="\/nhl\/past-club\/promos\/yesterday-towel-2025-26"[^>]*>(?:<img[^>]*>)?<span[^>]*><span[^>]*>Yesterday Towel 2025-26<\/span><span[^>]*>Monday, Mar 2, 2026/);
   assert.match(h, /<a [^>]*href="\/nhl\/past-club\/promos\/yesterday-towel-2027-28"[^>]*>Next edition: Yesterday Towel 2027-28 · Wednesday, Oct 20, 2027<\/a>/);
   // Nothing to sell: no ticket, parking, hotel or reminder link, and no
   // affiliate anchor of any kind.
@@ -1298,4 +1316,75 @@ test('eBay listings: a failed call renders the page with no block and does not t
   assert.doesNotMatch(lindell.h, /bobbleheads on eBay<\/h2>/);
   assert.equal(ebayCalls.length, 0, 'no call for a tier 1 upcoming page');
   ebayHandler = () => new Response('', { status: 500 });
+});
+
+// ── the archive pass (step 6, 2026-11-08) ────────────────────────────────────
+
+test('a played page outside the index window serves noindex; one inside it is indexable', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const ancient = await render('nhl', 'past-club', 'ancient-towel');
+  assert.deepEqual(ancient.meta.robots, { index: false, follow: true }, '2023-24 is two seasons back on 2026-10-29');
+  assert.match(ancient.h, /This game has been played/);
+  const lastSeason = await render('nhl', 'past-club', 'yesterday-towel-2025-26');
+  assert.equal(lastSeason.meta.robots, undefined, '2025-26 is the previous season: indexable');
+});
+
+test('sitemap-past: played pages inside the window only, one per page, never a tombstone, an upcoming page or a page outside the window; the archive page of every team with one', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const { getPastPromoSitemap } = await import('@/lib/promo-pages');
+  const { pages, archives } = await getPastPromoSitemap(TODAY);
+  const paths = pages.map((e) => e.path);
+  for (const p of ['/nhl/past-club/promos/yesterday-towel', '/nhl/past-club/promos/yesterday-towel-2025-26', '/nhl/minnesota-wild/promos/pride-night-2025-26', '/nba/phoenix-suns/promos/rally-towel', '/nba/phoenix-suns/promos/ring-night']) assert.ok(paths.includes(p), `listed: ${p}`);
+  for (const p of ['/nhl/past-club/promos/ancient-towel', '/nhl/minnesota-wild/promos/tombstoned-past-hat', '/nhl/minnesota-wild/promos/blaze-orange-hat', '/nhl/minnesota-wild/promos/pride-night', '/nhl/past-club/promos/tomorrow-towel']) assert.ok(!paths.includes(p), `not listed: ${p}`);
+  assert.equal(new Set(paths).size, paths.length, 'one URL per page');
+  for (const e of pages) assert.ok(!e.path.endsWith('/promos/past'), 'the archive pages are not in the past file');
+  const archivePaths = archives.map((e) => e.path).sort();
+  for (const p of ['/nhl/past-club/promos/past', '/nba/phoenix-suns/promos/past', '/nhl/minnesota-wild/promos/past']) assert.ok(archivePaths.includes(p), `archive listed: ${p}`);
+  assert.ok(!archivePaths.includes('/nhl/gray-club/promos/past'), 'a club with nothing played has no archive entry');
+  process.env.PROMO_PAGES_LIVE = 'false';
+  assert.deepEqual(await getPastPromoSitemap('2099-01-01'), { pages: [], archives: [] });
+  process.env.PROMO_PAGES_LIVE = 'true';
+});
+
+const archiveParams = (sport: string, team: string) => ({ params: Promise.resolve({ sport, team }) });
+
+test('the archive page: 404 for a club with nothing played; otherwise the seasons newest first, every row a link, breadcrumb, self canonical, description inside the battery’s bounds', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const { default: PastPage, generateMetadata: pastMeta } = await import('../../past/page');
+  await assert.rejects(() => PastPage(archiveParams('nhl', 'gray-club')), is404, 'nothing played: 404, not an empty page');
+  assert.deepEqual(await pastMeta(archiveParams('nhl', 'gray-club')), {});
+  await assert.rejects(() => PastPage(archiveParams('nba', 'past-club')), is404, 'the wrong sport is a 404');
+
+  const h = await html(await PastPage(archiveParams('nhl', 'past-club')));
+  const meta = await pastMeta(archiveParams('nhl', 'past-club'));
+  assert.equal(meta.title, 'Past Club past promos and giveaways');
+  assert.equal(meta.alternates?.canonical, 'https://www.getpromonight.com/nhl/past-club/promos/past');
+  const desc = String(meta.description);
+  assert.ok(desc.length >= 100 && desc.length <= 155, `description ${desc.length} chars: ${desc}`);
+  assert.equal(meta.robots, undefined, 'indexable');
+  assert.match(h, /<h1[^>]*>Past Club past promos and giveaways<\/h1>/);
+  assert.match(h, /<span aria-current="page" class="text-rd-ink-soft">Past promos<\/span>/);
+  assert.match(h, /href="\/nhl\/past-club"[^>]*>Past Club</, 'the team crumb');
+  const seasons = [...h.matchAll(/>(\d{4}(?:-\d{2})?) season<\/h2>/g)].map((m) => m[1]);
+  assert.deepEqual(seasons, ['2026-27', '2025-26', '2023-24'], 'newest season first');
+  for (const slug of ['yesterday-towel', 'two-nights', 'yesterday-towel-2025-26', 'ancient-towel']) assert.match(h, new RegExp(`href="/nhl/past-club/promos/${slug}"`), `row: ${slug}`);
+  assert.ok(!h.includes('href="/nhl/past-club/promos/tomorrow-towel"'), 'nothing upcoming');
+  assert.ok(!h.includes('href="/nhl/past-club/promos/yesterday-towel-2027-28"'), 'nothing upcoming, next season');
+  const ld = jsonLd(h).find((d) => d['@type'] === 'BreadcrumbList');
+  assert.ok(ld, 'a BreadcrumbList');
+  assert.equal(ld!.itemListElement[ld!.itemListElement.length - 1].name, 'Past promos');
+  assert.equal((h.match(/<article /g) ?? []).length, 1, 'one article');
+  assert.match(h, /<article class="page-content[^"]*" data-ad-region="content"/);
+});
+
+test('team page: the server HTML carries the five most recent completed rows, the rest behind the expander, and the archive link with the full count', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const suns = (await teamPageHtml('phoenix-suns')).html;
+  const completedRows = (suns.match(/>Completed<\/span>/g) ?? []).length;
+  assert.equal(completedRows, 5, `${completedRows} completed rows server-rendered`);
+  assert.match(suns, /Show 2 more completed promos/);
+  assert.match(suns, /<a [^>]*href="\/nba\/phoenix-suns\/promos\/past"[^>]*>All 7 past promos<\/a>/);
+  // The five are the most recent: Rally Towel (Oct 13) in, Ring Night (Oct 1) out.
+  assert.ok(suns.includes('href="/nba/phoenix-suns/promos/rally-towel"'), 'the newest played row is in the HTML');
+  assert.ok(!suns.includes('href="/nba/phoenix-suns/promos/ring-night"'), 'the oldest is behind the expander');
 });

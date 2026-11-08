@@ -31,6 +31,7 @@ import { makeKeyedTtlCache, STATIC_TTL_MS } from './collection-cache';
 import { getVenueHub, getVenueHubForTeam, type TeamVenueHubLink } from './venue-hub';
 import { beforeYouGoUnion } from './before-you-go-rows';
 import { ebayListingsFor, type EbayListing } from './ebay-browse';
+import { archiveSeasons, nextEditionFor, playedDateIndexable, previousEditionsFor, type ArchiveSeason, type PromoEdition } from './promo-editions';
 import { isBobbleheadGiveaway } from './ebay';
 import type { BeforeYouGoRow } from './before-you-go';
 import { buildCondensedLogistics, type CondensedLine } from './venue-hub-condensed';
@@ -338,13 +339,17 @@ export interface PromoPageContext {
    *  reaches 3. The cascade is what keeps the 8-link floor on a kids or food
    *  page with no theme (review finding 6). */
   crossTeam: { kind: 'theme' | 'league-type' | 'league' | 'type'; links: LinkedPromo[] } | null;
-  /** The prior season's page under the same base slug, when one exists. */
-  previousEdition: { href: string; season: string; date: string } | null;
-  /** The next season's page under the same base slug, when one exists (the
-   *  earliest later season; within it, the earliest date). A played page
-   *  (ruling 2026-11-08) offers it beside the previous edition in place of
-   *  the ticket row. */
-  nextEdition: { href: string; season: string; date: string } | null;
+  /** The prior editions of this promotion (archive pass, step 6,
+   *  2026-11-08): the same team and themeKey (else the same normalized
+   *  name) in earlier seasons, played dates only, never this page; newest
+   *  first, at most five (src/lib/promo-editions.ts). */
+  previousEditions: PromoEdition[];
+  /** The newest of `previousEditions`, or null. */
+  previousEdition: PromoEdition | null;
+  /** The forward link: the current season's edition of this promotion when
+   *  one exists, else the earliest later season's. A played page (ruling
+   *  2026-11-08) offers it in place of the ticket row. */
+  nextEdition: PromoEdition | null;
   /** The PromoNight Short for one of the page's promo ids (the social
    *  bridge, 2026-11-05: socialVideos/youtube), or null. */
   short: PromoShortVideo | null;
@@ -599,35 +604,13 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
   // is already in "Also at this game", so it is not the next one.
   const nextTeamPromos = onePerKey(others.filter((r) => r.date >= today && !pageDates.has(r.date)), (r) => r.pageSlug).slice(0, 5).map((r) => link(team, r));
 
-  // Previous edition: the same base slug in an earlier season, bare or
-  // carrying that season's suffix (the collision rule, promo-page-fields.js).
-  const base = baseSlugOf(page.slug, page.season);
-  let previousEdition: PromoPageContext['previousEdition'] = null;
-  let prevSeason: string | null = null;
-  for (const r of teamRows) {
-    if (r.tombstoned || !r.pageSeason || !page.season || r.pageSeason >= page.season) continue;
-    if (baseSlugOf(r.pageSlug, r.pageSeason) !== base) continue;
-    if (!YMD_RE.test(r.date) || !r.title.trim()) continue;
-    // The latest earlier season wins; within it, the latest date.
-    if (prevSeason !== null && laterSeason(prevSeason, r.pageSeason) !== r.pageSeason) continue;
-    if (prevSeason === r.pageSeason && previousEdition && previousEdition.date >= r.date) continue;
-    prevSeason = r.pageSeason;
-    previousEdition = { href: promoPagePath(team.sportSlug, team.id, r.pageSlug), season: r.pageSeason, date: r.date };
-  }
-  // Next edition: the same base slug in a later season. The earliest later
-  // season wins; within it, the earliest date (the mirror of the previous
-  // edition's rule).
-  let nextEdition: PromoPageContext['nextEdition'] = null;
-  let nextSeason: string | null = null;
-  for (const r of teamRows) {
-    if (r.tombstoned || !r.pageSeason || !page.season || r.pageSeason <= page.season) continue;
-    if (baseSlugOf(r.pageSlug, r.pageSeason) !== base) continue;
-    if (!YMD_RE.test(r.date) || !r.title.trim()) continue;
-    if (nextSeason !== null && laterSeason(nextSeason, r.pageSeason) !== nextSeason) continue;
-    if (nextSeason === r.pageSeason && nextEdition && nextEdition.date <= r.date) continue;
-    nextSeason = r.pageSeason;
-    nextEdition = { href: promoPagePath(team.sportSlug, team.id, r.pageSlug), season: r.pageSeason, date: r.date };
-  }
+  // Editions (archive pass, step 6, 2026-11-08): the same promotion in
+  // other seasons, by theme or by normalized name (src/lib/promo-editions.ts).
+  const editionHref = (slug: string) => promoPagePath(team.sportSlug, team.id, slug);
+  const editionPage = { slug: page.slug, season: page.season, themeKey: page.primary.themeKey, title: page.primary.title };
+  const previousEditions = previousEditionsFor(teamRows, editionPage, today, editionHref);
+  const previousEdition = previousEditions[0] ?? null;
+  const nextEdition = nextEditionFor(teamRows, editionPage, team.league, today, editionHref);
 
   // Cross-team (section 10): the same theme at other clubs, else the cascade
   // documented on PromoPageContext. On a removed page too: a reader who came
@@ -680,12 +663,98 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
     alsoAtGame,
     nextTeamPromos,
     crossTeam,
+    previousEditions,
     previousEdition,
     nextEdition,
     short,
     ebayListings: await ebayPending,
   };
 });
+
+// ── the archive (step 6, 2026-11-08) ─────────────────────────────────────────
+
+/** The team's played editions by season, newest first, for
+ *  /{league}/{team}/promos/past. Empty when the team has no played row. */
+export const getPastPromoEditions = cache(async (team: Team, today: string): Promise<ArchiveSeason[]> => {
+  const rows = await loadTeamPageRows(team);
+  return archiveSeasons(rows, today, (slug) => promoPagePath(team.sportSlug, team.id, slug));
+});
+
+/** The archive page's path. */
+export function pastPromosPath(sportSlug: string, teamId: string): string {
+  return `/${sportSlug}/${teamId}/promos/past`;
+}
+
+async function readPastDocs(floor: string, today: string, teams: Team[]): Promise<{ teamId: string; id: string; data: FirebaseFirestore.DocumentData }[]> {
+  try {
+    const snap = await db.collectionGroup('promos').where('date', '>=', floor).where('date', '<', today).orderBy('date', 'asc').get();
+    return snap.docs.map((d) => ({ teamId: d.ref.parent.parent?.id ?? '', id: d.id, data: d.data() }));
+  } catch {
+    const perTeam = await Promise.all(
+      teams.map(async (t) => {
+        const s = await db.collection('teams').doc(t.id).collection('promos').where('date', '>=', floor).where('date', '<', today).get();
+        return s.docs.map((d) => ({ teamId: t.id, id: d.id, data: d.data() }));
+      }),
+    );
+    return perTeam.flat().sort((a, b) => String(a.data.date).localeCompare(String(b.data.date)));
+  }
+}
+
+export interface PastPromoSitemap {
+  /** Played pages inside the index window, one per page. */
+  pages: PromoSitemapEntry[];
+  /** The archive page of every team with a played page in the window. */
+  archives: PromoSitemapEntry[];
+}
+
+const pastSitemapCache = makeKeyedTtlCache<PastPromoSitemap>(STATIC_TTL_MS);
+
+/** Played promo pages still indexable (the current and the previous season
+ *  of their league, src/lib/promo-editions.ts playedDateIndexable), one URL
+ *  per page with the latest updatedAt, duplicates under the canonical rule
+ *  left out, pages with a date still to come left out (they are in the live
+ *  sitemap); and the archive page of each team that has one. The read is
+ *  bounded at two calendar years back, which covers the previous season of
+ *  every league. Empty when the flag is off. */
+export async function getPastPromoSitemap(today: string): Promise<PastPromoSitemap> {
+  if (!isPromoPagesLive()) return { pages: [], archives: [] };
+  return pastSitemapCache(today, async () => {
+    const [teams, upcoming] = await Promise.all([getAllTeams(), getUpcomingPromoIndex(today)]);
+    const teamById = new Map(teams.map((t) => [t.id, t]));
+    const floor = `${Number(today.slice(0, 4)) - 2}-01-01`;
+    const docs = await readPastDocs(floor, today, teams);
+    const upcomingPages = new Set(upcoming.map((r) => `${r.teamId}|${r.pageSlug}|${r.pageSeason ?? ''}`));
+    const index: IndexedPromo[] = [];
+    const byPage = new Map<string, PromoSitemapEntry>();
+    const byTeam = new Map<string, PromoSitemapEntry>();
+    for (const d of docs) {
+      const team = teamById.get(d.teamId);
+      if (!team) continue;
+      const data = d.data;
+      if (!isVisiblePromo({ tombstoned: data.tombstoned, isPostseason: data.isPostseason })) continue;
+      const pageSlug = str(data.pageSlug);
+      const pageSeason = str(data.pageSeason);
+      const date = typeof data.date === 'string' && YMD_RE.test(data.date) ? data.date : null;
+      const title = str(data.title);
+      if (!pageSlug || !date || !title || date >= today) continue;
+      const stamp = isoOf(data.updatedAt);
+      const archivePath = pastPromosPath(team.sportSlug, team.id);
+      const archive = byTeam.get(archivePath);
+      const stampDate = stamp ? new Date(stamp) : null;
+      if (!archive) byTeam.set(archivePath, { path: archivePath, lastModified: stampDate });
+      else if (stampDate && (!archive.lastModified || stampDate > archive.lastModified)) archive.lastModified = stampDate;
+      if (!playedDateIndexable(team.league, date, today)) continue;
+      if (upcomingPages.has(`${team.id}|${pageSlug}|${pageSeason}`)) continue;
+      index.push({ teamId: team.id, promoId: d.id, date, title, type: data.type as PromoType, pageSlug, pageSeason: pageSeason || null, themeKey: str(data.themeKey), imageTier: tierOf(data.imageTier), updatedAt: stamp, ticketPackage: isTicketPackageLeague(team.league) && isTicketPackageDoc(data) });
+      const path = promoPagePath(team.sportSlug, team.id, pageSlug);
+      const prior = byPage.get(path);
+      if (!prior) byPage.set(path, { path, lastModified: stampDate });
+      else if (stampDate && (!prior.lastModified || stampDate > prior.lastModified)) prior.lastModified = stampDate;
+    }
+    const duplicates = await sitemapDuplicates(index, teamById);
+    return { pages: [...byPage.values()].filter((e) => !duplicates.has(e.path)), archives: [...byTeam.values()] };
+  });
+}
 
 // ── sitemap (brief C.11) ─────────────────────────────────────────────────────
 

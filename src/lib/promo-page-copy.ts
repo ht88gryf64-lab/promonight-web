@@ -855,11 +855,23 @@ export function canonicalSlugFor<T extends CanonicalCandidate>(pageSlug: string,
 /** Noindex when the name or every date is missing, and when a removed page's
  *  last date has passed. A removed page before its date stays indexable: it
  *  says the promotion is gone, which is the useful answer until the game. */
-export function promoPageIndexable(opts: { title: string; dates: readonly string[]; removed: boolean; today: string }): boolean {
+export function promoPageIndexable(opts: { title: string; dates: readonly string[]; removed: boolean; today: string; league: string }): boolean {
   if (!cleanText(opts.title)) return false;
   const valid = opts.dates.filter((d) => YMD_RE.test(d));
   if (valid.length === 0) return false;
-  if (opts.removed) return valid[valid.length - 1] >= opts.today;
+  const last = valid[valid.length - 1];
+  if (opts.removed) return last >= opts.today;
+  // A played page (every date before today) stays indexable through the
+  // current and the previous season of its league (archive pass, ruling
+  // 2026-11-08); older it is served with noindex, like a tombstone past its
+  // date. The season is the league's own label (seasonLabelFor), so an NHL
+  // page from March reads as last season until July.
+  if (last < opts.today) {
+    const season = seasonLabelFor(opts.league, last);
+    const current = seasonLabelFor(opts.league, opts.today);
+    const previous = current ? previousSeasonLabel(current) : null;
+    return !!season && (season === current || season === previous);
+  }
   return true;
 }
 

@@ -72,7 +72,11 @@ describe('the archive, by season', () => {
     const heat = [promo('2026-04-29', 'Mashup Logo Night'), promo('2026-04-22', 'Vice Logo Night')];
     const t = text(list(HEAT, heat, false));
     assert.match(t, /No upcoming Miami Heat promos scheduled right now\. See completed 2025-26 promos below\./);
-    assert.match(t, /LAST SEASON \(2025-26\) 2 completed events ▸/);
+    // Two rows, both server-rendered (the five-row cap, step 6): no expander
+    // arrow after the count; the archive link follows the block.
+    assert.match(t, /LAST SEASON \(2025-26\) 2 completed events/);
+    assert.doesNotMatch(t, /2 completed events ▸/);
+    assert.match(t, /All 2 past promos/);
     assert.doesNotMatch(t, /SEASON PROMOS/);
     assert.doesNotMatch(t, /on record for the/);
     assert.doesNotMatch(t, /this season/);
@@ -84,19 +88,23 @@ describe('the archive, by season', () => {
     const t = text(list(HEAT, rows, true));
     assert.match(t, /2026-27 SEASON PROMOS/);
     assert.match(t, /All 2 Miami Heat promotions on record for the 2026-27 season are below\./);
-    assert.match(t, /LAST SEASON \(2025-26\) 1 completed event ▸/);
+    assert.match(t, /LAST SEASON \(2025-26\) 1 completed event/);
+    assert.match(t, /All 3 past promos/);
   });
 
-  test('the resale lift stays at three across both seasons', () => {
-    // Five completed bobbleheads: two this season, three last season. The lift
-    // takes the current season first (A, B) and has ONE left for last season
-    // (C); D and E stay behind the collapse, out of the server HTML. Without
-    // the shared budget, last season would lift three more.
+  test('the server renders the five most recent completed rows across both seasons, the rest behind the expander, and links the archive (step 6, 2026-11-08)', () => {
+    // Seven completed bobbleheads: two this season, five last season. The
+    // five-row budget takes the current season first (A, B) and has three
+    // left for last season (C, D, E); F and G stay behind the collapse, out
+    // of the server HTML. The lift that once reordered bobbleheads is gone.
     const bh = (d: string, n: string) => promo(d, `${n} Bobblehead`, { type: 'giveaway' });
-    const rows = [bh('2026-10-02', 'A'), bh('2026-10-01', 'B'), bh('2026-03-01', 'C'), bh('2026-02-01', 'D'), bh('2025-12-01', 'E')];
+    const rows = [bh('2026-10-02', 'A'), bh('2026-10-01', 'B'), bh('2026-03-01', 'C'), bh('2026-02-01', 'D'), bh('2025-12-01', 'E'), bh('2025-11-15', 'F'), bh('2025-11-01', 'G')];
     const html = list(DETROIT, rows, true);
-    const shown = ['A', 'B', 'C', 'D', 'E'].filter((n) => html.includes(`${n} Bobblehead`));
-    assert.deepEqual(shown, ['A', 'B', 'C']);
+    const shown = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].filter((n) => html.includes(`${n} Bobblehead`));
+    assert.deepEqual(shown, ['A', 'B', 'C', 'D', 'E']);
+    const t = text(html);
+    assert.match(t, /Show 2 more completed promos/);
+    assert.match(html, /href="\/nhl\/detroit-red-wings\/promos\/past"[^>]*>All 7 past promos<\/a>/);
   });
 
   test('MLB: unchanged "COMPLETED 2026 PROMOS ... this season"', () => {

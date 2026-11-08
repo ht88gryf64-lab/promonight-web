@@ -8,7 +8,7 @@ import { LazyPromoRows } from '@/components/redesign/LazyPromoRows';
 import { groupPromoRows } from '@/lib/promo-row-groups';
 import { PromoArrivalHighlight } from '@/components/redesign/PromoArrivalHighlight';
 import { isBobbleheadGiveaway, isEbayResaleActive } from '@/lib/ebay';
-import { splitCompletedForRender } from '@/lib/render-windows';
+import Link from 'next/link';
 import { promoAnchorId, splitPromosByDate, todayYmd, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import {
   seasonSpan,
@@ -209,6 +209,19 @@ const COMPLETED_SSR_WHEN_SEASON_SCOPED = 8;
 
 const RESALE_LIFT_VISIBLE = 3;
 
+/**
+ * THE ARCHIVE PASS (step 6, 2026-11-08). The light variant server-renders
+ * the five most recent completed rows and no more, in date order (the resale
+ * lift that reordered older bobbleheads above newer rows is retired here; a
+ * bobblehead among the five keeps its resale CTA), then an "All {N} past
+ * promos" link to the team's archive page (/{league}/{team}/promos/past),
+ * which carries every past edition. The rest stays behind the expander,
+ * client-mounted. On NHL and NBA the five are spent across the season groups,
+ * current season first. The season-scoped eight and the lift above were the
+ * only ways the completed HTML grew past five; both are superseded.
+ */
+const COMPLETED_SSR = 5;
+
 export function PromoList({
   promos,
   teamSlug,
@@ -373,16 +386,10 @@ export function PromoList({
   // surface and not merely on the lift.
   // A partition of `past`: every completed row lands in exactly one group. The
   // arithmetic lives in src/lib/render-windows.ts and is tested there.
-  const {
-    resale: pastResale,
-    ssr: pastSsr,
-    collapsed: pastCollapsed,
-  } = splitCompletedForRender(
-    past,
-    isBobbleheadGiveaway,
-    RESALE_LIFT_VISIBLE,
-    seasonScoped ? COMPLETED_SSR_WHEN_SEASON_SCOPED : 0,
-  );
+  // Light variant (archive pass): the five most recent rows, no lift.
+  const pastResale: Promo[] = [];
+  const pastSsr = past.slice(0, COMPLETED_SSR);
+  const pastCollapsed = past.slice(COMPLETED_SSR);
 
   // Resolves to undefined (not a null-rendering element) for non-qualifying
   // rows, so the rows' `resaleSlot &&` wrapper never emits an empty div and
@@ -463,6 +470,7 @@ export function PromoList({
                       promo={promo}
                       share={share}
                       completed
+                      resaleSlot={resaleSlotFor(promo, 'light')}
                     />
                   ))}
                 </div>
@@ -487,16 +495,13 @@ export function PromoList({
     // RESALE_LIFT_VISIBLE across the WHOLE archive (current season first), so
     // grouping never widens the server-rendered affiliate surface; the
     // season-evidence slice belongs to the named season only.
-    let resaleLeft = RESALE_LIFT_VISIBLE;
+    // The five server-rendered rows are spent across the season groups,
+    // current season first (archive pass, step 6).
+    let ssrLeft = COMPLETED_SSR;
     const splitParts = splitGroups?.map((g) => {
-      const parts = splitCompletedForRender(
-        g.rows,
-        isBobbleheadGiveaway,
-        resaleLeft,
-        seasonScoped && g.isCurrent ? COMPLETED_SSR_WHEN_SEASON_SCOPED : 0,
-      );
-      resaleLeft -= parts.resale.length;
-      return parts;
+      const ssr = g.rows.slice(0, ssrLeft);
+      ssrLeft -= ssr.length;
+      return { resale: [] as Promo[], ssr, collapsed: g.rows.slice(ssr.length) };
     });
     const upcomingGroups = groupPromoRows(upcomingVisible);
     const renderUpcomingRow = (promo: Promo, i: number) => (
@@ -627,6 +632,11 @@ export function PromoList({
         No upcoming {teamName} promos scheduled right now. See completed {pastPointerYears}promos below.
       </p>
     );
+    const archiveLink = (
+      <p className="mt-4 font-rd text-[14px] font-medium">
+        <Link href={`/${sport}/${teamSlug}/promos/past`} className="text-rd-link no-underline hover:underline">{`All ${past.length} past ${past.length === 1 ? 'promo' : 'promos'}`}</Link>
+      </p>
+    );
     return (
       <section className="py-12 px-6">
         <PromoArrivalHighlight />
@@ -697,12 +707,28 @@ export function PromoList({
             <div className="text-center py-8">{pastPointerLine}</div>
           )}
 
-          {splitGroups && splitParts
-            ? splitGroups.map((g, gi) => (
+          {/* The archive link (step 6, 2026-11-08) closes the completed
+              section: every past edition by season on the archive page. It is
+              the one crawlable path from here to the past pages, so the
+              sitemap can list the archive page (the live battery checks every
+              sitemap promo URL is an href on its team page). Inside the
+              past-rows branch, so a page with nothing played renders the
+              element tree it rendered before. */}
+          {splitGroups && splitParts ? (
+            <>
+              {splitGroups.map((g, gi) => (
                 <Fragment key={g.label}>{archiveBlock(g.heading, g.subline, splitParts[gi], `${g.label}-`)}</Fragment>
-              ))
-            : past.length > 0 &&
-              archiveBlock(pastHeading, pastCount, { resale: pastResale, ssr: pastSsr, collapsed: pastCollapsed }, '')}
+              ))}
+              {archiveLink}
+            </>
+          ) : (
+            past.length > 0 && (
+              <>
+                {archiveBlock(pastHeading, pastCount, { resale: pastResale, ssr: pastSsr, collapsed: pastCollapsed }, '')}
+                {archiveLink}
+              </>
+            )
+          )}
           {showAppPitch && (
             <AppPushPitch variant="light" teamName={teamName} teamSlug={teamSlug} league={league} />
           )}

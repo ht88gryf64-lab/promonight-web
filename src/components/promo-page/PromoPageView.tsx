@@ -23,6 +23,7 @@ import { dateTileState, ymdInZone, type DateTileState } from '@/lib/promo-date-t
 import { gameTimeMarkup } from '@/lib/promo-page-time';
 import { promoRailItems } from '@/lib/promo-rail';
 import { PromoRail } from '@/components/promo-rail/PromoRail';
+import { PromoCard } from '@/components/promo-rail/PromoCard';
 import { PromoTypeSprite } from '@/components/promo-icons/PromoTypeIcon';
 import { SeasonTimeline } from '@/components/promo-page/SeasonTimeline';
 import type { ImageSize } from '@/lib/image-dimensions';
@@ -143,7 +144,7 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
   const base = heroImage(page);
   const image = base.kind === 'photo' && imageSize ? { ...base, width: imageSize.width, height: imageSize.height } : base;
   const imageUrl = image.kind === 'photo' ? image.url : `${SITE_URL}${image.url}`;
-  const indexable = promoPageIndexable({ title: primary.title, dates: removed ? page.removedDates : dates, removed, today });
+  const indexable = promoPageIndexable({ title: primary.title, dates: removed ? page.removedDates : dates, removed, today, league: team.league });
   // The og:image (2026-11-03): the PromoNight share card, keyed on the page's
   // stamp. The Event schema keeps the tier image (imageUrl), unchanged.
   const shareCardDate = primary.date || null;
@@ -214,23 +215,6 @@ function monthName(ym: string): string {
 // The date is the tile; the subtitle never repeats it. A cross-team card
 // names the club, a same-team card the opponent and the time (ruling
 // 2026-10-29).
-function PromoCard({ p, showTeam }: { p: LinkedPromo; showTeam: boolean }) {
-  const d = dateBlock(p.date);
-  const sub = showTeam ? p.teamName : [p.displayOpponent ? `vs ${p.displayOpponent}` : null, p.displayTime || null].filter(Boolean).join(' · ');
-  return (
-    <Link href={p.href} className="flex items-center gap-3 rounded-xl border border-rd-line bg-rd-card p-2.5 text-rd-ink no-underline transition-colors hover:border-rd-line-strong">
-      <span className="w-11 shrink-0 text-center leading-none">
-        <span className="block font-rd text-[10px] uppercase tracking-[0.1em] text-rd-ink-faint">{d.month}</span>
-        <span className="rd-numerals block text-[20px]">{d.day}</span>
-      </span>
-      <span className="min-w-0 flex-1 text-[14px]">
-        <span className="block font-semibold">{p.title}</span>
-        {sub ? <span className="block text-[12px] text-rd-ink-faint">{sub}</span> : null}
-      </span>
-    </Link>
-  );
-}
-
 export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageViewProps) {
   const { team, primary, dates } = page;
   const removed = page.state === 'removed';
@@ -598,15 +582,13 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
                 </Link>
                 <PromoShareRowButton {...shareProps} />
               </div>
-              {ctx.previousEdition || ctx.nextEdition ? (
-                <div className="flex flex-col gap-1 font-rd text-[14px]">
-                  {ctx.previousEdition ? (
-                    <Link href={ctx.previousEdition.href} className="font-medium text-rd-link no-underline hover:underline">{`Previous edition: ${cleanText(primary.title)} ${ctx.previousEdition.season} · ${formatLongDate(ctx.previousEdition.date)}`}</Link>
-                  ) : null}
-                  {ctx.nextEdition ? (
-                    <Link href={ctx.nextEdition.href} className="font-medium text-rd-link no-underline hover:underline">{`Next edition: ${cleanText(primary.title)} ${ctx.nextEdition.season} · ${formatLongDate(ctx.nextEdition.date)}`}</Link>
-                  ) : null}
-                </div>
+              {ctx.nextEdition ? (
+                // The forward link (archive pass, step 6): the current season's
+                // edition of this promotion when there is one, else the next.
+                // The past editions are the block after This game.
+                <p className="m-0 font-rd text-[14px]">
+                  <Link href={ctx.nextEdition.href} className="font-medium text-rd-link no-underline hover:underline">{`Next edition: ${cleanText(ctx.nextEdition.title)} ${ctx.nextEdition.season} · ${formatLongDate(ctx.nextEdition.date)}`}</Link>
+                </p>
               ) : null}
             </div>
           </section>
@@ -802,6 +784,33 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
           </section>
         ) : null}
 
+        {ctx.previousEditions.length ? (
+          // Previous editions (archive pass, step 6, 2026-11-08): the same
+          // promotion in earlier seasons, newest first, at most five, each
+          // row one Link with the tier 1 photo when the edition has one. After
+          // This game and above the eBay block, so a played bobblehead reads
+          // its history before the resale prices.
+          <section className="mt-6 flex flex-col gap-2.5 rounded-2xl border border-rd-line bg-rd-card p-3.5">
+            <H2>Previous editions</H2>
+            <ul className="m-0 flex list-none flex-col gap-2 p-0">
+              {ctx.previousEditions.map((e) => (
+                <li key={e.href}>
+                  <Link href={e.href} className="flex items-center gap-3 rounded-xl text-rd-ink no-underline hover:underline">
+                    {e.thumbnailUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- the stored tier 1 photo, like the hero's; no remote pattern, no second request.
+                      <img src={e.thumbnailUrl} alt="" width={56} height={56} loading="lazy" decoding="async" className="h-14 w-14 shrink-0 rounded-lg border border-rd-line bg-[#ebe4d6] object-contain" />
+                    ) : null}
+                    <span className="min-w-0 flex-1 text-[14px]">
+                      <span className="block font-semibold">{`${cleanText(e.title)} ${e.season}`}</span>
+                      <span className="block text-[12px] text-rd-ink-faint">{[formatLongDate(e.date), e.displayOpponent ? `vs ${e.displayOpponent}` : null].filter(Boolean).join(' · ')}</span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
         {ebayListings.length ? (
           // eBay listings (spec Visuals 6, step 5a, 2026-11-08): real photos
           // of the item, after This game and before the Fan guide (ruling
@@ -946,16 +955,6 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
             {crossTeam.map((p) => (
               <PromoCard key={p.href} p={p} showTeam />
             ))}
-          </section>
-        ) : null}
-
-        {ctx.previousEdition ? (
-          <section className="mt-6 flex flex-col gap-2">
-            <H2>Previous edition</H2>
-            <p className="m-0 text-[15px] leading-[1.45] text-rd-ink-soft">
-              <Link href={ctx.previousEdition.href} className="font-medium text-rd-link no-underline hover:underline">{`${cleanText(primary.title)} ${ctx.previousEdition.season}`}</Link>
-              <span>{` · ${formatLongDate(ctx.previousEdition.date)}`}</span>
-            </p>
           </section>
         ) : null}
 
