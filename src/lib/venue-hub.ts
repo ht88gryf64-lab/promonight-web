@@ -75,6 +75,12 @@ export interface VenueHubTenantOverlay {
    *  building's map. {} on an overlay written before wave 2. */
   /** Per-field time the source page was READ, from the harvest. See venue-claim. */
   observedAtByField: Record<string, string>;
+  /** Per-field state on the overlay (gatesOpen, gateVariance, tailgateWindow,
+   *  bagPolicyException, parkingPrice), the same four values as the building's
+   *  map. Undefined on a fixture built before step 4 and {} on an overlay the
+   *  pipeline wrote without one: both read as "no opinion". The promo page's
+   *  Before you go block keys its gates row on this (src/lib/before-you-go.ts). */
+  fieldStates?: Record<string, VenueFieldState>;
 }
 
 /**
@@ -409,6 +415,7 @@ export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> 
       verified: t.verified === true,
       sources: stringMap(t.sources),
       observedAtByField: stringMap(t.observedAtByField),
+      fieldStates: fieldStateMap(t.fieldStates),
     };
   });
   // Fetch, map, then GATE. The view is applied here and nowhere else, so a

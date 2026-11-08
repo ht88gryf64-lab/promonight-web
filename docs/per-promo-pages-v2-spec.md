@@ -91,6 +91,9 @@ Repo files, versioned, reviewed by Matt before merge: `content/promo-explainers/
 
 - Content floor (build order step 2) built 2026-11-07 on feature/promo-pages-v2-content-floor. Team colors: single source confirmed (teams/{id} ARGB via mapTeamDoc), 169/169 stored; contrast gate sends Ducks-type palettes to house red. Opponent links resolve on 96.9% of upcoming pages; the rest are MLB 2027 and MLS dates with no games spine yet. A second, unreconciled color copy lives on venues/{slug} (primaryColor/accentColor); nothing reads it, ticket if venue hubs ever theme.
 
+- Step 3 (icon set, promo rail, season timeline) live 2026-11-07, merge b0817c3, deploy dpl_5j7pVT3jTgqfvnpt27YFfnNKwXcL. Timeline shipped single-tone with one accent ring; category colors withdrawn until a legend earns its space. Hat glyph is weak at 16px (known-issues 77). Email rail renderer exists in src/lib/promo-rail.ts, not yet wired into the digest.
+- Live battery (npm run test:live) runs after every production deploy, no exceptions (CLAUDE.md). Guard 8 asserts the General guide is in the bundle; guard 2 holds team pages under 950,000 bytes, Twins at 945,889 after the row trim. Issue #30 must land before the MLB 2027 ingest in January.
+
 ## Build order
 
 1. Prerequisite row-click fix + drop tier 3 card from body. Same day.

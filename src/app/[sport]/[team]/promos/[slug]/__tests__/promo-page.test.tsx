@@ -19,7 +19,7 @@ mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-29T16:00:00Z') });
 const TODAY = '2026-10-29';
 
 type Data = Record<string, unknown>;
-type Doc = { id: string; path: string; exists: true; data: () => Data; get: (f: string) => unknown; ref: { parent: { parent: { id: string } | null } } };
+type Doc = { id: string; path: string; exists: true; data: () => Data; get: (f: string) => unknown; ref: { path: string; parent: { parent: { id: string } | null } } };
 
 // ── a fake Firestore over a path -> data map ────────────────────────────────
 const store = new Map<string, Data>();
@@ -31,7 +31,7 @@ function put(path: string, data: Data) {
 function docAt(path: string): Doc {
   const seg = path.split('/');
   const data = store.get(path) ?? {};
-  return { id: seg[seg.length - 1], path, exists: true, data: () => data, get: (f) => data[f], ref: { parent: { parent: seg.length >= 4 ? { id: seg[seg.length - 3] } : null } } };
+  return { id: seg[seg.length - 1], path, exists: true, data: () => data, get: (f) => data[f], ref: { path, parent: { parent: seg.length >= 4 ? { id: seg[seg.length - 3] } : null } } };
 }
 function query(match: (path: string) => boolean, label: string): any {
   const clauses: [string, string, unknown][] = [];
@@ -116,6 +116,36 @@ put('venueHubs/xcel-energy-center', {
   tenants: [{ teamId: 'minnesota-wild', league: 'NHL' }], parkingLots: [{ name: 'RiverCentre Ramp' }, { name: 'Lawson Ramp' }], publicTransit: { lines: ['Green Line'], notes: 'Green Line to Central Station, two blocks east.' },
   bagMaxDimensions: { unit: 'in', d: 6, w: 12, h: 12 }, clearBagRequired: false, outsideFoodAllowed: false,
   sources: { bagMaxDimensions: 'https://x/bag', clearBagRequired: 'https://x/bag', parkingLots: 'https://x/parking', 'publicTransit.notes': 'https://x/transit', 'publicTransit.lines': 'https://x/transit', outsideFoodAllowed: 'https://x/food' },
+  // Step 4 (Before you go): the per-field state and read time the pipeline
+  // writes. Every claim rendered and dated, so the Wild page shows all four
+  // rows; outside food is sourced and rendered but is not one of the block's
+  // four classes.
+  fieldStates: { bagMaxDimensions: 'rendered', clearBagRequired: 'rendered', parkingLots: 'rendered', publicTransit: 'rendered', outsideFoodAllowed: 'rendered' },
+  observedAtByField: { bagMaxDimensions: '2026-10-07T14:30:16.621Z', clearBagRequired: '2026-10-07T14:30:16.621Z', parkingLots: '2026-10-08T09:00:00.000Z', publicTransit: '2026-10-09T09:00:00.000Z', outsideFoodAllowed: '2026-10-07T14:30:16.621Z' },
+});
+// The Wild's overlay: a sourced, dated gate rule in state rendered.
+put('venueHubs/xcel-energy-center/tenants/minnesota-wild', {
+  teamId: 'minnesota-wild', league: 'NHL', displayName: 'Minnesota Wild', verified: true,
+  gatesOpen: { ruleText: 'Doors open 90 minutes before puck drop', minutesBefore: 90 },
+  sources: { gatesOpen: 'https://x/gates' }, observedAtByField: { gatesOpen: '2026-10-10T12:00:00.000Z' }, fieldStates: { gatesOpen: 'rendered' },
+});
+// The Ducks' building: verified and sourced like a legacy doc, with NO state
+// map. Zero rendered fields, so the Ducks pages get no Before you go block.
+put('venueHubs/honda-center', {
+  slug: 'honda-center', name: 'Honda Center', formerNames: [], city: 'Anaheim', state: 'California', lat: 33.8078, lng: -117.8765, verified: true,
+  tenants: [{ teamId: 'anaheim-ducks', league: 'NHL' }], parkingLots: [{ name: 'Lot 1' }], bagMaxDimensions: { unit: 'in', d: 6, w: 14, h: 14 },
+  sources: { bagMaxDimensions: 'https://x/ducks-bag', parkingLots: 'https://x/ducks-parking' },
+});
+// The gray club's building: one rendered, dated claim (the prohibition), the
+// clear-bag answer in operator conflict (its value nulled, the pointer kept),
+// transit held, and the lots rendered but never dated. Exactly one row.
+put('venueHubs/gray-arena', {
+  slug: 'gray-arena', name: 'Gray Arena', formerNames: [], city: 'Gray', state: 'Minnesota', lat: 45, lng: -93, verified: true,
+  tenants: [{ teamId: 'gray-club', league: 'NHL' }], parkingLots: [{ name: 'Gray Lot A' }], publicTransit: { lines: ['Gray Line'], notes: 'Light rail to Gray Station.' },
+  bagsProhibited: true, bagMaxDimensions: { unit: 'in', d: 3, w: 5, h: 9 }, clearBagRequired: null, bagPolicyUrl: 'https://x/gray-bag-policy',
+  sources: { bagsProhibited: 'https://x/gray-bag', bagMaxDimensions: 'https://x/gray-bag', parkingLots: 'https://x/gray-parking', publicTransit: 'https://x/gray-transit' },
+  fieldStates: { bagsProhibited: 'rendered', bagMaxDimensions: 'rendered', clearBagRequired: 'operator-conflict', parkingLots: 'rendered', publicTransit: 'held' },
+  observedAtByField: { bagsProhibited: '2026-10-01T08:00:00.000Z', bagMaxDimensions: '2026-10-01T08:00:00.000Z' },
 });
 
 // ── the corpus ───────────────────────────────────────────────────────────────
@@ -326,7 +356,7 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   // mini date tile, the type icon through the sprite, the name; never the
   // opponent line and never the tile date twice.
   assert.match(h, /<a role="listitem" class="[^"]*" href="\/nhl\/minnesota-wild\/promos\/hockey-fights-cancer-night">[\s\S]*?FRI NOV<\/span><span class="rd-numerals[^"]*">20<\/span>[\s\S]*?<use href="#pn-icon-theme-night"><\/use>[\s\S]*?Hockey Fights Cancer Night<\/span><\/a>/);
-  assert.match(h, /Formerly Xcel Energy Center\./);
+  assert.match(h, /Grand Casino Arena<span>, formerly Xcel Energy Center<\/span>/);
   assert.ok(!/Dallas Stars · Nov 15/.test(h), 'cross-team card subtitle never repeats the tile date');
   assert.match(h, /<img src="https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/promonight\.firebasestorage\.app\/o\/promo-images%2Fc7057219198efd77\.png\?alt=media" alt="Blaze Orange Hat, the Minnesota Wild giveaway item"/);
   // The hero (follow-up 2026-10-31): the stored photo's own size from its
@@ -351,9 +381,12 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   assert.ok(!h.includes('team_cta_'), 'no team_cta link on a promo page');
   // The read date is the team's scan stamp, never the row's updatedAt.
   assert.match(h, /Source: <a href="https:\/\/www\.nhl\.com\/wild\/fans\/giveaway-schedule"[^>]*>nhl\.com<\/a><span> · read Oct 23, 2026<\/span>/);
-  // Quick facts from the building: bag, transit, parking, outside food.
-  assert.match(h, /Grand Casino Arena, quick facts/);
-  for (const t of ['Max bag 12&quot; x 12&quot; x 6&quot;.', 'Green Line to Central Station', 'Lots: RiverCentre Ramp, Lawson Ramp.', 'No outside food or drink.']) assert.ok(h.includes(t), t);
+  // Before you go (step 4): the building's rendered, dated claims; the quick
+  // facts card and its outside-food line are gone.
+  assert.match(h, />Before you go<\/h2>/);
+  assert.ok(!h.includes('quick facts'));
+  for (const t of ['Max bag 12&quot; x 12&quot; x 6&quot;.', 'Doors open 90 minutes before puck drop.', 'Green Line to Central Station, two blocks east. Lines: Green Line.', 'Lots: RiverCentre Ramp, Lawson Ramp.']) assert.ok(h.includes(t), t);
+  assert.ok(!h.includes('No outside food or drink.'), 'outside food is not one of the four classes');
   // Also at this game: Pride Night, never the special-ticket row.
   assert.match(h, /Also at this game/);
   assert.match(h, /href="\/nhl\/minnesota-wild\/promos\/pride-night"/);
@@ -482,10 +515,10 @@ test('multi-date series: a dates list in place of the game line, one Event per d
   assert.deepEqual(ld.slice(1, 4).map((e) => e.startDate), ['2026-10-29', '2026-11-18', '2026-12-11']);
   assert.equal(ld[0].dateModified, '2026-10-31T10:00:00.000Z');
   assert.match(ld[4].mainEntity[0].name, /Which games is Original Six Matchup on\?/);
-  // No hub for the Red Wings in this fixture: no venue link, no quick facts; the
-  // guard still clears 8 through the breadcrumb, the aggregator, the team's
-  // next promos and the league block.
-  assert.ok(!h.includes('quick facts'));
+  // No hub for the Red Wings in this fixture: no venue link, no Before you go;
+  // the guard still clears 8 through the breadcrumb, the aggregator, the
+  // team's next promos and the league block.
+  assert.ok(!h.includes('Before you go'));
   guard(h, 'original-six-matchup');
 });
 
@@ -1051,4 +1084,58 @@ test('step 3: the rail replaces the same-team list (nothing below two cards), th
   }
   assert.equal(cards, 4);
   assert.ok(!/role="listitem"[^>]*onclick/i.test(blaze.h));
+});
+
+test('step 4: Before you go renders rendered-and-dated fields only, in the venue page order, each with its read date; a conflicted or held field never renders; zero rendered fields, no block', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  // The Wild: all four classes rendered and dated. One block, after the
+  // General guide and before the rail, in the venue page's order.
+  const { h } = await render('nhl', 'minnesota-wild', 'blaze-orange-hat');
+  const start = h.indexOf('<section id="before-you-go"');
+  assert.ok(start > 0, 'the block');
+  const block = h.slice(start, h.indexOf('</section>', start));
+  assert.match(block, />Before you go<\/h2>/);
+  assert.match(block, /Grand Casino Arena<span>, formerly Xcel Energy Center<\/span>/);
+  const labels = [...block.matchAll(/<dt [^>]*>([^<]+)<\/dt>/g)].map((m) => m[1]);
+  assert.deepEqual(labels, ['Bag policy', 'Gates', 'Transit', 'Parking']);
+  // Every row: the operator host linked, then this field's own read date.
+  const rows = [...block.matchAll(/<dd class="m-0">([\s\S]*?)<\/dd>/g)].map((m) => m[1]);
+  assert.equal(rows.length, 4);
+  const expected: [string, string, string][] = [
+    ['Max bag 12&quot; x 12&quot; x 6&quot;.', 'https://x/bag', 'Oct 7, 2026'],
+    ['Doors open 90 minutes before puck drop.', 'https://x/gates', 'Oct 10, 2026'],
+    ['Green Line to Central Station, two blocks east. Lines: Green Line.', 'https://x/transit', 'Oct 9, 2026'],
+    ['Lots: RiverCentre Ramp, Lawson Ramp.', 'https://x/parking', 'Oct 8, 2026'],
+  ];
+  rows.forEach((row, i) => {
+    const [text, url, date] = expected[i];
+    assert.ok(row.startsWith(text), `${labels[i]}: ${row}`);
+    assert.match(row, new RegExp(`<a href="${url}" target="_blank" rel="noopener noreferrer" class="[^"]*">x ›</a> · Source read ${date}</span>$`), `${labels[i]} provenance line`);
+  });
+  const guide = h.indexOf(`>${'General guide'}<`);
+  const rail = h.indexOf('role="listitem"');
+  assert.ok(guide < start && start < rail, 'after the guide, before the rail');
+  // The former name is in the block, so not on the venue line: once on the page.
+  assert.equal((h.match(/formerly Xcel Energy Center/g) ?? []).length, 1, 'the former name once');
+
+  // The gray club: the prohibition is rendered and dated; the clear-bag answer
+  // is in operator conflict, transit is held, the lots carry no read time.
+  // One row, and none of the withheld text anywhere on the page.
+  const gray = await render('nhl', 'gray-club', 'gray-towel');
+  const gs = gray.h.indexOf('<section id="before-you-go"');
+  assert.ok(gs > 0, 'the gray block');
+  const gblock = gray.h.slice(gs, gray.h.indexOf('</section>', gs));
+  assert.deepEqual([...gblock.matchAll(/<dt [^>]*>([^<]+)<\/dt>/g)].map((m) => m[1]), ['Bag policy']);
+  assert.match(gblock, /Bags are not allowed\.<span class="[^"]*"><a href="https:\/\/x\/gray-bag"[^>]*>x ›<\/a> · Source read Oct 1, 2026<\/span>/);
+  for (const withheld of ['5&quot; x 9&quot;', 'Clear bag', 'Light rail to Gray Station', 'Gray Line', 'Gray Lot A', 'operator', 'conflicting']) {
+    assert.ok(!gray.h.includes(withheld), `withheld: ${withheld}`);
+  }
+
+  // The Ducks: a verified, sourced building with no state map. Zero rendered
+  // fields, so no block; the venue line still names the building.
+  const ducks = await render('nhl', 'anaheim-ducks', 'pride-night');
+  assert.ok(!ducks.h.includes('Before you go'), 'no block');
+  assert.ok(!ducks.h.includes('before-you-go'));
+  assert.match(ducks.h, /Honda Center/);
+  assert.ok(!ducks.h.includes('Lot 1') && !ducks.h.includes('14&quot;'), 'nothing from the building');
 });

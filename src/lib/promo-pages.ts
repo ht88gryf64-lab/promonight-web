@@ -29,7 +29,8 @@ import { getAllTeams, getGamesForTeam, getTeamPromos, getVenueForTeam, isTicketP
 import { applyGameDisplay, buildGameIndex, resolveTnEventUrl } from './promo-game-join';
 import { makeKeyedTtlCache, STATIC_TTL_MS } from './collection-cache';
 import { getVenueHub, getVenueHubForTeam, type TeamVenueHubLink } from './venue-hub';
-import { buildCondensedLogistics, type CondensedLine } from './venue-hub-condensed';
+import { beforeYouGoRows } from './before-you-go-rows';
+import type { BeforeYouGoRow } from './before-you-go';
 import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
 import { isVisiblePromo, promoDisplayOpponent, promoDisplayTime, teamDisplayName } from './promo-helpers';
 import { getShortForPromos } from './youtube-shorts-store';
@@ -302,9 +303,10 @@ export interface PromoPageContext {
   venue: Venue | null;
   /** The building hub link (slug, display name, index floor) the team page uses. */
   hub: TeamVenueHubLink | null;
-  /** Quick facts from the building's published view, the condensed lines the
-   *  school pages print: bag, transit, parking, outside food, gates. */
-  quickFacts: CondensedLine[];
+  /** Before you go (spec item 8): the building's facts in state `rendered`
+   *  with a read time, in the venue page's order (bag, gates, transit,
+   *  parking). Empty renders no block. */
+  beforeYouGo: BeforeYouGoRow[];
   /** The Event location, from the hub (name, city, state) and the venue doc (street). */
   location: PromoPageLocation | null;
   /** The building's coordinates (the hub's, else the venue doc's) for parking. */
@@ -450,8 +452,6 @@ const loadTeamScanStamp = cache(async (league: string, teamId: string): Promise<
   }
 });
 
-const QUICK_FACT_KEYS: readonly CondensedLine['key'][] = ['bag', 'transit', 'parking', 'outsideFood', 'gates'];
-
 /** Everything the page links to and the building it names. */
 export const loadPromoPageContext = cache(async (page: PromoPage, today: string): Promise<PromoPageContext> => {
   const { team } = page;
@@ -538,12 +538,11 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
     if (count > 0) venueGiveaways = { count, month };
   }
 
-  // Quick facts: only for a verified building, through its published view
-  // (the condensed builder waives the verified flag for the college corpus by
-  // ruling; a pro building that nobody signed off shows nothing here).
-  const quickFacts = building && building.verified
-    ? buildCondensedLogistics(building, team.id).filter((l) => QUICK_FACT_KEYS.includes(l.key))
-    : [];
+  // Before you go (step 4, 2026-11-08): the building's published view, then
+  // the per-field state and read time on top (src/lib/before-you-go.ts). An
+  // unverified building has every claim nulled by the view; a legacy doc with
+  // no state map has no rendered field. Either way, no rows, no block.
+  const beforeYouGo = building ? beforeYouGoRows(building, team.id) : [];
 
   const location: PromoPageLocation | null = building
     ? { name: building.name, streetAddress: venue?.address ?? null, locality: building.city, region: building.state }
@@ -615,7 +614,7 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
     venueGiveaways,
     venue,
     hub,
-    quickFacts,
+    beforeYouGo,
     location,
     coords,
     formerNames: building?.formerNames ?? [],

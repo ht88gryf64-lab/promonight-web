@@ -1,7 +1,7 @@
 // The tenant-overlay mapping getVenueHub applies (src/lib/venue-hub.ts), for
 // the fixture builder, which maps a Firestore dump without a db handle.
 // Keep in step with getVenueHub's tSnap.docs.map.
-import type { VenueHubTenantOverlay } from '../../../../lib/venue-hub';
+import { fieldStateMap, type VenueHubTenantOverlay } from '../../../../lib/venue-hub';
 
 function stringMap(v: unknown): Record<string, string> {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
@@ -28,5 +28,6 @@ export function overlayFromDoc(t: Record<string, any>): VenueHubTenantOverlay {
     verified: t.verified === true,
     sources: stringMap(t.sources),
     observedAtByField: stringMap(t.observedAtByField),
+    fieldStates: fieldStateMap(t.fieldStates),
   };
 }
