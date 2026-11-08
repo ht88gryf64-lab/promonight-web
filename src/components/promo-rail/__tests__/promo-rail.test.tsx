@@ -3,7 +3,8 @@
  * than five, every card is one Link with no handler of its own (a click is a
  * navigation, nothing else fires); the timeline renders nothing below three
  * home games, puts a dot per promo on the bar in one muted ink tone, rings
- * this game in the accent, and hover, focus or a click names the promo.
+ * this game in the accent, names this game, and on a pointer device hover
+ * names the hovered promo; the dots are not controls.
  * Same real-DOM harness as promo-row-click.test.tsx. */
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { test, mock, after, beforeEach } from 'node:test';
@@ -107,7 +108,7 @@ test('the email rail: inline-styled table, one cell per card, the icon inline, n
   assert.ok(!/class=/.test(html), 'no classes, inline styles only');
 });
 
-test('the season timeline: nothing below three home games; a dot per promo in one ink tone, this game ringed in the accent, hover or focus or a click names the promo', async () => {
+test('the season timeline: nothing below three home games; a dot per promo in one ink tone, this game ringed in the accent and named; the dots are not controls; hover names a promo on pointer devices only', async () => {
   const { SeasonTimeline } = await import('@/components/promo-page/SeasonTimeline');
   const games = [{ date: '2026-10-20' }, { date: '2026-10-29' }, { date: '2026-12-28' }];
   const promos = [
@@ -116,25 +117,39 @@ test('the season timeline: nothing below three home games; a dot per promo in on
     { date: '2026-12-28', title: 'Holiday Scarf', href: '/nhl/minnesota-wild/promos/holiday-scarf', type: 'giveaway' as const },
   ];
   assert.equal(renderToStaticMarkup(<SeasonTimeline games={games.slice(0, 2)} promos={promos} thisDate="2026-10-29" teamName="Minnesota Wild" />), '', 'two home games: nothing');
+  // A touch device (the default): the bar is static.
+  const mql = (matches: boolean) => (query: string) => ({ matches, media: query, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent() { return false; } }) as unknown as MediaQueryList;
+  window.matchMedia = mql(false);
   const container = await mount(<SeasonTimeline games={games} promos={promos} thisDate="2026-10-29" thisHref="/nhl/minnesota-wild/promos/blaze-orange-hat" teamName="Minnesota Wild" />);
-  const dots = [...container.querySelectorAll('g[role="button"]')];
+  const dots = [...container.querySelectorAll('svg circle[fill="var(--color-rd-ink)"]')];
   assert.equal(dots.length, 3, 'a dot per promo');
+  // Ruling 2026-11-08: no role, no tabindex, no handler. The group is a picture.
+  assert.equal(container.querySelector('[role="button"], [tabindex]'), null, 'the dots are not controls');
+  assert.equal(container.querySelector('svg')?.getAttribute('role'), 'img');
+  for (const c of dots) assert.ok(c.querySelector('title')?.textContent, 'each dot keeps its title');
   // A promo on a date with no home game is not on the bar.
   const stray = await mount(<SeasonTimeline games={games} promos={[...promos, { date: '2026-11-11', title: 'Stray', href: '/x', type: 'kids' }]} thisDate="2026-10-29" teamName="Minnesota Wild" />);
-  assert.equal(stray.querySelectorAll('g[role="button"]').length, 3);
+  assert.equal(stray.querySelectorAll('svg circle[fill="var(--color-rd-ink)"]').length, 3);
   // Every dot is the same muted ink, no category colour; this game is ringed in the accent and named by default.
-  for (const c of container.querySelectorAll('g[role="button"] circle')) {
-    assert.equal(c.getAttribute('fill'), 'var(--color-rd-ink)');
-    assert.ok(['0.4', '0.7'].includes(c.getAttribute('fill-opacity') ?? ''), c.getAttribute('fill-opacity') ?? 'none');
-  }
+  for (const c of dots) assert.ok(['0.4', '0.7'].includes(c.getAttribute('fill-opacity') ?? ''), c.getAttribute('fill-opacity') ?? 'none');
   assert.ok(!/#(f97316|7c3aed|16a34a|2563eb)/i.test(container.innerHTML), 'no category hex on the bar');
   assert.equal(container.querySelectorAll('circle[stroke="var(--pp-accent)"]').length, 1, 'one accent ring');
   assert.match(container.textContent ?? '', /Oct 29 · Blaze Orange Hat · home game 2 of 3/);
-  // Focus names a dot's promo; so does a click.
+  // On touch, hovering (or clicking) a dot changes nothing and navigates nowhere.
   const { act } = await import('react');
-  await act(async () => { (dots[2] as HTMLElement).dispatchEvent(new FocusEvent('focus', { bubbles: false })); });
-  await click(dots[2].querySelector('circle')!);
-  assert.match(container.textContent ?? '', /Dec 28 · Holiday Scarf · home game 3 of 3/);
-  assert.equal(container.querySelector('p a')?.getAttribute('href'), '/nhl/minnesota-wild/promos/holiday-scarf');
-  assert.deepEqual(navigations, [], 'a click on a dot navigates nowhere');
+  await act(async () => { dots[2].dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); });
+  await click(dots[2]);
+  assert.match(container.textContent ?? '', /Oct 29 · Blaze Orange Hat · home game 2 of 3/);
+  assert.deepEqual(navigations, []);
+  // A pointer device: hover names the hovered promo and links it; leaving the bar names this game again.
+  window.matchMedia = mql(true);
+  const pointer = await mount(<SeasonTimeline games={games} promos={promos} thisDate="2026-10-29" thisHref="/nhl/minnesota-wild/promos/blaze-orange-hat" teamName="Minnesota Wild" />);
+  const pdots = [...pointer.querySelectorAll('svg circle[fill="var(--color-rd-ink)"]')];
+  await act(async () => { pdots[2].dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); });
+  assert.match(pointer.textContent ?? '', /Dec 28 · Holiday Scarf · home game 3 of 3/);
+  assert.equal(pointer.querySelector('p a')?.getAttribute('href'), '/nhl/minnesota-wild/promos/holiday-scarf');
+  await act(async () => { pointer.firstElementChild!.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body })); });
+  assert.match(pointer.textContent ?? '', /Oct 29 · Blaze Orange Hat · home game 2 of 3/);
+  assert.equal(pointer.querySelector('[role="button"], [tabindex]'), null);
+  assert.deepEqual(navigations, [], 'nothing navigates');
 });

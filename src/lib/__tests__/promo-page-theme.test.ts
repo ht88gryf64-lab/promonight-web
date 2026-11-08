@@ -51,11 +51,13 @@ test('a missing or malformed color is skipped, never guessed', () => {
 test('the date tile state: tonight with and without doors, days inside two weeks, the weekday beyond', () => {
   assert.deepEqual(dateTileState('2026-10-29', '2026-10-29', '5:30 PM'), { kind: 'tonight', label: 'Tonight · gates 5:30 PM' });
   assert.deepEqual(dateTileState('2026-10-29', '2026-10-29', null), { kind: 'tonight', label: 'Tonight' });
-  assert.deepEqual(dateTileState('2026-10-30', '2026-10-29', '5:30 PM'), { kind: 'soon', label: 'In 1 day' });
+  // Ruling 2026-11-08: "Tomorrow" for one day out, the count of days for
+  // anything further, never the weekday; a played date has no state line.
+  assert.deepEqual(dateTileState('2026-10-30', '2026-10-29', '5:30 PM'), { kind: 'tomorrow', label: 'Tomorrow' });
   assert.deepEqual(dateTileState('2026-11-05', '2026-10-29', null), { kind: 'soon', label: 'In 7 days' });
   assert.deepEqual(dateTileState('2026-11-12', '2026-10-29', null), { kind: 'soon', label: 'In 14 days' });
-  assert.deepEqual(dateTileState('2026-12-05', '2026-10-29', null), { kind: 'later', label: 'Saturday' });
-  assert.deepEqual(dateTileState('2026-10-20', '2026-10-29', null), { kind: 'past', label: 'Tuesday' });
+  assert.deepEqual(dateTileState('2026-12-05', '2026-10-29', null), { kind: 'soon', label: 'In 37 days' });
+  assert.equal(dateTileState('2026-10-20', '2026-10-29', null), null);
   assert.equal(dateTileState('', '2026-10-29', null), null);
   assert.equal(daysBetweenYmd('2026-10-29', '2026-11-05'), 7);
   assert.equal(weekdayName('2026-11-07'), 'Saturday');

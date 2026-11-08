@@ -10,7 +10,7 @@ import { getLeagueHub } from '@/lib/league-hubs';
 import { buildSpotHeroUrl, buildTicketmasterUrl, buildTicketNetworkLink, ticketNetworkForGame, ticketNetworkLinkLevel } from '@/lib/affiliates';
 import { resolveHotelLink } from '@/lib/hotel-link';
 import { promoDownloadHref } from '@/lib/app-link';
-import { promoAnchorId, teamDisplayName } from '@/lib/promo-helpers';
+import { teamDisplayName } from '@/lib/promo-helpers';
 import { PROMO_TYPE_LABELS } from '@/lib/types';
 import { TICKET_PACKAGE_ROW_NOTE } from '@/lib/ticket-packages';
 import type { LinkedPromo, PromoPage, PromoPageContext } from '@/lib/promo-pages';
@@ -18,6 +18,7 @@ import { EXPLAINER_LABEL, explainerFor } from '@/lib/promo-explainers';
 import { BEFORE_YOU_GO_LABEL } from '@/lib/before-you-go';
 import { promoPageTheme, themeStyle } from '@/lib/promo-page-theme';
 import { dateTileState, ymdInZone, type DateTileState } from '@/lib/promo-date-tile';
+import { gameTimeMarkup } from '@/lib/promo-page-time';
 import { promoRailItems } from '@/lib/promo-rail';
 import { PromoRail } from '@/components/promo-rail/PromoRail';
 import { PromoTypeSprite } from '@/components/promo-icons/PromoTypeIcon';
@@ -43,7 +44,6 @@ import {
   promoPagePath,
   promoPageTitle,
   quantityLine,
-  seasonLabelFor,
   shareCardOrigin,
   shareCardPath,
   YMD_RE,
@@ -241,7 +241,6 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
   const venueHref = ctx.hub && ctx.hub.indexable ? `/venues/${ctx.hub.slug}` : null;
   const venueName = head.venueName;
   const venueLine = [venueName, ctx.hub?.city ?? null].filter(Boolean).join(', ');
-  const crumbHref = `${teamHref}#promo-${promoAnchorId({ date: primary.date, title: primary.title })}`;
 
   const badge = badgeLabel({ type: primary.type, tombstoned: removed, ticketPackageRequired: primary.ticketPackageRequired });
   const quantity = removed ? null : quantityLine(primary);
@@ -291,14 +290,14 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
       {primary.sourceUrl && sourceHost ? (
         <>
           {'Source: '}
-          <a href={primary.sourceUrl} target="_blank" rel="noopener nofollow" className="text-rd-red">
+          <a href={primary.sourceUrl} target="_blank" rel="noopener nofollow" className="text-rd-link underline underline-offset-2">
             {sourceHost}
           </a>
         </>
       ) : (
         <>Source: the team&rsquo;s published schedule</>
       )}
-      {readOn ? <span>{` · read ${readOn}`}</span> : null}
+      {readOn ? <span>{` · checked ${readOn}`}</span> : null}
     </p>
   );
 
@@ -374,11 +373,12 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
     dateModified: page.updatedAt,
     faqs: storedFaqs,
     // The visible trail, item for item (Google asks the markup to reflect it):
-    // league hub, team page, the team's promos (its anchor on the team page).
+    // league hub, team page, this page (ruling 2026-11-08: the last crumb is
+    // the page's own title, not a link).
     breadcrumbs: [
       { name: team.league, url: `${SITE_URL}${leagueHref ?? '/'}` },
       { name: teamName, url: `${SITE_URL}${teamHref}` },
-      { name: 'Promos', url: `${SITE_URL}${crumbHref}` },
+      { name: cleanText(primary.title) || 'Untitled promotion', url: canonical },
     ],
   });
 
@@ -390,9 +390,15 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
     // subId1 web_promo_date_{team}: the per-date link, told apart from the
     // primary CTA partner-side (the click event keeps surface web_promo_page).
     const rowTickets = tnAllowed && withOpponent && !removed && date >= today ? buildTicketNetworkLink({ team, surface: PROMO_DATE_SUBID_SURFACE, eventUrl: row.tnEventUrl ?? null, pageSlug: page.slug }) : null;
+    // <time> with the zone offset, the venue zone's abbreviation after the
+    // time (ruling 2026-11-08): the building's zone is the game's zone on
+    // every date of a series.
+    const when = gameTimeMarkup(date, row.displayTime, ctx.game?.timeZone);
     return (
       <li key={key} className="m-0 list-none text-[15px] leading-[1.45] text-rd-ink-soft">
-        <strong className="text-rd-ink">{`${formatLongDate(date)}${row.displayTime ? ` · ${row.displayTime}` : ''}`}</strong>
+        <strong className="text-rd-ink">
+          <time dateTime={when.dateTime}>{`${formatLongDate(date)}${row.displayTime ? ` · ${row.displayTime}${when.zone ? ` ${when.zone}` : ''}` : ''}`}</time>
+        </strong>
         {rowTickets ? (
           <>
             {' '}
@@ -408,7 +414,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
               target="_blank"
               rel="noopener noreferrer sponsored"
               ariaLabel={`Tickets for ${formatLongDate(date)}${row.displayOpponent ? ` vs ${row.displayOpponent}` : ''} on TicketNetwork`}
-              className="ml-1 font-rd text-[13px] font-semibold text-rd-red no-underline hover:underline"
+              className="ml-1 font-rd text-[13px] font-semibold text-rd-link no-underline hover:underline"
             >
               Tickets
             </TrackedAffiliateLink>
@@ -451,26 +457,13 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
     if (opponentName) {
       thisGame.push({
         label: 'Opponent',
-        value: g?.opponentHref ? <Link href={g.opponentHref} className="font-medium text-rd-red no-underline hover:underline">{opponentName}</Link> : opponentName,
+        value: g?.opponentHref ? <Link href={g.opponentHref} className="font-medium text-rd-link no-underline hover:underline">{opponentName}</Link> : opponentName,
       });
     }
-    if (YMD_RE.test(primary.date)) thisGame.push({ label: multi ? 'Next date' : 'Game', value: `${formatLongDate(primary.date)}${primary.displayTime ? ` · ${primary.displayTime}` : ''}` });
+    // The date row and the home-schedule row left (ruling 2026-11-08,
+    // ux-review D5): the header already carries the date and time, and the
+    // timeline's caption carries the position in the home schedule.
     if (doors) thisGame.push({ label: 'Doors', value: doors });
-    if (g?.homeGameNumber && g.homeGamesTotal) {
-      // The season is named only when it is not the current one (a page for
-      // next season's opener says so; this season's games do not), and never
-      // wraps mid-label.
-      const season = g.seasonLabel && g.seasonLabel !== seasonLabelFor(team.league, today) ? g.seasonLabel : null;
-      thisGame.push({
-        label: 'Home schedule',
-        value: (
-          <>
-            {`Home game ${g.homeGameNumber} of ${g.homeGamesTotal}`}
-            {season ? <span className="whitespace-nowrap">{`, ${season}`}</span> : null}
-          </>
-        ),
-      });
-    }
     if (ctx.alsoAtGame.length) {
       thisGame.push({
         label: multi ? 'Also at these games' : 'Also at this game',
@@ -478,7 +471,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
           <ul className="m-0 flex flex-col gap-1 p-0">
             {ctx.alsoAtGame.map((p) => (
               <li key={p.href} className="list-none">
-                <Link href={p.href} className="font-medium text-rd-red no-underline hover:underline">{p.title}</Link>
+                <Link href={p.href} className="font-medium text-rd-link no-underline hover:underline">{p.title}</Link>
                 <span className="font-rd text-[12px] text-rd-ink-faint">{` · ${multi ? formatMonDay(p.date) : (PROMO_TYPE_LABELS[p.type] ?? '')}`}</span>
               </li>
             ))}
@@ -490,7 +483,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
       const n = ctx.venueGiveaways.count;
       thisGame.push({
         label: ctx.venueGiveaways.month === today.slice(0, 7) ? 'This month' : `In ${monthName(ctx.venueGiveaways.month)}`,
-        value: <Link href={venueHref} className="font-medium text-rd-red no-underline hover:underline">{`${n} more giveaway${n === 1 ? '' : 's'} at ${venueName}`}</Link>,
+        value: <Link href={venueHref} className="font-medium text-rd-link no-underline hover:underline">{`${n} more giveaway${n === 1 ? '' : 's'} at ${venueName}`}</Link>,
       });
     }
   }
@@ -525,7 +518,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
           <span aria-hidden="true">/</span>
           <Link href={teamHref} className="no-underline hover:text-rd-ink">{teamDisplayName(team)}</Link>
           <span aria-hidden="true">/</span>
-          <Link href={crumbHref} className="no-underline hover:text-rd-ink">Promos</Link>
+          <span aria-current="page" className="text-rd-ink-soft">{cleanText(primary.title) || 'Untitled promotion'}</span>
         </nav>
 
         <header className="flex flex-col gap-2.5 pt-3">
@@ -555,7 +548,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
           ) : null}
           {multi && foldedRows.length ? (
             <details className="m-0">
-              <summary className="cursor-pointer font-rd text-[14px] font-medium text-rd-red">{foldLabel}</summary>
+              <summary className="cursor-pointer font-rd text-[14px] font-medium text-rd-link">{foldLabel}</summary>
               <ul className="m-0 mt-1.5 flex flex-col gap-1.5 p-0">
                 {foldedRows.map((r) => gameLine(r.date, r, r.promoId, true))}
               </ul>
@@ -568,7 +561,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
           ) : null}
           {venueLine ? (
             <p className="m-0 text-[15px] leading-[1.45] text-rd-ink-soft">
-              {venueHref ? <Link href={venueHref} className="text-rd-red no-underline hover:underline">{venueName}</Link> : venueName}
+              {venueHref ? <Link href={venueHref} className="text-rd-link no-underline hover:underline">{venueName}</Link> : venueName}
               {ctx.hub?.city ? <span>{`, ${ctx.hub.city}`}</span> : null}
               {/* A renamed building names its former name in the Before you
                   go block, or in the quick facts card it falls back to; when
@@ -603,10 +596,10 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
               {ctx.previousEdition || ctx.nextEdition ? (
                 <div className="flex flex-col gap-1 font-rd text-[14px]">
                   {ctx.previousEdition ? (
-                    <Link href={ctx.previousEdition.href} className="font-medium text-rd-red no-underline hover:underline">{`Previous edition: ${cleanText(primary.title)} ${ctx.previousEdition.season} · ${formatLongDate(ctx.previousEdition.date)}`}</Link>
+                    <Link href={ctx.previousEdition.href} className="font-medium text-rd-link no-underline hover:underline">{`Previous edition: ${cleanText(primary.title)} ${ctx.previousEdition.season} · ${formatLongDate(ctx.previousEdition.date)}`}</Link>
                   ) : null}
                   {ctx.nextEdition ? (
-                    <Link href={ctx.nextEdition.href} className="font-medium text-rd-red no-underline hover:underline">{`Next edition: ${cleanText(primary.title)} ${ctx.nextEdition.season} · ${formatLongDate(ctx.nextEdition.date)}`}</Link>
+                    <Link href={ctx.nextEdition.href} className="font-medium text-rd-link no-underline hover:underline">{`Next edition: ${cleanText(primary.title)} ${ctx.nextEdition.season} · ${formatLongDate(ctx.nextEdition.date)}`}</Link>
                   ) : null}
                 </div>
               ) : null}
@@ -666,7 +659,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
                 target="_blank"
                 rel="noopener noreferrer sponsored"
                 ariaLabel={`${teamName} tickets, also on Ticketmaster`}
-                className="self-center font-rd text-[14px] font-medium text-rd-red no-underline hover:underline"
+                className="self-center font-rd text-[14px] font-medium text-rd-link no-underline hover:underline"
               >
                 Also on Ticketmaster
               </TrackedAffiliateLink>
@@ -754,7 +747,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
             {!removed ? <PromoShareImageButton {...shareProps} /> : null}
             <figcaption className="px-3 py-2 font-rd text-[11px] text-rd-ink-faint">
               <span>{`${image.credit ?? `Image: ${teamName}`}${image.sourceUrl ? ' · ' : ''}`}</span>
-              {image.sourceUrl ? <a href={image.sourceUrl} target="_blank" rel="noopener nofollow" className="text-rd-red">source</a> : null}
+              {image.sourceUrl ? <a href={image.sourceUrl} target="_blank" rel="noopener nofollow" className="text-rd-link underline underline-offset-2">source</a> : null}
             </figcaption>
           </figure>
         ) : null}
@@ -841,9 +834,9 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
                     {r.sourceUrl || r.observedOn ? (
                       <span className="block font-rd text-[11px] text-rd-ink-faint">
                         {r.sourceUrl && r.sourceHost ? (
-                          <a href={r.sourceUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-rd-red">{`${r.sourceHost} ›`}</a>
+                          <a href={r.sourceUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-rd-link">{`${r.sourceHost} ›`}</a>
                         ) : null}
-                        {r.observedOn ? `${r.sourceUrl ? ' · ' : ''}Source read ${r.observedOn}` : null}
+                        {r.observedOn ? `${r.sourceUrl ? ' · ' : ''}Checked ${r.observedOn}` : null}
                       </span>
                     ) : null}
                   </dd>
@@ -851,7 +844,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
               ))}
             </dl>
             {venueHref ? (
-              <Link href={venueHref} className="font-rd text-[14px] font-medium text-rd-red no-underline hover:underline">{`${venueName} gameday guide`}</Link>
+              <Link href={venueHref} className="font-rd text-[14px] font-medium text-rd-link no-underline hover:underline">{`${venueName} gameday guide`}</Link>
             ) : null}
           </section>
         ) : ctx.quickFacts.length && venueName ? (
@@ -875,7 +868,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
                     {l.href && l.hrefLabel ? (
                       <>
                         {' '}
-                        <a href={l.href} target="_blank" rel="noopener noreferrer" className="text-rd-red">{l.hrefLabel}</a>
+                        <a href={l.href} target="_blank" rel="noopener noreferrer" className="text-rd-link">{l.hrefLabel}</a>
                       </>
                     ) : null}
                   </dd>
@@ -883,7 +876,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
               ))}
             </dl>
             {venueHref ? (
-              <Link href={venueHref} className="font-rd text-[14px] font-medium text-rd-red no-underline hover:underline">{`${venueName} gameday guide`}</Link>
+              <Link href={venueHref} className="font-rd text-[14px] font-medium text-rd-link no-underline hover:underline">{`${venueName} gameday guide`}</Link>
             ) : null}
           </section>
         ) : null}
@@ -899,8 +892,8 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
             ctx.nextTeamPromos.slice(0, 1).map((p) => <PromoCard key={p.href} p={p} showTeam={false} />)
           )}
           <p className="m-0 flex flex-wrap gap-x-4 gap-y-1 font-rd text-[14px] font-medium">
-            <Link href={teamHref} className="text-rd-red no-underline hover:underline">{`All ${teamName} promos`}</Link>
-            <Link href={aggregator.href} className="text-rd-red no-underline hover:underline">{aggregator.label}</Link>
+            <Link href={teamHref} className="text-rd-link no-underline hover:underline">{`All ${teamName} promos`}</Link>
+            <Link href={aggregator.href} className="text-rd-link no-underline hover:underline">{aggregator.label}</Link>
           </p>
         </section>
 
@@ -918,7 +911,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
           <section className="mt-6 flex flex-col gap-2">
             <H2>Previous edition</H2>
             <p className="m-0 text-[15px] leading-[1.45] text-rd-ink-soft">
-              <Link href={ctx.previousEdition.href} className="font-medium text-rd-red no-underline hover:underline">{`${cleanText(primary.title)} ${ctx.previousEdition.season}`}</Link>
+              <Link href={ctx.previousEdition.href} className="font-medium text-rd-link no-underline hover:underline">{`${cleanText(primary.title)} ${ctx.previousEdition.season}`}</Link>
               <span>{` · ${formatLongDate(ctx.previousEdition.date)}`}</span>
             </p>
           </section>
@@ -928,9 +921,11 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
           <section className="mt-6 flex flex-col gap-2">
             <H2>Questions</H2>
             {faqs.map((f) => (
-              <details key={f.question} className="rounded-xl border border-rd-line bg-rd-card px-3.5 py-3">
-                <summary className="cursor-pointer text-[14px] font-semibold text-rd-ink">{f.question}</summary>
-                <p className="mb-0 mt-2 text-[14px] leading-[1.5] text-rd-ink-soft">{f.answer}</p>
+              <details key={f.question} className="rounded-xl border border-rd-line bg-rd-card">
+                {/* The padding sits on the summary, so the whole card is the
+                    hit area (ruling 2026-11-08). */}
+                <summary className="cursor-pointer px-3.5 py-3 text-[14px] font-semibold text-rd-ink">{f.question}</summary>
+                <p className="m-0 px-3.5 pb-3 text-[14px] leading-[1.5] text-rd-ink-soft">{f.answer}</p>
               </details>
             ))}
           </section>
