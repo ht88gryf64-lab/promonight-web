@@ -35,6 +35,7 @@
 // Pure and client-safe: no clock, no Firestore, no env.
 
 import bridge from '../config/social-bridge.json';
+import { withQuery } from './url-query';
 
 /** A short link's slug: 2 to 14 lowercase letters or digits (promo-video src/lib/team-short.ts TEAM_SHORT_PATTERN). */
 export const TEAM_SHORT_RE = /^[a-z0-9]{2,14}$/;
@@ -137,6 +138,5 @@ export function resolvePromoCode<T extends BridgePromo>(code: string, wholeId: s
 
 /** `path` with the request's query string (the UTMs) carried over. */
 export function withSearch(path: string, search: URLSearchParams): string {
-  const qs = search.toString();
-  return qs ? `${path}?${qs}` : path;
+  return withQuery(path, search);
 }

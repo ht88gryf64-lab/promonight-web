@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname, useSearchParams } from 'next/navigation';
+import { withQuery } from '@/lib/url-query';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import type { ScoredPromoWithTeam, TeamScoreWithTeam } from '@/lib/types';
 import { track } from '@/lib/analytics';
@@ -85,7 +86,7 @@ export function TeamRankingsList({
       if (next === 'All') params.delete('league');
       else params.set('league', next);
       const qs = params.toString();
-      window.history.replaceState(null, '', qs ? `${pathname}?${qs}` : pathname);
+      window.history.replaceState(null, '', withQuery(pathname, qs));
     },
     [league, pathname],
   );

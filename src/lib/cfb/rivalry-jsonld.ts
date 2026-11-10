@@ -10,7 +10,7 @@
 import type { MatchupPage } from '@/lib/cfb/matchups';
 import type { CfbGame } from '@/lib/cfb/types';
 import { buildMatchupDescription, prettySchoolId } from '@/lib/cfb/matchup-description';
-import { renderedKickoff, rivalryIndexTitle, rivalryIndexDescription } from '@/lib/cfb/metadata';
+import { renderedKickoff, rivalryIndexTitle, rivalryIndexDescription, rivalryListName } from '@/lib/cfb/metadata';
 import { cfbSeasonLabel } from '@/lib/cfb/season';
 import type { RivalryFaq, RivalryIndexRow } from '@/lib/cfb/rivalry-index';
 // The pipeline's single time parser + tz tools (guards.ts). One parser
@@ -36,8 +36,8 @@ export function buildRivalryIndexJsonLd(rows: RivalryIndexRow[], faqs: RivalryFa
     {
       '@context': 'https://schema.org',
       '@type': 'CollectionPage',
-      name: rivalryIndexTitle(),
-      description: rivalryIndexDescription(),
+      name: rivalryIndexTitle(rows),
+      description: rivalryIndexDescription(rows),
       url,
       isPartOf: {
         '@type': 'WebSite',
@@ -48,7 +48,8 @@ export function buildRivalryIndexJsonLd(rows: RivalryIndexRow[], faqs: RivalryFa
     {
       '@context': 'https://schema.org',
       '@type': 'ItemList',
-      name: rivalryIndexTitle(),
+      // Every rivalry, not just Rivalry Week (ux-review R3): the list's own name.
+      name: rivalryListName(),
       numberOfItems: rows.length,
       itemListElement: rows.map((r, i) => ({
         '@type': 'ListItem',

@@ -14,7 +14,7 @@ import { resolveHotelLink } from '@/lib/hotel-link';
 import { promoDownloadHref } from '@/lib/app-link';
 import { synthPromoId, teamDisplayName } from '@/lib/promo-helpers';
 import { PROMO_TYPE_LABELS } from '@/lib/types';
-import { TICKET_PACKAGE_ROW_NOTE } from '@/lib/ticket-packages';
+import { TICKET_PACKAGE_ROW_NOTE, isTicketPackageLeague } from '@/lib/ticket-packages';
 import type { LinkedPromo, PromoPage, PromoPageContext } from '@/lib/promo-pages';
 import { EXPLAINER_LABEL, explainerFor } from '@/lib/promo-explainers';
 import { BEFORE_YOU_GO_LABEL } from '@/lib/before-you-go';
@@ -41,6 +41,8 @@ import {
   formatLongDate,
   formatMonDay,
   formatMonDayYear,
+  packagePageName,
+  packagePageTitle,
   pageImage,
   promoFaqs,
   promoPageDescription,
@@ -126,7 +128,22 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
   const venueName = ctx.hub?.displayName ?? ctx.venue?.name ?? null;
   // The cascade (ruling 2026-10-30) falls back to the club's nickname, then
   // the promo name alone, so the rendered title stays inside 60.
-  const title = promoPageTitle(primary.title, teamName, removed ? page.removedDates : dates, page.season, team.name);
+  // A special-ticket package page names itself one in the <title> when the
+  // same game has a promotion page about the same thing (rule 2, ruling
+  // 2026-11-10), so the theme page stays the target for the theme search.
+  // The same-game pages are ctx.alsoAtGame: the linkable rows on the page's
+  // dates, which never include a package row.
+  const name = packagePageName(primary.title, {
+    ticketPackage: isTicketPackageLeague(team.league) && primary.ticketPackageRequired === true,
+    sameGameTitles: ctx.alsoAtGame.map((p) => p.title),
+  });
+  // A qualified package name runs its own cascade, which never drops the
+  // team (ruling 2026-11-10): it may end in an absolute title, no suffix.
+  const titleDates = removed ? page.removedDates : dates;
+  const { title, absolute: titleAbsolute } =
+    name !== cleanText(primary.title)
+      ? packagePageTitle(name, primary.title, teamName, titleDates, page.season, { nickname: team.name })
+      : { title: promoPageTitle(name, teamName, titleDates, page.season, team.name), absolute: false };
   const description = promoPageDescription({
     description: primary.description,
     title: primary.title,
@@ -156,7 +173,7 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
     height: CARD_HEIGHT,
     alt: shareCardDate ? `${cleanText(primary.title)}: ${teamName}, ${formatMonDayYear(shareCardDate)}` : `${cleanText(primary.title)}: ${teamName}`,
   };
-  return { teamName, canonical, title, description, image, imageUrl, indexable, venueName, shareCard };
+  return { teamName, canonical, title, titleAbsolute, description, image, imageUrl, indexable, venueName, shareCard };
 }
 
 function ticketHref(page: PromoPage): string {

@@ -318,6 +318,28 @@ promo('nashville-predators', 'n2', { title: 'Catfish Gravy Boat', pageSlug: 'cat
 // series has ONE date left, which is the sitemap's trap.
 promo('dallas-stars', 'r5', { title: 'Rally Towel Night', pageSlug: 'rally-towel-night', type: 'theme', date: '2026-11-10', opponent: 'Kings' });
 
+// ── same-game pairs (rulings 2026-11-10, fix/gsc-cleanup-2026-11) ────────────
+// The pipeline's two rows per game, theme and item or package, on the
+// Islanders (a team with no other rows here).
+const isles = (id: string, over: Data) => promo('new-york-islanders', id, { opponent: 'Rangers', sourceUrl: 'https://www.nhl.com/islanders/tickets/promotions', ...over });
+// Rule 1, item named: both pages stay their own canonical and link each other.
+isles('i1', { title: 'Elf Hat', pageSlug: 'elf-hat', date: '2026-12-12', description: 'Elf hat giveaway.' });
+isles('i2', { title: 'ELF Night', pageSlug: 'elf-night', type: 'theme', date: '2026-12-12' });
+// Rule 1, no item that sets the giveaway apart (the Ducks' real pair): the
+// giveaway canonicals to the night.
+isles('i3', { title: 'Hockey is for Everyone Giveaway', pageSlug: 'hockey-is-for-everyone-giveaway', date: '2027-01-14', attendanceCap: 10000 });
+isles('i4', { title: 'Hockey is for Everyone Night', pageSlug: 'hockey-is-for-everyone-night', type: 'theme', date: '2027-01-14' });
+// Rule 2: a special-ticket package beside its theme night (the Penguins' and
+// Timberwolves' shape). The package page's title says so; the night does not
+// link it (WEB6 G2); the package page links the night.
+isles('i5', { title: '90s Night', pageSlug: '90s-night', type: 'theme', date: '2026-12-18' });
+isles('i6', { title: '90s Night T-Shirt', pageSlug: '90s-night-t-shirt', type: 'theme', date: '2026-12-18', ticketPackageRequired: true, ticketPackageName: '90s Night T-Shirt Ticket Package' });
+// Rule 2 past the budget: a long package name whose team shapes do not fit 60
+// with the suffix. The title drops the suffix and the stored "Islanders"
+// prefix, never the team (Gate 2 item 3).
+isles('i7', { title: 'Hockey Fights Cancer Night', pageSlug: 'hockey-fights-cancer-night', type: 'theme', date: '2026-11-21' });
+isles('i8', { title: 'Islanders Hockey Fights Cancer Lavender Warmup Jersey', pageSlug: 'islanders-hockey-fights-cancer-lavender-warmup-jersey', type: 'theme', date: '2026-11-21', ticketPackageRequired: true, ticketPackageName: 'Lavender Warmup Jersey' });
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 async function html(el: React.ReactElement): Promise<string> {
   const { prerenderToNodeStream } = await import('react-dom/static');
@@ -908,7 +930,7 @@ test('canonical: the three ruled examples; a duplicate points every URL signal a
 });
 
 // ── old slugs (the re-mint of 2026-10-29) ────────────────────────────────────
-test('an old slug in previousSlugs is a permanent redirect to the current slug; the sitemap never lists it; an unknown slug is still a 404', async () => {
+test('an old slug in previousSlugs is a permanent redirect to its row\'s page, or that page\'s canonical when it is a duplicate; the sitemap never lists it; an unknown slug is still a 404', async () => {
   process.env.PROMO_PAGES_LIVE = 'true';
   const { default: Page, generateMetadata } = await page();
   await assert.rejects(
@@ -916,7 +938,10 @@ test('an old slug in previousSlugs is a permanent redirect to the current slug; 
     (err: { digest?: string }) => {
       const d = String(err.digest ?? '');
       assert.ok(d.startsWith('NEXT_REDIRECT;'), d);
-      assert.ok(d.includes(';/nba/phoenix-suns/promos/dia-de-los-muertos;308;'), d);
+      // ONE HOP (ruling 2026-11-10): the row's current page (dia-de-los-muertos)
+      // is a duplicate of the night under the canonical rule, so the old slug
+      // goes straight to the night.
+      assert.ok(d.includes(';/nba/phoenix-suns/promos/dia-de-los-muertos-night;308;'), d);
       return true;
     },
   );
@@ -929,6 +954,72 @@ test('an old slug in previousSlugs is a permanent redirect to the current slug; 
   const { getPromoPageSitemapEntries } = await import('@/lib/promo-pages');
   const paths = (await getPromoPageSitemapEntries(TODAY)).map((e) => e.path);
   assert.ok(!paths.includes('/nba/phoenix-suns/promos/d-a-de-los-muertos'));
+});
+
+test('redirects resolve in one hop: an old slug never lands on a page whose canonical is elsewhere', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const { default: Page } = await page();
+  const target = await Page(params('nba', 'phoenix-suns', 'd-a-de-los-muertos')).then(
+    () => null,
+    (err: { digest?: string }) => String(err.digest ?? '').split(';')[2],
+  );
+  assert.equal(target, '/nba/phoenix-suns/promos/dia-de-los-muertos-night');
+  // The target serves its own page (200, its own canonical), not another redirect.
+  const { meta } = await render('nba', 'phoenix-suns', 'dia-de-los-muertos-night');
+  assert.equal(meta.alternates?.canonical, `https://www.getpromonight.com${target}`);
+});
+
+// ── same-game pairs (rulings 2026-11-10) ────────────────────────────────────
+test('rule 1: a giveaway that names its item and its theme night keep their own canonical and titles, and link each other', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const C = 'https://www.getpromonight.com/nhl/new-york-islanders/promos';
+  const hat = await render('nhl', 'new-york-islanders', 'elf-hat');
+  const night = await render('nhl', 'new-york-islanders', 'elf-night');
+  assert.equal(hat.meta.alternates?.canonical, `${C}/elf-hat`);
+  assert.equal(night.meta.alternates?.canonical, `${C}/elf-night`);
+  assert.match(String(hat.meta.title), /^Elf Hat \|/);
+  assert.match(String(night.meta.title), /^ELF Night \|/);
+  assert.match(hat.h, /href="\/nhl\/new-york-islanders\/promos\/elf-night"/, 'item page links the night');
+  assert.match(night.h, /href="\/nhl\/new-york-islanders\/promos\/elf-hat"/, 'night links the item page');
+});
+
+test('rule 1 extension: a giveaway with no item of its own canonicals to the night, leaves the sitemap and stays linked', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const C = 'https://www.getpromonight.com/nhl/new-york-islanders/promos';
+  const give = await render('nhl', 'new-york-islanders', 'hockey-is-for-everyone-giveaway');
+  const night = await render('nhl', 'new-york-islanders', 'hockey-is-for-everyone-night');
+  assert.equal(give.meta.alternates?.canonical, `${C}/hockey-is-for-everyone-night`);
+  assert.equal((give.meta.openGraph as any).url, `${C}/hockey-is-for-everyone-night`);
+  assert.equal(give.meta.robots, undefined, 'a duplicate is not noindexed');
+  assert.equal(night.meta.alternates?.canonical, `${C}/hockey-is-for-everyone-night`);
+  assert.match(night.h, /href="\/nhl\/new-york-islanders\/promos\/hockey-is-for-everyone-giveaway"/);
+  assert.match(give.h, /href="\/nhl\/new-york-islanders\/promos\/hockey-is-for-everyone-night"/);
+  const { getPromoPageSitemapEntries } = await import('@/lib/promo-pages');
+  const paths = (await getPromoPageSitemapEntries(TODAY)).map((e) => e.path);
+  assert.ok(paths.includes('/nhl/new-york-islanders/promos/hockey-is-for-everyone-night'));
+  assert.ok(!paths.includes('/nhl/new-york-islanders/promos/hockey-is-for-everyone-giveaway'));
+});
+
+test('rule 2: a special-ticket package page beside its theme night carries "Ticket Package" in its title; the night is unchanged and does not link it', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const pkg = await render('nhl', 'new-york-islanders', '90s-night-t-shirt');
+  const night = await render('nhl', 'new-york-islanders', '90s-night');
+  assert.match(String(pkg.meta.title), /^90s Night T-Shirt Ticket Package \|/);
+  assert.equal((pkg.meta.openGraph as any).title, `${pkg.meta.title} | PromoNight`);
+  assert.match(pkg.h, /<h1 class="rd-display[^"]*">90s Night T-Shirt<\/h1>/, 'the H1 keeps the stored name');
+  assert.match(String(night.meta.title), /^90s Night \|/);
+  assert.doesNotMatch(night.h, /href="\/nhl\/new-york-islanders\/promos\/90s-night-t-shirt"/, 'WEB6 G2: no link to the package page');
+  assert.match(pkg.h, /href="\/nhl\/new-york-islanders\/promos\/90s-night"/);
+  // Both are their own canonical: two pages, two searches.
+  assert.equal(pkg.meta.alternates?.canonical, 'https://www.getpromonight.com/nhl/new-york-islanders/promos/90s-night-t-shirt');
+  // Past the budget: an absolute title, no suffix, team kept, prefix cut.
+  const long = await render('nhl', 'new-york-islanders', 'islanders-hockey-fights-cancer-lavender-warmup-jersey');
+  assert.deepEqual(long.meta.title, { absolute: 'Hockey Fights Cancer Lavender Warmup Jersey Ticket Package | Islanders' });
+  assert.equal((long.meta.openGraph as any).title, 'Hockey Fights Cancer Lavender Warmup Jersey Ticket Package | Islanders', 'no suffix on the social title either');
+  assert.match(long.h, /<h1 class="rd-display[^"]*">Islanders Hockey Fights Cancer Lavender Warmup Jersey<\/h1>/);
+  // A package page with no related page on its game keeps its stored title.
+  const lone = await render('nhl', 'minnesota-wild', 'puck-package-night');
+  assert.match(String(lone.meta.title), /^Puck Package Night \|/);
 });
 
 // ── The family wrapper (hotfix 2026-10-30, option 3) ────────────────────────

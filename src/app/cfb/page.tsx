@@ -10,6 +10,7 @@ import { CfbHubBrowse } from '@/components/cfb/hub/CfbHubBrowse';
 import { CfbHubSearch } from '@/components/cfb/hub/CfbHubSearch';
 import { CfbTodaySlot } from '@/components/cfb/hub/CfbTodaySlot';
 import { cfbSeasonLabel } from '@/lib/cfb/season';
+import { rivalryWeekLong, rivalryWeekRange, rivalryWeekRows } from '@/lib/cfb/rivalry-index';
 
 // ISR — same 21600s window the homepage/playoffs use for date-rollover safety;
 // the §14a Monday-AM weekly-rail cutover lands overnight within this window.
@@ -47,7 +48,15 @@ export default async function CfbHub() {
   // maps getMatchupIndex 1:1), so this anchor's count can never drift from the
   // index page's row count. getMatchupIndex skips venue resolution, which the
   // count does not need.
-  const matchupCount = (await getMatchupIndex()).length;
+  const matchupIndex = await getMatchupIndex();
+  const matchupCount = matchupIndex.length;
+  // The Rivalry Week card (fix/gsc-cleanup-2026-11): /cfb/rivalries is the
+  // one target for rivalry week searches, and this is its prominent inbound
+  // link. The days and the count are the same derivation the index prints,
+  // over the same rows (getMatchupIndexRows maps getMatchupIndex 1:1). The
+  // hub's own title and H1 do not name rivalry week.
+  const rivalryWeek = rivalryWeekRange(matchupIndex);
+  const rivalryWeekCount = rivalryWeekRows(matchupIndex).length;
   const allTeams = data.browse.flatMap((b) => b.teams.map((t) => ({ id: t.id, name: t.name })));
   // Indexable stadium guides for the schools we cover (deduped by building).
   const venueLinks = await getVenueLinksForTeams(allTeams.map((t) => t.id));
@@ -85,6 +94,25 @@ export default async function CfbHub() {
       </header>
 
       <div className="mx-auto max-w-6xl px-5 pb-24 sm:px-10">
+
+        {rivalryWeek && (
+          // The whole card is the tap target (ux-review C1): the link's ::after
+          // covers the card, so the anchor text stays "Rivalry Week 2026
+          // schedule". No data-ad-item (ux-review C3): a two-line card is not a
+          // content item, and the first ad anchor stays where it was.
+          <section className="relative mt-2 rounded-xl border px-5 py-4" style={{ borderColor: `${GOLD}55`, background: `${GOLD}0d` }}>
+            <Link
+              href="/cfb/rivalries"
+              className="inline-flex min-h-11 items-center text-[17px] font-bold text-white underline-offset-4 after:absolute after:inset-0 after:rounded-xl after:content-[''] hover:underline"
+              style={{ fontFamily: SANS }}
+            >
+              {`Rivalry Week ${cfbSeasonLabel()} schedule`} →
+            </Link>
+            <p className="text-[14px] text-white/70" style={{ fontFamily: SANS }}>
+              {`${rivalryWeekLong(rivalryWeek)}: ${rivalryWeekCount} ${rivalryWeekCount === 1 ? 'rivalry game' : 'rivalry games'}, with the stadium for each.`}
+            </p>
+          </section>
+        )}
 
         {/* Persistent today-slot — CFB's positive bridge to the daily pro board. */}
         <CfbTodaySlot hasGames={data.weekly.games.length > 0} />

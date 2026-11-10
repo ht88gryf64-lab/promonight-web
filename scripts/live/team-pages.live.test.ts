@@ -42,6 +42,11 @@
 //    what catches it. The candidates are far-dated pages; when all of them
 //    are gone the sitemap's promo pages are sampled instead, and at least one
 //    must carry the guide.
+// Empty query (fix/gsc-cleanup-2026-11). No anchor on any sitemap team or
+//    promo page, nor on the other sitemap pages (every hub, aggregator and
+//    CFB page, and a spread of venue pages), has an href ending in a bare
+//    "?". Search Console indexed /nba/minnesota-timberwolves? as its own URL
+//    (canonical already clean); this keeps the site from ever linking one.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -504,4 +509,21 @@ test(`the first archive page in the sitemap answers 200 with a /promos/ link and
   const canonical = /<link rel="canonical" href="([^"]+)"/.exec(html)?.[1];
   assert.equal(canonical, `https://www.getpromonight.com${path}`, `${path}: canonical`);
   assert.match(html, /<span aria-current="page"[^>]*>Past promos<\/span>/, `${path}: the breadcrumb's current crumb`);
+});
+
+test(`no anchor on a sitemap page has an href ending in a bare "?" (${HOST})`, async () => {
+  const all = await sitemap();
+  const teamOrPromo = all.filter((p) => PROMO_RE.test(p) || TEAM_RE.test(p));
+  const venues = all.filter((p) => p.startsWith('/venues/'));
+  // The homepage loc carries no path, so the sitemap regex never yields '/'.
+  const others = ['/', ...all.filter((p) => p !== '/' && !PROMO_RE.test(p) && !TEAM_RE.test(p) && !p.startsWith('/venues/'))];
+  const paths = [...teamOrPromo, ...others, ...spread(venues, 12)];
+  const rows = await pool(paths, async (p) => {
+    const html = PROMO_RE.test(p) ? await promoPage(p) : TEAM_RE.test(p) ? await teamPage(p) : await get(p);
+    return { p, bad: [...anchorHrefs(html)].filter((h) => h.endsWith('?')) };
+  });
+  const bad = rows.flatMap((r) => r.bad.map((h) => `${r.p}: ${h}`));
+  console.log(`pages ${rows.length} (${teamOrPromo.length} team/promo, ${others.length} other, ${Math.min(12, venues.length)} venue), hrefs ending in "?" ${bad.length}`);
+  assert.ok(rows.length > 100, 'read the sitemap');
+  assert.deepEqual(bad, [], `${bad.length} hrefs end in a bare "?":\n${bad.slice(0, 20).join('\n')}`);
 });

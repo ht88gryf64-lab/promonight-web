@@ -19,6 +19,7 @@ import type { MatchupPage } from '@/lib/cfb/matchups';
 import { buildMatchupDescription, prettySchoolId } from '@/lib/cfb/matchup-description';
 import { venueLocalKickoff } from '@/lib/cfb/kickoff';
 import { cfbSeasonLabel } from './season';
+import { headingText, rivalryIndexHeading, rivalryWeekAnswer, rivalryWeekRange, rivalryWeekRows } from './rivalry-index';
 
 // The root layout title template appends ' | PromoNight' (13 chars) to every
 // page title. The house standard keeps the RENDERED <title> (field + brand) ≤60
@@ -279,21 +280,35 @@ export function buildCfbMatchupMetadata(data: MatchupPage): Metadata {
 
 // Exported so the index JSON-LD (rivalry-jsonld.ts) reuses the exact strings
 // the <head> ships — CollectionPage name/description and meta cannot drift.
-export function rivalryIndexTitle(): string {
-  return `College Football Rivalries ${cfbSeasonLabel()}`;
+//
+// Rivalry Week targeting (fix/gsc-cleanup-2026-11, ruling 2026-11-10): the
+// title, the H1 and the description name the stored game days inside the
+// window (rivalry-index.ts rivalryWeekRange), never typed dates, so the page
+// answers "when is rivalry week" in the head. With no game in the window the
+// index title and description of before stand.
+export function rivalryIndexTitle(rows: ReadonlyArray<{ date: string | null }>): string {
+  return headingText(rivalryIndexHeading(rows));
 }
 // Promises only what the index renders: date, stadium, trip planning. Kickoffs
 // live on the matchup pages once announced, so they are named there, not here.
-// No count: the registry is curated and a literal would drift.
-export function rivalryIndexDescription(): string {
-  return `Named college football rivalries in ${cfbSeasonLabel()}: the date, the stadium and how to plan the trip. Kickoff times appear on each rivalry page once announced.`;
+// Counts are the rows' own (the page is ISR; a literal would drift).
+export function rivalryIndexDescription(rows: ReadonlyArray<{ date: string | null }>): string {
+  const range = rivalryWeekRange(rows);
+  if (!range) {
+    return `Named college football rivalries in ${cfbSeasonLabel()}: the date, the stadium and how to plan the trip. Kickoff times appear on each rivalry page once announced.`;
+  }
+  const week = rivalryWeekRows(rows).length;
+  return `${rivalryWeekAnswer(range)} Dates and stadiums for ${week === 1 ? 'its 1 game' : `its ${week} games`}, plus all ${rows.length} rivalries by date.`;
 }
 
-export function buildCfbRivalryIndexMetadata(): Metadata {
-  // Description unchanged from what the route already shipped; this builder only
-  // adds the canonical and the self-referencing og:url it was missing.
-  const title = rivalryIndexTitle();
-  const description = rivalryIndexDescription();
+/** The full list's name (the ItemList), which is every rivalry, not the week. */
+export function rivalryListName(): string {
+  return `College Football Rivalries ${cfbSeasonLabel()}`;
+}
+
+export function buildCfbRivalryIndexMetadata(rows: ReadonlyArray<{ date: string | null }>): Metadata {
+  const title = rivalryIndexTitle(rows);
+  const description = rivalryIndexDescription(rows);
   const socialTitle = `${title} | PromoNight`;
   const url = `${BASE}/cfb/rivalries`;
   return {
