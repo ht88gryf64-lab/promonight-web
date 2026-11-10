@@ -930,7 +930,7 @@ test('canonical: the three ruled examples; a duplicate points every URL signal a
 });
 
 // ── old slugs (the re-mint of 2026-10-29) ────────────────────────────────────
-test('an old slug in previousSlugs is a permanent redirect to the current slug; the sitemap never lists it; an unknown slug is still a 404', async () => {
+test('an old slug in previousSlugs is a permanent redirect to its row\'s page, or that page\'s canonical when it is a duplicate; the sitemap never lists it; an unknown slug is still a 404', async () => {
   process.env.PROMO_PAGES_LIVE = 'true';
   const { default: Page, generateMetadata } = await page();
   await assert.rejects(

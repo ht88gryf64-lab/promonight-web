@@ -298,7 +298,12 @@ export function rivalryIndexDescription(rows: ReadonlyArray<{ date: string | nul
     return `Named college football rivalries in ${cfbSeasonLabel()}: the date, the stadium and how to plan the trip. Kickoff times appear on each rivalry page once announced.`;
   }
   const week = rivalryWeekRows(rows).length;
-  return `${rivalryWeekAnswer(range)} Dates and stadiums for ${week === 1 ? 'its 1 game' : `all ${week} games`}, plus ${rows.length} rivalries in date order.`;
+  return `${rivalryWeekAnswer(range)} Dates and stadiums for ${week === 1 ? 'its 1 game' : `its ${week} games`}, plus all ${rows.length} rivalries by date.`;
+}
+
+/** The full list's name (the ItemList), which is every rivalry, not the week. */
+export function rivalryListName(): string {
+  return `College Football Rivalries ${cfbSeasonLabel()}`;
 }
 
 export function buildCfbRivalryIndexMetadata(rows: ReadonlyArray<{ date: string | null }>): Metadata {

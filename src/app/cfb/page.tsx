@@ -96,10 +96,14 @@ export default async function CfbHub() {
       <div className="mx-auto max-w-6xl px-5 pb-24 sm:px-10">
 
         {rivalryWeek && (
-          <section data-ad-item="cfb-section" className="mt-2 rounded-xl border px-5 py-4" style={{ borderColor: `${GOLD}55`, background: `${GOLD}0d` }}>
+          // The whole card is the tap target (ux-review C1): the link's ::after
+          // covers the card, so the anchor text stays "Rivalry Week 2026
+          // schedule". No data-ad-item (ux-review C3): a two-line card is not a
+          // content item, and the first ad anchor stays where it was.
+          <section className="relative mt-2 rounded-xl border px-5 py-4" style={{ borderColor: `${GOLD}55`, background: `${GOLD}0d` }}>
             <Link
               href="/cfb/rivalries"
-              className="inline-flex min-h-11 items-center text-[17px] font-bold text-white underline-offset-4 hover:underline"
+              className="inline-flex min-h-11 items-center text-[17px] font-bold text-white underline-offset-4 after:absolute after:inset-0 after:rounded-xl after:content-[''] hover:underline"
               style={{ fontFamily: SANS }}
             >
               {`Rivalry Week ${cfbSeasonLabel()} schedule`} →

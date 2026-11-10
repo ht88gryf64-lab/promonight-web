@@ -515,7 +515,8 @@ test(`no anchor on a sitemap page has an href ending in a bare "?" (${HOST})`, a
   const all = await sitemap();
   const teamOrPromo = all.filter((p) => PROMO_RE.test(p) || TEAM_RE.test(p));
   const venues = all.filter((p) => p.startsWith('/venues/'));
-  const others = all.filter((p) => !PROMO_RE.test(p) && !TEAM_RE.test(p) && !p.startsWith('/venues/'));
+  // The homepage loc carries no path, so the sitemap regex never yields '/'.
+  const others = ['/', ...all.filter((p) => p !== '/' && !PROMO_RE.test(p) && !TEAM_RE.test(p) && !p.startsWith('/venues/'))];
   const paths = [...teamOrPromo, ...others, ...spread(venues, 12)];
   const rows = await pool(paths, async (p) => {
     const html = PROMO_RE.test(p) ? await promoPage(p) : TEAM_RE.test(p) ? await teamPage(p) : await get(p);

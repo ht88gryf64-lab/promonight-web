@@ -142,7 +142,7 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
   const titleDates = removed ? page.removedDates : dates;
   const { title, absolute: titleAbsolute } =
     name !== cleanText(primary.title)
-      ? packagePageTitle(name, primary.title, teamName, titleDates, page.season, { nickname: team.name, city: team.city })
+      ? packagePageTitle(name, primary.title, teamName, titleDates, page.season, { nickname: team.name })
       : { title: promoPageTitle(name, teamName, titleDates, page.season, team.name), absolute: false };
   const description = promoPageDescription({
     description: primary.description,

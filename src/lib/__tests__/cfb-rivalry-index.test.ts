@@ -209,7 +209,7 @@ test('title and H1 carry the dates: the approved title, and the H1 is the same s
 test('the description answers "when" with the dates, in 120 to 155 characters, counts derived', () => {
   const d = rivalryIndexDescription(season2026);
   assert.match(d, /^College football Rivalry Week 2026 is Friday, November 27 and Saturday, November 28\./);
-  assert.match(d, /Dates and stadiums for all 4 games, plus 7 rivalries in date order\.$/);
+  assert.match(d, /Dates and stadiums for its 4 games, plus all 7 rivalries by date\.$/);
   // The real corpus: 16 in the window, 32 in all.
   const full = [...Array.from({ length: 16 }, (_, i) => row(`w${i}`, i < 4 ? '2026-11-27' : '2026-11-28')), ...Array.from({ length: 16 }, (_, i) => row(`o${i}`, '2026-10-10'))];
   const real = rivalryIndexDescription(full);

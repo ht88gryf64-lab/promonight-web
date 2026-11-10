@@ -306,14 +306,18 @@ export const PACKAGE_TITLE_HARD_MAX = 70;
 
 /** A stored name less a leading word run that only repeats the team or the
  *  season ("Islanders Scout Patch" on the Islanders, "2026-27 Pride Jersey"),
- *  with the separator after it. Never empties the name; nothing else is cut. */
-export function stripRedundantPrefix(name: string, opts: { teamName: string; nickname?: string | null; city?: string | null; season?: string | null }): string {
+ *  with the space or colon after it. Never empties the name; nothing else is
+ *  cut. A bare city is not the team ("New York-Style Pizza", "Minnesota
+ *  Hockey Celebration"), and a hyphen joins a word rather than ending a
+ *  prefix, so neither is cut. */
+export function stripRedundantPrefix(name: string, opts: { teamName: string; nickname?: string | null; season?: string | null }): string {
   const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const prefixes = [opts.teamName, opts.city && opts.nickname ? `${opts.city} ${opts.nickname}` : null, opts.nickname, opts.city, opts.season]
+  // teamName is the display name (teamDisplayName).
+  const prefixes = [opts.teamName, opts.nickname, opts.season]
     .filter((x): x is string => !!x && !!x.trim())
     .sort((a, b) => b.length - a.length);
   for (const pre of prefixes) {
-    const m = new RegExp(`^${esc(pre.trim())}(?:'s)?(?:\\s*[:|,-]\\s*|\\s+)(.+)$`, 'i').exec(name);
+    const m = new RegExp(`^${esc(pre.trim())}(?:'s)?(?:\\s*[:|]\\s*|\\s+)(.+)$`, 'i').exec(name);
     if (m && m[1].trim()) return m[1].trim();
   }
   return name;
@@ -338,14 +342,14 @@ export function packagePageTitle(
   teamName: string,
   dates: readonly string[],
   season: string | null,
-  team: { nickname?: string | null; city?: string | null },
+  team: { nickname?: string | null },
 ): { title: string; absolute: boolean } {
   const withTeam = promoPageTitle(packagedName, teamName, dates, season, team.nickname);
   if (withTeam !== cleanText(packagedName) && renderedTitleLength(withTeam) <= TITLE_MAX) return { title: withTeam, absolute: false };
   const nick = team.nickname && team.nickname.trim() ? team.nickname.trim() : teamName;
   const a = `${packagedName} | ${nick}`;
   if (a.length <= TITLE_MAX) return { title: a, absolute: true };
-  const stripped = stripRedundantPrefix(cleanText(storedName), { teamName, nickname: team.nickname, city: team.city, season });
+  const stripped = stripRedundantPrefix(cleanText(storedName), { teamName, nickname: team.nickname, season });
   const b = `${stripped} ${PACKAGE_QUALIFIER} | ${nick}`;
   return { title: b, absolute: true };
 }
@@ -906,7 +910,7 @@ const PACKAGE_QUALIFIER = 'Ticket Package';
 export function packagePageName(title: string, opts: { ticketPackage: boolean; sameGameTitles: readonly string[] }): string {
   const name = cleanText(title);
   if (!opts.ticketPackage || !name) return name;
-  if (/\bticket package\b/i.test(name)) return name;
+  if (/\b(?:package|pack)\b/i.test(name)) return name;
   if (!opts.sameGameTitles.some((t) => sameGameRelated(name, t))) return name;
   return `${name} ${PACKAGE_QUALIFIER}`;
 }
@@ -951,14 +955,17 @@ export function canonicalGroups<T extends CanonicalCandidate>(candidates: readon
   // words. The giveaway names no item that sets it apart, so it is the
   // weaker page: it canonicals to the night. Only pages in no group yet, one
   // giveaway and one theme, so nothing the nesting rule decided moves.
-  for (let i = 0; i < pages.length; i++) {
-    for (let j = 0; j < pages.length; j++) {
-      if (inGroup.has(i) || inGroup.has(j) || pages[i].type !== 'giveaway' || pages[j].type !== 'theme') continue;
-      if (!sameDistinctiveWords(pages[i].title, pages[j].title)) continue;
-      inGroup.add(i);
-      inGroup.add(j);
-      out.push({ winner: pages[j], members: [pages[i], pages[j]] });
-    }
+  // Order-free (render, sitemap and card read the rows in different orders):
+  // giveaways by slug, and of several matching nights the most specific.
+  const bySlugOrder = pages.map((_, k) => k).sort((x, y) => pages[x].pageSlug.localeCompare(pages[y].pageSlug));
+  for (const i of bySlugOrder) {
+    if (inGroup.has(i) || pages[i].type !== 'giveaway') continue;
+    const nights = bySlugOrder.filter((j) => !inGroup.has(j) && pages[j].type === 'theme' && sameDistinctiveWords(pages[i].title, pages[j].title));
+    if (nights.length === 0) continue;
+    const winner = mostSpecific(nights.map((j) => pages[j]));
+    inGroup.add(i);
+    inGroup.add(pages.indexOf(winner));
+    out.push({ winner, members: [pages[i], winner] });
   }
   return out;
 }

@@ -4296,3 +4296,15 @@ ux-review of `feature/promo-archive` (docs/ux-review/2026-11-08-feature-promo-ar
 ## 95. Opponent naming differs between seasons on the same team's rows (deferred, logged 2026-11-08)
 
 ux-review of `feature/promo-archive` (D8). On the Wild's archive page the 2026-27 rows say "vs Lightning", "vs Sharks", "vs Islanders" and the 2025-26 rows say "vs Florida Panthers", "vs Colorado Avalanche", "vs Nashville Predators"; one row (Xcel Energy LED Night Light, Dec 11) has no opponent and says "TBD" for the time. The same strings show on the team page's completed rows and in a promo page's Previous editions line, so the inconsistency is in the stored rows and the game join (promo-game-join fills empty slots from the spine with the display names the spine carries), not in the archive. Pipeline: settle one form of the opponent on every row, and fill the Dec 11 row's time and opponent from the spine.
+
+## 96. /best-promos sells tickets for played games (deferred, logged 2026-11-10)
+
+ux-review of `fix/gsc-cleanup-2026-11` (B0), present on production. With the season over, every ranked promo on /best-promos is past (the 50 rendered JSON-LD dates run 2026-03-28 to 2026-08-19) and the page says nothing is upcoming, yet each card still shows two "Get Tickets" buttons (Ticketmaster and TicketNetwork), 100 in all at 390. The Ticketmaster one lands on the team's artist page, which does not contain the game tapped. Fix: drop the ticket buttons on a played row (known-issues 83 is the promo-page twin).
+
+## 97. A package page's "Get tickets" sells a standard ticket the page says does not include the item (deferred, logged 2026-11-10)
+
+ux-review of `fix/gsc-cleanup-2026-11` (T2), present on production, on /nba/minnesota-timberwolves/promos/paint-night-blanket. The primary button goes to TicketNetwork event tickets, while the page's own FAQ says a standard ticket does not include the blanket. A special-ticket package page needs its CTA to name what it sells, or to send the fan to the team's package link when the row stores one.
+
+## 98. /cfb rivalry cards show played dates with no played marker (deferred, logged 2026-11-10)
+
+ux-review of `fix/gsc-cleanup-2026-11` (C4), present on production. On /cfb the evergreen rivalry blocks print `SAT, OCT 10 · DALLAS (NEUTRAL)` (Red River) and `SAT, OCT 31 · JACKSONVILLE` (Florida vs Georgia) after those games were played, reading as upcoming. Mark a played meeting (or show the next season's once scheduled).
