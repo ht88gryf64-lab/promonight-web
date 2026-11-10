@@ -178,6 +178,9 @@ is Nov 27 and 28, so demand peaks just before the recheck.
 | Rollback target | `dpl_moVf2pML877yzJWVq6X3CuyJTtEC` (main `a4bcfd5`) |
 | test:live on production | 11 of 11 guards pass, 2026-11-10 after deploy (the new "?" guard: 1,972 pages, 0) |
 | Read clock | starts 2026-11-10T17:34:38Z; compare Nov 11 to Nov 29 against the baselines below, read on Nov 30 |
+| Follow-up deploy | main `59afc98`, `dpl_HCmyKH3Bn5czegwj1t2hLfcCvLNu`, READY **2026-11-10T18:44:50Z**; test:live 13 of 13 |
+| What changed at the follow-up | all 35 package titles moved to the a/b/c rule (24 now carry the game date, none the PromoNight suffix); the disclosure under Get tickets on the 317 live package pages; IndexNow resubmitted the 35 at 2026-11-10T18:49:36Z (both endpoints 200) |
+| Watch-list timing | the package titles changed TWICE on Nov 10: 17:34:38Z (qualifier) and 18:44:50Z (a/b/c with the date). Read the watch list from Nov 11, the first full UTC day on the final titles |
 
 ## A. Rivalry Week: /cfb/rivalries is the single target
 
