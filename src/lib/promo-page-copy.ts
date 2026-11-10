@@ -805,6 +805,61 @@ export function canonicalWinner<T extends CanonicalCandidate>(members: readonly 
   return mostSpecific(tier1.length ? tier1 : members);
 }
 
+// ── same-game pairs (fix/gsc-cleanup-2026-11, rulings 2026-11-10) ─────────────
+// The pipeline writes one row for a game's theme night and another for its
+// item or special-ticket package, each with its own page. Search Console
+// shows the item pages earn their own clicks, so both pages stay; what the
+// rulings fix is two titles that say the same thing.
+//
+// A title's DISTINCTIVE words are its words less the ones that say what kind
+// of promo it is ("night", "giveaway", "game", "day", a league's initials):
+// "Hello Kitty Night" and "Hello Kitty Giveaway" are both {hello, kitty};
+// "Noche Latina Baseball Jersey" is {noche, latina, baseball, jersey}.
+
+const KIND_WORDS: ReadonlySet<string> = new Set(['night', 'giveaway', 'game', 'day', 'nba', 'nhl', 'mlb', 'nfl', 'mls', 'wnba']);
+
+export function distinctiveWords(title: string): Set<string> {
+  return new Set(canonicalTitleKey(title).split(' ').filter((t) => t && !KIND_WORDS.has(t)));
+}
+
+/** Two titles on one game are about the same promotion: one's distinctive
+ *  words all appear in the other's ("Pride Night" and "Pride Baseball
+ *  Jersey"). Empty sets relate to nothing. */
+export function sameGameRelated(a: string, b: string): boolean {
+  const wa = distinctiveWords(a);
+  const wb = distinctiveWords(b);
+  if (wa.size === 0 || wb.size === 0) return false;
+  const [small, big] = wa.size <= wb.size ? [wa, wb] : [wb, wa];
+  return [...small].every((t) => big.has(t));
+}
+
+/** Same distinctive words exactly: the item title names no item the night's
+ *  title lacks ("Hockey is for Everyone Giveaway" / "... Night"). */
+export function sameDistinctiveWords(a: string, b: string): boolean {
+  const wa = distinctiveWords(a);
+  const wb = distinctiveWords(b);
+  return wa.size > 0 && wa.size === wb.size && [...wa].every((t) => wb.has(t));
+}
+
+const PACKAGE_QUALIFIER = 'Ticket Package';
+
+/**
+ * Rule 2 (ruling 2026-11-10): the name a special-ticket package page puts in
+ * its <title>. When the page is a package row (the stored
+ * ticketPackageRequired, NHL and NBA) and the same game has a promotion page
+ * about the same thing (sameGameRelated), the name carries " Ticket Package",
+ * so the theme page stays the target for the theme search. A stored name
+ * that already says it is a package is left as it is. The H1 and every list
+ * keep the stored title.
+ */
+export function packagePageName(title: string, opts: { ticketPackage: boolean; sameGameTitles: readonly string[] }): string {
+  const name = cleanText(title);
+  if (!opts.ticketPackage || !name) return name;
+  if (/\bticket package\b/i.test(name)) return name;
+  if (!opts.sameGameTitles.some((t) => sameGameRelated(name, t))) return name;
+  return `${name} ${PACKAGE_QUALIFIER}`;
+}
+
 /** The groups among one team's pages on ONE date, one candidate per slug
  *  (same-date twins under one slug are one page; the twin that is a tier 1
  *  giveaway stands for it, so the winner does not depend on document
@@ -820,6 +875,9 @@ export function canonicalGroups<T extends CanonicalCandidate>(candidates: readon
   }
   const pages = [...bySlug.values()];
   const grouped = new Set<number>();
+  // Pages in a group of two or more (grouped also holds the singletons the
+  // nesting pass visited).
+  const inGroup = new Set<number>();
   const out: CanonicalGroup<T>[] = [];
   for (let i = 0; i < pages.length; i++) {
     if (grouped.has(i)) continue;
@@ -833,8 +891,23 @@ export function canonicalGroups<T extends CanonicalCandidate>(candidates: readon
       }
     }
     if (comp.length < 2) continue;
+    for (const k of comp) inGroup.add(k);
     const members = comp.map((k) => pages[k]);
     out.push({ winner: canonicalWinner(members), members });
+  }
+  // Rule 1's extension (ruling 2026-11-10): a giveaway and a theme night on
+  // the same game whose titles do not nest but carry the same distinctive
+  // words. The giveaway names no item that sets it apart, so it is the
+  // weaker page: it canonicals to the night. Only pages in no group yet, one
+  // giveaway and one theme, so nothing the nesting rule decided moves.
+  for (let i = 0; i < pages.length; i++) {
+    for (let j = 0; j < pages.length; j++) {
+      if (inGroup.has(i) || inGroup.has(j) || pages[i].type !== 'giveaway' || pages[j].type !== 'theme') continue;
+      if (!sameDistinctiveWords(pages[i].title, pages[j].title)) continue;
+      inGroup.add(i);
+      inGroup.add(j);
+      out.push({ winner: pages[j], members: [pages[i], pages[j]] });
+    }
   }
   return out;
 }

@@ -421,3 +421,47 @@ test('canonical rule: the three ruled examples (2026-10-29), the tie-breaks and 
   assert.equal(canonicalGroups(chain).length, 1);
   assert.equal(canonicalGroups(chain)[0].members.length, 3);
 });
+
+// ── same-game pairs (rulings 2026-11-10, fix/gsc-cleanup-2026-11) ────────────
+test('packagePageName: rule 2 qualifies a package page beside a related promotion, from the stored flag', async () => {
+  const { packagePageName } = await import('../promo-page-copy');
+  // The real pairs of 2026-11-10.
+  assert.equal(packagePageName('Noche Latina Baseball Jersey', { ticketPackage: true, sameGameTitles: ['Noche Latina'] }), 'Noche Latina Baseball Jersey Ticket Package');
+  assert.equal(packagePageName('Paint Night Blanket', { ticketPackage: true, sameGameTitles: ['NBA Paint Night'] }), 'Paint Night Blanket Ticket Package');
+  assert.equal(packagePageName('Pride Baseball Jersey', { ticketPackage: true, sameGameTitles: ['Pride Night'] }), 'Pride Baseball Jersey Ticket Package');
+  assert.equal(packagePageName('Cherry Blossom Hat', { ticketPackage: true, sameGameTitles: ['Cherry Blossom Night'] }), 'Cherry Blossom Hat Ticket Package');
+  // Not a package row, no related page on the game, or the name already says it: unchanged.
+  assert.equal(packagePageName('Noche Latina', { ticketPackage: false, sameGameTitles: ['Noche Latina Baseball Jersey'] }), 'Noche Latina');
+  assert.equal(packagePageName('Scout Pack', { ticketPackage: true, sameGameTitles: ['Pride Night'] }), 'Scout Pack');
+  assert.equal(packagePageName('Scout Pack', { ticketPackage: true, sameGameTitles: [] }), 'Scout Pack');
+  assert.equal(packagePageName('Family Ticket Package', { ticketPackage: true, sameGameTitles: ['Family Night'] }), 'Family Ticket Package');
+});
+
+test('sameGameRelated / sameDistinctiveWords: kind words and league initials do not count', async () => {
+  const { sameGameRelated, sameDistinctiveWords } = await import('../promo-page-copy');
+  assert.ok(sameGameRelated('Noche Latina', 'Noche Latina Baseball Jersey'));
+  assert.ok(sameGameRelated('NBA Paint Night', 'Paint Night Blanket'));
+  assert.ok(!sameGameRelated('Pride Night', 'Hockey Fights Cancer Night'));
+  assert.ok(!sameGameRelated('Night', 'Giveaway'), 'all kind words: nothing distinctive');
+  assert.ok(sameDistinctiveWords('Hello Kitty Giveaway', 'Hello Kitty Night'));
+  assert.ok(sameDistinctiveWords('Hockey is for Everyone Giveaway', 'Hockey is for Everyone Night'));
+  assert.ok(!sameDistinctiveWords('Elf Hat', 'ELF Night'), 'the giveaway names its item');
+  assert.ok(!sameDistinctiveWords('Swamp Dragons Bobblehead', 'Swamp Dragons Night'));
+});
+
+test('canonicalGroups rule 1 extension: giveaway and theme with the same words group to the theme; nothing else moves', async () => {
+  const { canonicalGroups } = await import('../promo-page-copy');
+  const c = (pageSlug: string, title: string, type: string, imageTier: number | null = 3) => ({ pageSlug, title, type: type as never, imageTier: imageTier as never });
+  const [g] = canonicalGroups([c('hife-giveaway', 'Hockey is for Everyone Giveaway', 'giveaway', null), c('hife-night', 'Hockey is for Everyone Night', 'theme')]);
+  assert.equal(g.winner.pageSlug, 'hife-night');
+  assert.deepEqual(g.members.map((m) => m.pageSlug).sort(), ['hife-giveaway', 'hife-night']);
+  // Even a tier 1 giveaway with no item of its own: the night is the stronger page.
+  assert.equal(canonicalGroups([c('k', 'Hello Kitty Giveaway', 'giveaway', 1), c('n', 'Hello Kitty Night', 'theme')])[0].winner.pageSlug, 'n');
+  // Item named: no group.
+  assert.deepEqual(canonicalGroups([c('a', 'Elf Hat', 'giveaway'), c('b', 'ELF Night', 'theme')]), []);
+  // Two giveaways, or two theme nights, with the same words: not this rule.
+  assert.deepEqual(canonicalGroups([c('a', 'Star Wars Giveaway', 'giveaway'), c('b', 'Star Wars Night', 'giveaway')]), []);
+  // The nesting rule still decides its own groups: Día de los Muertos (Suns).
+  const [m] = canonicalGroups([c('dia-de-los-muertos-2026-27', 'Día de los Muertos', 'giveaway', null), c('dia-de-los-muertos-night', 'Día de los Muertos Night', 'theme')]);
+  assert.equal(m.winner.pageSlug, 'dia-de-los-muertos-night');
+});

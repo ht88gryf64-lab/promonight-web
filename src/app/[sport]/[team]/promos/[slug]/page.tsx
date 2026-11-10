@@ -24,7 +24,8 @@ import { storedImageSize, type ImageSize } from '@/lib/image-dimensions';
 // RESOLUTION. The slug's rows for this team, the current season's group
 // winning (src/lib/promo-pages.ts resolvePromoPage). A slug no row carries
 // but some row lists in previousSlugs (the slug re-mint of 2026-10-29) is a
-// permanent redirect to that row's current slug; a slug no row knows is a
+// permanent redirect to that row's current slug (or to that page's canonical
+// when it is a duplicate, one hop); a slug no row knows is a
 // 404. A slug whose every row is tombstoned renders the removed page; a row
 // with no usable date or name renders with noindex (brief A.5).
 
@@ -58,7 +59,13 @@ async function resolve(params: Params): Promise<Resolved> {
     // An old slug: the page body answers with the redirect (the metadata of
     // a redirected response is never read).
     const current = await resolvePreviousSlug(team, slug);
-    return current ? { kind: 'redirect', to: promoPagePath(sport, team.id, current) } : null;
+    if (!current) return null;
+    // ONE HOP (ruling 2026-11-10): when the row's current page is itself a
+    // duplicate under the canonical rule, the old slug goes straight to the
+    // canonical, not to a page that would point a crawler on again
+    // (d-a-de-los-muertos was 308 to -2026-27, which canonicals to -night).
+    const currentPage = await resolvePromoPage(team, current, today);
+    return { kind: 'redirect', to: promoPagePath(sport, team.id, currentPage?.canonicalSlug ?? current) };
   }
   const ctx = await loadPromoPageContext(page, today);
   // The hero's width and height: the card's are fixed, a stored photo's are
