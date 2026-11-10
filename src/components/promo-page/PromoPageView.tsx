@@ -14,7 +14,7 @@ import { resolveHotelLink } from '@/lib/hotel-link';
 import { promoDownloadHref } from '@/lib/app-link';
 import { synthPromoId, teamDisplayName } from '@/lib/promo-helpers';
 import { PROMO_TYPE_LABELS } from '@/lib/types';
-import { TICKET_PACKAGE_ROW_NOTE, isTicketPackageLeague } from '@/lib/ticket-packages';
+import { PACKAGE_CTA_DISCLOSURE, PACKAGE_SOURCE_LINK_LABEL, TICKET_PACKAGE_ROW_NOTE, isTicketPackageLeague } from '@/lib/ticket-packages';
 import type { LinkedPromo, PromoPage, PromoPageContext } from '@/lib/promo-pages';
 import { EXPLAINER_LABEL, explainerFor } from '@/lib/promo-explainers';
 import { BEFORE_YOU_GO_LABEL } from '@/lib/before-you-go';
@@ -137,12 +137,13 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
     ticketPackage: isTicketPackageLeague(team.league) && primary.ticketPackageRequired === true,
     sameGameTitles: ctx.alsoAtGame.map((p) => p.title),
   });
-  // A qualified package name runs its own cascade, which never drops the
-  // team (ruling 2026-11-10): it may end in an absolute title, no suffix.
+  // A qualified package name runs its own rule (a, b, c), always an
+  // absolute title with the team and never the " | PromoNight" suffix
+  // (Gate 3 follow-up, ruling 2026-11-10).
   const titleDates = removed ? page.removedDates : dates;
   const { title, absolute: titleAbsolute } =
     name !== cleanText(primary.title)
-      ? packagePageTitle(name, primary.title, teamName, titleDates, page.season, { nickname: team.name })
+      ? packagePageTitle(name, teamName, titleDates, { nickname: team.name })
       : { title: promoPageTitle(name, teamName, titleDates, page.season, team.name), absolute: false };
   const description = promoPageDescription({
     description: primary.description,
@@ -280,6 +281,13 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
   const storedFaqs = promoFaqs({ row: primary, teamName, dates, removed, removedOn, past });
   const faqs = [...storedFaqs, ...(explainer?.faqs.map((f) => ({ question: f.q, answer: f.a })) ?? [])];
   const sourceHost = hostOf(primary.sourceUrl);
+  // A special-ticket package page (NHL and NBA, the stored flag): "Get
+  // tickets" stays TicketNetwork with its tagging unchanged, and a disclosure
+  // sits directly under it, server-rendered (Gate 3 follow-up, ruling
+  // 2026-11-10). The team-site link is the row's stored source URL, never a
+  // guessed one: no stored URL, no link.
+  const packagePage = isTicketPackageLeague(team.league) && primary.ticketPackageRequired === true;
+  const packageSourceUrl = packagePage && primary.sourceUrl && sourceHost && /^https?:\/\//i.test(primary.sourceUrl) ? primary.sourceUrl : null;
   const readOn = formatInstantDate(ctx.observedAt);
   const description = cleanText(primary.description);
   // The sponsor is a line inside About (spec item 5), unless the sourced
@@ -672,6 +680,16 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
               </TrackedAffiliateLink>
               <PromoShareRowButton {...shareProps} />
             </div>
+            {packagePage ? (
+              <div data-package-disclosure="" className="flex flex-col gap-1">
+                <p className="m-0 font-rd text-[14px] leading-[1.45] text-rd-ink-soft">{PACKAGE_CTA_DISCLOSURE}</p>
+                {packageSourceUrl ? (
+                  <a href={packageSourceUrl} target="_blank" rel="noopener nofollow" className="self-start font-rd text-[14px] font-medium text-rd-link underline underline-offset-2">
+                    {PACKAGE_SOURCE_LINK_LABEL}
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
             {ticketNetwork ? (
               <TrackedAffiliateLink
                 href={ticketmaster}

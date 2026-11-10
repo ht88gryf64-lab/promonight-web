@@ -87,3 +87,13 @@ export const TICKET_PACKAGES_SUBLINE =
 // package required" nights), so it must not promise an item either (round 6).
 // The row's own description, printed under it, says which.
 export const TICKET_PACKAGE_ROW_NOTE = 'Comes with a special ticket package.';
+
+/** The line under a package page's "Get tickets" (Gate 3 follow-up, ruling
+ *  2026-11-10, resolves known-issues 97): the primary CTA sells a standard
+ *  TicketNetwork ticket, and the item comes with the team's package. Same
+ *  meaning as TICKET_PACKAGE_ROW_NOTE, no new claim. */
+export const PACKAGE_CTA_DISCLOSURE = 'This giveaway comes with a special ticket package from the team. Tickets bought through us may not include it.';
+
+/** The secondary link after the disclosure, to the row's stored source URL
+ *  as stored (no affiliate parameters); absent when the row stores none. */
+export const PACKAGE_SOURCE_LINK_LABEL = 'See the package on the team site';
