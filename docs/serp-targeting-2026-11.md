@@ -171,6 +171,14 @@ scope and are unchanged (their after-window above runs to Dec 3).
 **Recheck: 2026-11-30.** The deadline item is Rivalry Week: Thanksgiving weekend
 is Nov 27 and 28, so demand peaks just before the recheck.
 
+| Deploy | |
+|---|---|
+| Merge commit | `f3034c5` on main (branch head `9202cc6`) |
+| Production deployment | `dpl_BMF2Q3TDUPCqJLsFRVufTwGYmKEB`, READY 2026-11-10T17:34:38Z |
+| Rollback target | `dpl_moVf2pML877yzJWVq6X3CuyJTtEC` (main `a4bcfd5`) |
+| test:live on production | 11 of 11 guards pass, 2026-11-10 after deploy (the new "?" guard: 1,972 pages, 0) |
+| Read clock | starts 2026-11-10T17:34:38Z; compare Nov 11 to Nov 29 against the baselines below, read on Nov 30 |
+
 ## A. Rivalry Week: /cfb/rivalries is the single target
 
 Baseline, GSC Nov 2 to Nov 9: about 2,200 impressions a week on "rivalry week
