@@ -161,3 +161,83 @@ renders the stored data faithfully; the fix is in the data.
   not claim to quote the operator.
 - t-mobile-park's storage sentence cites the wrong mlb.com page.
 - Nine buildings store dimensions in a different order from their source.
+
+# GSC cleanup, 2026-11 (fix/gsc-cleanup-2026-11)
+
+Branch `fix/gsc-cleanup-2026-11`, rulings of 2026-11-10 (Gates 1 and 2). Three
+fixes from the Search Console read of Nov 2 to Nov 9. Venue pages were out of
+scope and are unchanged (their after-window above runs to Dec 3).
+
+**Recheck: 2026-11-30.** The deadline item is Rivalry Week: Thanksgiving weekend
+is Nov 27 and 28, so demand peaks just before the recheck.
+
+## A. Rivalry Week: /cfb/rivalries is the single target
+
+Baseline, GSC Nov 2 to Nov 9: about 2,200 impressions a week on "rivalry week
+college football" queries, split between /cfb and /cfb/rivalries, with Google
+flipping between them. /cfb/rivalries ranks 3.3 to 4.7 for "when is rivalry week
+college football 2026" at 1 to 2% CTR.
+
+What changed:
+
+- /cfb/rivalries title "College Football Rivalries 2026" became "College Football
+  Rivalry Week 2026: Nov 27-28" (H1 the same). The meta description, the first
+  sentence, the Rivalry Week line and the FAQ answer lead with "College football
+  Rivalry Week 2026 is Friday, November 27 and Saturday, November 28."
+- Every date is derived: the first and last stored game day inside the window
+  (src/lib/cfb/rivalry-index.ts, Nov 26 to 28, Thanksgiving week). Big Game (Nov
+  21) left the section and stays in the full list.
+- /cfb keeps its title and H1 and gains a card under the hero linking
+  /cfb/rivalries with the anchor "Rivalry Week 2026 schedule".
+
+Read on Nov 30: the query's impressions and clicks by page (they should
+concentrate on /cfb/rivalries), its position and CTR there against 3.3 to 4.7 and
+1 to 2%.
+
+## B. Same-game promo pairs: no 301s
+
+No redirect table and no merged URLs: Search Console showed the item pages earn
+their own clicks. What shipped instead (rules of 2026-11-10; pipeline ticket
+docs/ops-tickets/promo-duplicates-2026-11.md):
+
+1. Giveaway and theme night on one game, neither a package: both stay and link
+   each other. A giveaway whose title names no item of its own canonicals to the
+   night: anaheim-ducks hockey-is-for-everyone-giveaway to
+   hockey-is-for-everyone-night (the only one on 2026-11-10).
+2. A special-ticket package page beside a related promotion carries "Ticket
+   Package" in its title (35 pages on 2026-11-10, 26 upcoming), never dropping
+   the team. The theme page does not link it.
+3. Old slugs land on the canonical in one hop: phoenix-suns d-a-de-los-muertos to
+   dia-de-los-muertos-night; san-francisco-giants pok-mon-worlds-night-jersey to
+   pokemon-worlds-night-worlds-pikachu-jersey; seattle-mariners pok-mon-go-night
+   to pokemon-go-night-jersey.
+
+### Watch list
+
+Baseline GSC Oct 30 to Nov 9, clicks / impressions / position:
+
+| Page | Change | Baseline |
+|---|---|---|
+| nba/minnesota-timberwolves/promos/paint-night-blanket | qualified | 16 / 79 / 2.8 |
+| nhl/pittsburgh-penguins/promos/90s-night-t-shirt | qualified | 9 / 35 / 4.0 |
+| nba/minnesota-timberwolves/promos/military-appreciation-baseball-jersey | qualified | 4 / 53 / 3.6 |
+| nba/minnesota-timberwolves/promos/noche-latina | theme target | 27 / 397 / 3.7 |
+| nba/minnesota-timberwolves/promos/noche-latina-baseball-jersey | qualified | 6 / 341 / 7.1 |
+| nba/golden-state-warriors/promos/hello-kitty-night | qualified (the night is stored as a package) | 25 / 334 / 4.4 |
+| nba/golden-state-warriors/promos/hello-kitty-giveaway | unchanged | 12 / 131 / 7.0 |
+
+**Rule to apply on Nov 30:** if a qualified page drops more than a third of its
+clicks while holding its position, revisit the qualifier's wording. The label
+stays; only the wording changes. Read CTR at a comparable position (a page that
+drops two places loses clicks whatever its title says). For noche-latina, the
+qualifier is meant to move "noche latina timberwolves" from the jersey page to
+the theme page.
+
+## C. The empty "?"
+
+/nba/minnesota-timberwolves? (209 impressions) was indexed as its own URL. Its
+canonical already pointed at the bare path. No builder in the repo emits a bare
+"?"; every query join now goes through src/lib/url-query.ts withQuery, and
+test:live fails on any served href ending in "?". No middleware redirect: on the
+preview of 2026-11-10, Vercel received "GET /path?" but the middleware never saw
+the bare "?", so a 308 could not fire (ruling: drop it in that case).

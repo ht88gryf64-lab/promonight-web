@@ -75,7 +75,10 @@ without guessing from words.
    giveaway carries rel=canonical to the night and leaves the sitemap.
 2. A special-ticket package page (NBA, NHL) beside a related promotion on its game:
    its `<title>` carries " Ticket Package" (from `ticketPackageRequired`); its H1
-   keeps the stored title. The theme page does not link it (WEB6 G2 stands).
+   keeps the stored title. The theme page does not link it (WEB6 G2 stands). The
+   title never drops the team: past 60 it drops the " | PromoNight" suffix, then
+   a stored prefix that repeats the team or season, and runs up to 70 (Gate 2
+   ruling). 35 pages carried the qualifier on 2026-11-10.
 3. An old slug in `previousSlugs` whose current page is a duplicate redirects
    straight to the canonical in one hop.
 
@@ -84,15 +87,40 @@ without guessing from words.
 - `giveawayItem` is null on every record in the 22 pairs checked: the item name
   lives only in the title.
 - Cavaliers 2026-11-14: slug `10th-anniversary-celebration-2016-championship-mini-banner-g`
-  is cut off mid-word (title "... Mini Banner Giveaway"), and the record is a theme
-  with `ticketPackageName: "10th Anniversary Plan"` beside a separate non-package
-  giveaway record for the same banner.
-- Warriors 2027-03-22: `hello-kitty-night` (the theme night, the stronger page) is
-  stored `ticketPackageRequired: true` with no `ticketPackageName`, while the
-  description says the special item goes to buyers through a special event link.
-  Confirm whether the night itself is a package or only its item is. The same
-  shape: Wizards `cherry-blossom-night-2026-27`, Grizzlies `sunday-family-funday`.
+  is cut off mid-word (title "... Mini Banner Giveaway"). It looks like a slug
+  length cap applied to the title, a pipeline artifact. The record is a theme with
+  `ticketPackageName: "10th Anniversary Plan"` beside a separate non-package
+  giveaway record for the same banner. Its package title is the longest on the
+  site, 96 characters ("10th Anniversary Celebration & 2016 Championship Mini
+  Banner Giveaway Ticket Package | Cavaliers"): a shorter stored title would fix it.
+  Re-minting the slug needs the old one in `previousSlugs` (the web redirects it).
+
+## Verify ticketPackageRequired: the night itself is flagged
+
+Four records where the theme night (not an item beside it) is stored as a
+special-ticket package. The web applies rule 2 to them as stored (ruling
+2026-11-10: the stored flag is the source of truth, and the 2026-10-24 ruling says
+a package promo must never look free), so each page's title reads "... Ticket
+Package". Please verify each flag against its source:
+
+| Team | Page slug | Stored | Same-game sibling |
+|---|---|---|---|
+| Warriors | `hello-kitty-night` (2027-03-22) | theme, `ticketPackageRequired: true`, no `ticketPackageName` | `hello-kitty-giveaway` (giveaway, not a package) |
+| Warriors | `pride-night` (2026-11-05, played) | theme, `ticketPackageRequired: true`, no `ticketPackageName` | `pride-night-fan` (giveaway, not a package) |
+| Wizards | `cherry-blossom-night-2026-27` (2027-03-24) | theme, `ticketPackageRequired: true`, `ticketPackageName: "Cherry Blossom Night"` | `cherry-blossom-sakura-snow-globe` (giveaway, not a package) |
+| Grizzlies | `sunday-family-funday` (2026-11-29) | theme, `ticketPackageRequired: true`, no `ticketPackageName` | `sunday-family-funday-kids-day` (kids, not a package) |
+
+If a flag is corrected, nothing on the web needs to change: the title, the links
+and the canonical are computed at render from the stored flag. The corrected page
+updates on the scan's post-write revalidate (lib/promo-pages-notify.js revalidates
+each written row's path); its same-game sibling, whose links and (for the
+Warriors) canonical also depend on the flag, updates through its own daily ISR
+(`revalidate = 86400`). A correction written outside a scan, without the
+notifier, reaches both pages within a day.
+
 - Islanders 2026-12-04: `islanders-scout-patch` (theme) and `scout-patch` (kids,
   two records under one slug) are all package records with the same
   `ticketPackageName: "Scouts Night Out"`, so the game has no non-package page at
-  all.
+  all. Left unchanged on the web by ruling (no rule fits a game whose every page
+  is a package): both titles are as stored, no qualifier, no canonical. Two
+  records under one slug is itself worth a look.
