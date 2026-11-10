@@ -488,6 +488,9 @@ test('packagePageTitle: one rule, a then b then c, absolute, never the PromoNigh
   const mil = packagePageTitle('Military Appreciation Baseball Jersey Ticket Package', 'Minnesota Timberwolves', ['2026-11-12'], wolves);
   assert.deepEqual(mil, { title: 'Military Appreciation Baseball Jersey Ticket Package | Timberwolves', absolute: true, form: 'c' });
   assert.ok(mil.title.length <= PACKAGE_TITLE_HARD_MAX);
+  // A stored name that repeats the team keeps it: no prefix is cut (the
+  // stripper was retired with the a/b/c rule, Gate 3 follow-up).
+  assert.deepEqual(packagePageTitle('Penguins Star Wars Shirt Ticket Package', 'Pittsburgh Penguins', ['2026-12-06'], { nickname: 'Penguins' }), { title: 'Penguins Star Wars Shirt Ticket Package | Penguins Dec 6', absolute: true, form: 'a' });
   // A series has no single date: it starts at b.
   assert.deepEqual(packagePageTitle('Scout Pack Ticket Package', 'Minnesota Wild', ['2026-11-01', '2026-11-08'], { nickname: 'Wild' }), { title: 'Scout Pack Ticket Package | Wild', absolute: true, form: 'b' });
   // Never the suffix, and every title names the team.

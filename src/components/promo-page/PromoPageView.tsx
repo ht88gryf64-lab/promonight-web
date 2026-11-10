@@ -684,7 +684,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
               <div data-package-disclosure="" className="flex flex-col gap-1">
                 <p className="m-0 font-rd text-[14px] leading-[1.45] text-rd-ink-soft">{PACKAGE_CTA_DISCLOSURE}</p>
                 {packageSourceUrl ? (
-                  <a href={packageSourceUrl} target="_blank" rel="noopener nofollow" className="self-start font-rd text-[14px] font-medium text-rd-link underline underline-offset-2">
+                  <a href={packageSourceUrl} target="_blank" rel="noopener nofollow" className="inline-flex min-h-11 items-center self-start font-rd text-[14px] font-medium text-rd-link underline underline-offset-2">
                     {PACKAGE_SOURCE_LINK_LABEL}
                   </a>
                 ) : null}

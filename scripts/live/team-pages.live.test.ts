@@ -534,6 +534,29 @@ test(`no anchor on a sitemap page has an href ending in a bare "?" (${HOST})`, a
   assert.deepEqual(bad, [], `${bad.length} hrefs end in a bare "?":\n${bad.slice(0, 20).join('\n')}`);
 });
 
+// The two package titles past 70 accepted by ruling (2026-11-10, follow-up
+// gate item 1); a third fails until it is ruled on or the pipeline shortens it.
+const PACKAGE_TITLES_PAST_70 = new Set([
+  '/nba/minnesota-timberwolves/promos/native-american-heritage-night-baseball-jersey',
+  '/nba/cleveland-cavaliers/promos/10th-anniversary-celebration-2016-championship-mini-banner-g',
+]);
+
+test(`no package page title passes 70 characters beyond the two ruled exceptions, and none carries the PromoNight suffix (${HOST})`, async () => {
+  const promos = (await sitemap()).filter((p) => PROMO_RE.test(p));
+  const rows = await pool(promos, async (p) => {
+    const html = await promoPage(p);
+    const title = unescape(/<title>([^<]*)<\/title>/.exec(html)?.[1] ?? '');
+    return { p, title, pkg: / Ticket Package \| /.test(title) };
+  });
+  const pkgs = rows.filter((r) => r.pkg);
+  const long = pkgs.filter((r) => r.title.length > 70 && !PACKAGE_TITLES_PAST_70.has(r.p)).map((r) => `${r.title.length} ${r.p}: ${r.title}`);
+  const suffixed = pkgs.filter((r) => r.title.endsWith(' | PromoNight')).map((r) => `${r.p}: ${r.title}`);
+  console.log(`package titles ${pkgs.length}, past 70 outside the exceptions ${long.length}, with the suffix ${suffixed.length}`);
+  assert.ok(pkgs.length > 0, 'found package titles');
+  assert.deepEqual(long, [], `package titles past 70:\n${long.join('\n')}`);
+  assert.deepEqual(suffixed, [], `package titles with the suffix:\n${suffixed.join('\n')}`);
+});
+
 test(`every live package page carries the disclosure inside its CTA block, and no other promo page does (${HOST})`, async () => {
   const promos = (await sitemap()).filter((p) => PROMO_RE.test(p));
   const rows = await pool(promos, async (p) => {

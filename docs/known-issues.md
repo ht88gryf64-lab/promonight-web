@@ -4310,3 +4310,7 @@ ux-review of `fix/gsc-cleanup-2026-11` (T2), present on production, on /nba/minn
 ## 98. /cfb rivalry cards show played dates with no played marker (deferred, logged 2026-11-10)
 
 ux-review of `fix/gsc-cleanup-2026-11` (C4), present on production. On /cfb the evergreen rivalry blocks print `SAT, OCT 10 · DALLAS (NEUTRAL)` (Red River) and `SAT, OCT 31 · JACKSONVILLE` (Florida vs Georgia) after those games were played, reading as upcoming. Mark a played meeting (or show the next season's once scheduled).
+
+## 99. On package promo pages the date tile stretches with the taller CTA column (deferred, logged 2026-11-10)
+
+ux-review of `fix/gsc-cleanup-followup` (P3). The CTA section is `flex items-stretch`, so the date tile beside the buttons grows with the column; the package disclosure (known-issues 97) makes the column taller, and at 390 the tile goes from 189 to 285px with its 91px of content floating in it (137 to 213px at 768 and 1280). Cosmetic. Fix: align the tile to the top (`self-start`) or center its content, checked against the non-package pages, whose layout must not move.

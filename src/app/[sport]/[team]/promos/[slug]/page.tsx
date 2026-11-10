@@ -80,8 +80,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const r = await resolve(params);
   if (!r || r.kind === 'redirect') return {};
   const head = promoPageHead(r.page, r.ctx, r.today, r.imageSize);
-  // An absolute title (a package page whose team would not fit with the
-  // suffix, ruling 2026-11-10) is the whole <title>: no " | PromoNight".
+  // An absolute title (every qualified package page, the a/b/c rule of
+  // 2026-11-10) is the whole <title>: no " | PromoNight".
   const socialTitle = head.titleAbsolute ? head.title : `${head.title} | PromoNight`;
   return {
     // Bare: the root layout's title.template appends " | PromoNight".
