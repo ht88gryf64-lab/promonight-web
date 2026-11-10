@@ -47,6 +47,11 @@
 //    CFB page, and a spread of venue pages), has an href ending in a bare
 //    "?". Search Console indexed /nba/minnesota-timberwolves? as its own URL
 //    (canonical already clean); this keeps the site from ever linking one.
+// Package disclosure (Gate 3 follow-up, 2026-11-10; known-issues 97). Every
+//    sitemap promo page that is a special-ticket package (NHL or NBA, the
+//    About block's "Comes with a special ticket package.") and still sells
+//    tickets carries the disclosure INSIDE its CTA block (the <section> with
+//    "Get tickets"), in the server HTML; no other promo page carries it.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -54,6 +59,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import robotsParser from 'robots-parser';
 import { robotsTxt } from '../../src/lib/robots-txt';
+import { PACKAGE_CTA_DISCLOSURE, TICKET_PACKAGE_ROW_NOTE } from '../../src/lib/ticket-packages';
 
 const HOST = (process.env.LIVE_HOST || 'https://www.getpromonight.com').replace(/\/$/, '');
 const VIA_CLI = /\.vercel\.app$/.test(new URL(HOST).hostname);
@@ -526,4 +532,45 @@ test(`no anchor on a sitemap page has an href ending in a bare "?" (${HOST})`, a
   console.log(`pages ${rows.length} (${teamOrPromo.length} team/promo, ${others.length} other, ${Math.min(12, venues.length)} venue), hrefs ending in "?" ${bad.length}`);
   assert.ok(rows.length > 100, 'read the sitemap');
   assert.deepEqual(bad, [], `${bad.length} hrefs end in a bare "?":\n${bad.slice(0, 20).join('\n')}`);
+});
+
+// The two package titles past 70 accepted by ruling (2026-11-10, follow-up
+// gate item 1); a third fails until it is ruled on or the pipeline shortens it.
+const PACKAGE_TITLES_PAST_70 = new Set([
+  '/nba/minnesota-timberwolves/promos/native-american-heritage-night-baseball-jersey',
+  '/nba/cleveland-cavaliers/promos/10th-anniversary-celebration-2016-championship-mini-banner-g',
+]);
+
+test(`no package page title passes 70 characters beyond the two ruled exceptions, and none carries the PromoNight suffix (${HOST})`, async () => {
+  const promos = (await sitemap()).filter((p) => PROMO_RE.test(p));
+  const rows = await pool(promos, async (p) => {
+    const html = await promoPage(p);
+    const title = unescape(/<title>([^<]*)<\/title>/.exec(html)?.[1] ?? '');
+    return { p, title, pkg: / Ticket Package \| /.test(title) };
+  });
+  const pkgs = rows.filter((r) => r.pkg);
+  const long = pkgs.filter((r) => r.title.length > 70 && !PACKAGE_TITLES_PAST_70.has(r.p)).map((r) => `${r.title.length} ${r.p}: ${r.title}`);
+  const suffixed = pkgs.filter((r) => r.title.endsWith(' | PromoNight')).map((r) => `${r.p}: ${r.title}`);
+  console.log(`package titles ${pkgs.length}, past 70 outside the exceptions ${long.length}, with the suffix ${suffixed.length}`);
+  assert.ok(pkgs.length > 0, 'found package titles');
+  assert.deepEqual(long, [], `package titles past 70:\n${long.join('\n')}`);
+  assert.deepEqual(suffixed, [], `package titles with the suffix:\n${suffixed.join('\n')}`);
+});
+
+test(`every live package page carries the disclosure inside its CTA block, and no other promo page does (${HOST})`, async () => {
+  const promos = (await sitemap()).filter((p) => PROMO_RE.test(p));
+  const rows = await pool(promos, async (p) => {
+    const html = await promoPage(p);
+    const at = html.indexOf('>Get tickets</a>');
+    const cta = at < 0 ? '' : html.slice(html.lastIndexOf('<section', at), html.indexOf('</section>', at));
+    const pkg = /^\/(nba|nhl)\//.test(p) && html.includes(TICKET_PACKAGE_ROW_NOTE);
+    return { p, pkg, sells: at >= 0, inCta: cta.includes(PACKAGE_CTA_DISCLOSURE), anywhere: html.includes(PACKAGE_CTA_DISCLOSURE) };
+  });
+  const packages = rows.filter((r) => r.pkg && r.sells);
+  const missing = packages.filter((r) => !r.inCta).map((r) => r.p);
+  const stray = rows.filter((r) => !r.pkg && r.anywhere).map((r) => r.p);
+  console.log(`promo pages ${rows.length}, live package pages ${packages.length}, missing the disclosure ${missing.length}, non-package pages with it ${stray.length}`);
+  assert.ok(packages.length > 0, 'found live package pages');
+  assert.deepEqual(missing, [], `package pages without the disclosure in the CTA block:\n${missing.join('\n')}`);
+  assert.deepEqual(stray, [], `non-package pages with the disclosure:\n${stray.join('\n')}`);
 });

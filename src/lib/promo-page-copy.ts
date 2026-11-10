@@ -299,59 +299,39 @@ export function promoPageTitle(title: string, teamName: string, dates: readonly 
   return shapes.find((s) => renderedTitleLength(s) <= TITLE_MAX) ?? name;
 }
 
-/** The longest a package page's absolute title may run when nothing shorter
- *  keeps the team (ruling 2026-11-10: Google truncates; a missing team name
- *  costs more than a cut-off tail). */
+/** The longest a package title is accepted at (form c, ruling 2026-11-10):
+ *  Google truncates; a missing team name costs more than a cut-off tail. */
 export const PACKAGE_TITLE_HARD_MAX = 70;
 
-/** A stored name less a leading word run that only repeats the team or the
- *  season ("Islanders Scout Patch" on the Islanders, "2026-27 Pride Jersey"),
- *  with the space or colon after it. Never empties the name; nothing else is
- *  cut. A bare city is not the team ("New York-Style Pizza", "Minnesota
- *  Hockey Celebration"), and a hyphen joins a word rather than ending a
- *  prefix, so neither is cut. */
-export function stripRedundantPrefix(name: string, opts: { teamName: string; nickname?: string | null; season?: string | null }): string {
-  const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // teamName is the display name (teamDisplayName).
-  const prefixes = [opts.teamName, opts.nickname, opts.season]
-    .filter((x): x is string => !!x && !!x.trim())
-    .sort((a, b) => b.length - a.length);
-  for (const pre of prefixes) {
-    const m = new RegExp(`^${esc(pre.trim())}(?:'s)?(?:\\s*[:|]\\s*|\\s+)(.+)$`, 'i').exec(name);
-    if (m && m[1].trim()) return m[1].trim();
-  }
-  return name;
-}
+export type PackageTitleForm = 'a' | 'b' | 'c';
 
 /**
  * The <title> of a package page whose name carries " Ticket Package" (rule
- * 2), never without the team (ruling 2026-11-10, Gate 2 item 3):
- *   1. promoPageTitle's shapes that name the team, suffix " | PromoNight"
- *      appended by the layout, while one fits 60;
- *   2. `{Item} Ticket Package | {Nickname}` as an ABSOLUTE title (no suffix),
- *      while it fits 60;
- *   3. the same with the stored name less a prefix that repeats the team or
- *      season (stripRedundantPrefix), while it fits 60;
- *   4. that last form up to 70; past 70 it is still the title (the team is
- *      never dropped) and the report names it.
- * `absolute` tells the route to bypass the layout's title template.
+ * 2). One rule for every such page (Gate 3 follow-up, ruling 2026-11-10),
+ * always an ABSOLUTE title, never " | PromoNight":
+ *   a. `{Item} Ticket Package | {Nickname} {Mon D}` when it fits 60 (a played
+ *      game keeps its date too);
+ *   b. else `{Item} Ticket Package | {Nickname}` when that fits 60;
+ *   c. else the same as b, accepted up to 70.
+ * A series (more than one date) has no single `{Mon D}`, so it starts at b.
+ * Past 70 the title is still b's string (the team is never dropped) and the
+ * form reads 'c'; the report names every one.
  */
 export function packagePageTitle(
   packagedName: string,
-  storedName: string,
   teamName: string,
   dates: readonly string[],
-  season: string | null,
   team: { nickname?: string | null },
-): { title: string; absolute: boolean } {
-  const withTeam = promoPageTitle(packagedName, teamName, dates, season, team.nickname);
-  if (withTeam !== cleanText(packagedName) && renderedTitleLength(withTeam) <= TITLE_MAX) return { title: withTeam, absolute: false };
+): { title: string; absolute: true; form: PackageTitleForm } {
   const nick = team.nickname && team.nickname.trim() ? team.nickname.trim() : teamName;
-  const a = `${packagedName} | ${nick}`;
-  if (a.length <= TITLE_MAX) return { title: a, absolute: true };
-  const stripped = stripRedundantPrefix(cleanText(storedName), { teamName, nickname: team.nickname, season });
-  const b = `${stripped} ${PACKAGE_QUALIFIER} | ${nick}`;
-  return { title: b, absolute: true };
+  const name = cleanText(packagedName);
+  const date = dates.length === 1 && YMD_RE.test(dates[0]) ? dates[0] : null;
+  if (date) {
+    const a = `${name} | ${nick} ${formatMonDay(date)}`;
+    if (a.length <= TITLE_MAX) return { title: a, absolute: true, form: 'a' };
+  }
+  const b = `${name} | ${nick}`;
+  return { title: b, absolute: true, form: b.length <= TITLE_MAX ? 'b' : 'c' };
 }
 
 /** The rendered length of a bare title, suffix included, for the report. */

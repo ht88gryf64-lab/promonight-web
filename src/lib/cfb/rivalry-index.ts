@@ -84,10 +84,17 @@ export function rivalryWeekLong(range: RivalryWeekRange): string {
   return `${longDay(range.start)} to ${longDay(range.end)}`;
 }
 
+/** Rivalry Week is over: `today` (YYYY-MM-DD, the site's day) is past the
+ *  window's last bound (Gate 3 follow-up, ruling 2026-11-10). */
+export function rivalryWeekPast(today: string): boolean {
+  return today > RIVALRY_WEEK_END;
+}
+
 /** The page's answer sentence, shared by the lede, the meta description and
- *  the FAQ so the three can never name different days. */
-export function rivalryWeekAnswer(range: RivalryWeekRange): string {
-  return `College football Rivalry Week ${cfbSeasonLabel()} is ${rivalryWeekLong(range)}.`;
+ *  the FAQ so the three can never name different days. Past tense once
+ *  `today` is past the window ("... was Friday, November 27 ..."). */
+export function rivalryWeekAnswer(range: RivalryWeekRange, today: string): string {
+  return `College football Rivalry Week ${cfbSeasonLabel()} ${rivalryWeekPast(today) ? 'was' : 'is'} ${rivalryWeekLong(range)}.`;
 }
 
 /** The H1 (and <title>) in parts, so the page can style the year and the
@@ -127,7 +134,7 @@ export interface RivalryFaq {
 
 /** FAQ with every count derived from the rows the DOM renders. A question whose
  *  count would be zero is omitted rather than shipped with a hollow claim. */
-export function buildRivalryIndexFaqs(rows: RivalryIndexRow[]): RivalryFaq[] {
+export function buildRivalryIndexFaqs(rows: RivalryIndexRow[], today: string): RivalryFaq[] {
   const total = rows.length;
   const dated = rows.filter((r) => r.date).length;
   const week = rivalryWeekRows(rows).length;
@@ -144,7 +151,7 @@ export function buildRivalryIndexFaqs(rows: RivalryIndexRow[]): RivalryFaq[] {
   if (week > 0 && range) {
     faqs.push({
       question: `When is college football Rivalry Week in ${cfbSeasonLabel()}?`,
-      answer: `${rivalryWeekAnswer(range)} ${week} of the ${total} rivalries tracked here are played ${range.days.length === 1 ? 'that day' : 'on those days'}.`,
+      answer: `${rivalryWeekAnswer(range, today)} ${week} of the ${total} rivalries tracked here ${rivalryWeekPast(today) ? 'were' : 'are'} played ${range.days.length === 1 ? 'that day' : 'on those days'}.`,
     });
   }
   if (trophies > 0) {

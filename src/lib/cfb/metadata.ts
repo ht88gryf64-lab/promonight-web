@@ -292,13 +292,13 @@ export function rivalryIndexTitle(rows: ReadonlyArray<{ date: string | null }>):
 // Promises only what the index renders: date, stadium, trip planning. Kickoffs
 // live on the matchup pages once announced, so they are named there, not here.
 // Counts are the rows' own (the page is ISR; a literal would drift).
-export function rivalryIndexDescription(rows: ReadonlyArray<{ date: string | null }>): string {
+export function rivalryIndexDescription(rows: ReadonlyArray<{ date: string | null }>, today: string): string {
   const range = rivalryWeekRange(rows);
   if (!range) {
     return `Named college football rivalries in ${cfbSeasonLabel()}: the date, the stadium and how to plan the trip. Kickoff times appear on each rivalry page once announced.`;
   }
   const week = rivalryWeekRows(rows).length;
-  return `${rivalryWeekAnswer(range)} Dates and stadiums for ${week === 1 ? 'its 1 game' : `its ${week} games`}, plus all ${rows.length} rivalries by date.`;
+  return `${rivalryWeekAnswer(range, today)} Dates and stadiums for ${week === 1 ? 'its 1 game' : `its ${week} games`}, plus all ${rows.length} rivalries by date.`;
 }
 
 /** The full list's name (the ItemList), which is every rivalry, not the week. */
@@ -306,9 +306,9 @@ export function rivalryListName(): string {
   return `College Football Rivalries ${cfbSeasonLabel()}`;
 }
 
-export function buildCfbRivalryIndexMetadata(rows: ReadonlyArray<{ date: string | null }>): Metadata {
+export function buildCfbRivalryIndexMetadata(rows: ReadonlyArray<{ date: string | null }>, today: string): Metadata {
   const title = rivalryIndexTitle(rows);
-  const description = rivalryIndexDescription(rows);
+  const description = rivalryIndexDescription(rows, today);
   const socialTitle = `${title} | PromoNight`;
   const url = `${BASE}/cfb/rivalries`;
   return {

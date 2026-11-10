@@ -334,11 +334,10 @@ isles('i4', { title: 'Hockey is for Everyone Night', pageSlug: 'hockey-is-for-ev
 // link it (WEB6 G2); the package page links the night.
 isles('i5', { title: '90s Night', pageSlug: '90s-night', type: 'theme', date: '2026-12-18' });
 isles('i6', { title: '90s Night T-Shirt', pageSlug: '90s-night-t-shirt', type: 'theme', date: '2026-12-18', ticketPackageRequired: true, ticketPackageName: '90s Night T-Shirt Ticket Package' });
-// Rule 2 past the budget: a long package name whose team shapes do not fit 60
-// with the suffix. The title drops the suffix and the stored "Islanders"
-// prefix, never the team (Gate 2 item 3).
+// Rule 2 past the budget: a long package name whose dated and undated forms
+// both pass 60 (form c, Gate 3 follow-up).
 isles('i7', { title: 'Hockey Fights Cancer Night', pageSlug: 'hockey-fights-cancer-night', type: 'theme', date: '2026-11-21' });
-isles('i8', { title: 'Islanders Hockey Fights Cancer Lavender Warmup Jersey', pageSlug: 'islanders-hockey-fights-cancer-lavender-warmup-jersey', type: 'theme', date: '2026-11-21', ticketPackageRequired: true, ticketPackageName: 'Lavender Warmup Jersey' });
+isles('i8', { title: 'Hockey Fights Cancer Lavender Warmup Jersey', pageSlug: 'hockey-fights-cancer-lavender-warmup-jersey', type: 'theme', date: '2026-11-21', ticketPackageRequired: true, ticketPackageName: 'Lavender Warmup Jersey' });
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 async function html(el: React.ReactElement): Promise<string> {
@@ -1004,19 +1003,20 @@ test('rule 2: a special-ticket package page beside its theme night carries "Tick
   process.env.PROMO_PAGES_LIVE = 'true';
   const pkg = await render('nhl', 'new-york-islanders', '90s-night-t-shirt');
   const night = await render('nhl', 'new-york-islanders', '90s-night');
-  assert.match(String(pkg.meta.title), /^90s Night T-Shirt Ticket Package \|/);
-  assert.equal((pkg.meta.openGraph as any).title, `${pkg.meta.title} | PromoNight`);
+  // Form a (Gate 3 follow-up): dated, absolute, no PromoNight suffix.
+  assert.deepEqual(pkg.meta.title, { absolute: '90s Night T-Shirt Ticket Package | Islanders Dec 18' });
+  assert.equal((pkg.meta.openGraph as any).title, '90s Night T-Shirt Ticket Package | Islanders Dec 18');
   assert.match(pkg.h, /<h1 class="rd-display[^"]*">90s Night T-Shirt<\/h1>/, 'the H1 keeps the stored name');
   assert.match(String(night.meta.title), /^90s Night \|/);
   assert.doesNotMatch(night.h, /href="\/nhl\/new-york-islanders\/promos\/90s-night-t-shirt"/, 'WEB6 G2: no link to the package page');
   assert.match(pkg.h, /href="\/nhl\/new-york-islanders\/promos\/90s-night"/);
   // Both are their own canonical: two pages, two searches.
   assert.equal(pkg.meta.alternates?.canonical, 'https://www.getpromonight.com/nhl/new-york-islanders/promos/90s-night-t-shirt');
-  // Past the budget: an absolute title, no suffix, team kept, prefix cut.
-  const long = await render('nhl', 'new-york-islanders', 'islanders-hockey-fights-cancer-lavender-warmup-jersey');
+  // Form c: past 60 without the date, accepted up to 70, the team kept, no suffix.
+  const long = await render('nhl', 'new-york-islanders', 'hockey-fights-cancer-lavender-warmup-jersey');
   assert.deepEqual(long.meta.title, { absolute: 'Hockey Fights Cancer Lavender Warmup Jersey Ticket Package | Islanders' });
   assert.equal((long.meta.openGraph as any).title, 'Hockey Fights Cancer Lavender Warmup Jersey Ticket Package | Islanders', 'no suffix on the social title either');
-  assert.match(long.h, /<h1 class="rd-display[^"]*">Islanders Hockey Fights Cancer Lavender Warmup Jersey<\/h1>/);
+  assert.match(long.h, /<h1 class="rd-display[^"]*">Hockey Fights Cancer Lavender Warmup Jersey<\/h1>/);
   // A package page with no related page on its game keeps its stored title.
   const lone = await render('nhl', 'minnesota-wild', 'puck-package-night');
   assert.match(String(lone.meta.title), /^Puck Package Night \|/);

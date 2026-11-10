@@ -56,3 +56,40 @@ test('the page source types no Rivalry Week date', async () => {
   const src = readFileSync(new URL('../page.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /November \d|Nov \d/);
 });
+
+// ── tense with the clock set (Gate 3 follow-up, ruling 2026-11-10) ───────────
+async function renderAt(iso: string) {
+  mock.timers.enable({ apis: ['Date'], now: new Date(iso) });
+  try {
+    const mod = await import('../page');
+    const h = await html(await mod.default());
+    const md = await mod.generateMetadata();
+    return { h, md };
+  } finally {
+    mock.timers.reset();
+  }
+}
+const ldOf = (h: string) => [...h.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]));
+
+for (const [label, iso, verb, played] of [
+  ['Nov 20, before the window', '2026-11-20T17:00:00Z', 'is', 'are'],
+  ['Nov 30, after the window', '2026-11-30T17:00:00Z', 'was', 'were'],
+] as const) {
+  test(`tense on ${label}: description, first sentence and FAQ read "${verb}"; title, H1 and ItemList name unchanged`, async () => {
+    const { h, md } = await renderAt(iso);
+    const answer = `College football Rivalry Week 2026 ${verb} Friday, November 27 and Saturday, November 28.`;
+    assert.ok(String(md.description).startsWith(answer), String(md.description));
+    const lede = text(h.slice(h.indexOf('</h1>'), h.indexOf('</p>', h.indexOf('</h1>'))));
+    assert.ok(lede.startsWith(answer), lede);
+    const ld = ldOf(h);
+    const faq = ld.find((x) => x['@type'] === 'FAQPage');
+    const rw = faq.mainEntity.find((q: { name: string }) => /Rivalry Week/.test(q.name));
+    assert.ok(rw.acceptedAnswer.text.startsWith(answer), rw.acceptedAnswer.text);
+    assert.match(rw.acceptedAnswer.text, new RegExp(` ${played} played on those days\\.$`));
+    assert.ok(text(h).includes(rw.acceptedAnswer.text), 'the FAQ shown on the page says the same');
+    // Unchanged by tense.
+    assert.equal(md.title, 'College Football Rivalry Week 2026: Nov 27-28');
+    assert.deepEqual([...h.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/g)].map((m) => text(m[1])), ['College Football Rivalry Week 2026: Nov 27-28']);
+    assert.equal(ld.find((x) => x['@type'] === 'ItemList').name, 'College Football Rivalries 2026');
+  });
+}

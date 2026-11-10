@@ -94,6 +94,13 @@ without guessing from words.
   site, 96 characters ("10th Anniversary Celebration & 2016 Championship Mini
   Banner Giveaway Ticket Package | Cavaliers"): a shorter stored title would fix it.
   Re-minting the slug needs the old one in `previousSlugs` (the web redirects it).
+- Timberwolves 2026-11-17: `native-american-heritage-night-baseball-jersey`, a
+  package record titled "Native American Heritage Night Baseball Jersey". Its
+  package title is 76 characters ("Native American Heritage Night Baseball Jersey
+  Ticket Package | Timberwolves"), past the 70 the web accepts (ruling
+  2026-11-10: kept, with the team, no further cut on the web). Please store a
+  shorter title if the source allows one (the theme record is "Native American
+  Heritage Night"; the item is the jersey).
 
 ## Verify ticketPackageRequired: the night itself is flagged
 

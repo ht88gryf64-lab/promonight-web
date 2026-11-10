@@ -4301,10 +4301,16 @@ ux-review of `feature/promo-archive` (D8). On the Wild's archive page the 2026-2
 
 ux-review of `fix/gsc-cleanup-2026-11` (B0), present on production. With the season over, every ranked promo on /best-promos is past (the 50 rendered JSON-LD dates run 2026-03-28 to 2026-08-19) and the page says nothing is upcoming, yet each card still shows two "Get Tickets" buttons (Ticketmaster and TicketNetwork), 100 in all at 390. The Ticketmaster one lands on the team's artist page, which does not contain the game tapped. Fix: drop the ticket buttons on a played row (known-issues 83 is the promo-page twin).
 
-## 97. A package page's "Get tickets" sells a standard ticket the page says does not include the item (deferred, logged 2026-11-10)
+## 97. A package page's "Get tickets" sells a standard ticket the page says does not include the item (RESOLVED 2026-11-10, fix/gsc-cleanup-followup)
 
 ux-review of `fix/gsc-cleanup-2026-11` (T2), present on production, on /nba/minnesota-timberwolves/promos/paint-night-blanket. The primary button goes to TicketNetwork event tickets, while the page's own FAQ says a standard ticket does not include the blanket. A special-ticket package page needs its CTA to name what it sells, or to send the fan to the team's package link when the row stores one.
+
+**Resolved by fix/gsc-cleanup-followup (ruling 2026-11-10).** "Get tickets" stays TicketNetwork with its tagging unchanged (subId1, subId3; no subId2). On every package page (NHL and NBA, `ticketPackageRequired: true`) a one-line disclosure sits directly under it, in the server HTML: "This promo comes with a special ticket package from the team. Tickets bought through us may not include it." When the row stores a source URL, a text link "See the package on the team site" follows, to that URL as stored, with no affiliate parameters; with none, the disclosure stands alone. Non-package pages are unchanged. Guarded by src/components/promo-page/__tests__/promo-page-package-disclosure.test.tsx and the test:live disclosure guard.
 
 ## 98. /cfb rivalry cards show played dates with no played marker (deferred, logged 2026-11-10)
 
 ux-review of `fix/gsc-cleanup-2026-11` (C4), present on production. On /cfb the evergreen rivalry blocks print `SAT, OCT 10 · DALLAS (NEUTRAL)` (Red River) and `SAT, OCT 31 · JACKSONVILLE` (Florida vs Georgia) after those games were played, reading as upcoming. Mark a played meeting (or show the next season's once scheduled).
+
+## 99. On package promo pages the date tile stretches with the taller CTA column (deferred, logged 2026-11-10)
+
+ux-review of `fix/gsc-cleanup-followup` (P3). The CTA section is `flex items-stretch`, so the date tile beside the buttons grows with the column; the package disclosure (known-issues 97) makes the column taller, and at 390 the tile goes from 189 to 285px with its 91px of content floating in it (137 to 213px at 768 and 1280). Cosmetic. Fix: align the tile to the top (`self-start`) or center its content, checked against the non-package pages, whose layout must not move.
