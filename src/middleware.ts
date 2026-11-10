@@ -5,6 +5,7 @@ import {
   manageCookieOptions,
 } from '@/lib/manage-session';
 import { NOINDEX_HEADER, shortLinkRedirect } from '@/lib/social-bridge';
+import { bareQueryTarget, rawRequestUrl } from '@/lib/url-query';
 
 /**
  * Pages whose ?token= is exchanged for a cookie before any HTML is produced.
@@ -80,6 +81,14 @@ function detectBot(userAgent: string | null): string | null {
 }
 
 export async function middleware(request: NextRequest, event: NextFetchEvent) {
+  // A BARE "?" (fix/gsc-cleanup-2026-11): "/nba/minnesota-timberwolves?"
+  // was indexed as its own URL. 308 to the path, before anything else, so
+  // the empty query never reaches a page or the counter. Only an empty
+  // query: any real parameter passes through untouched.
+  // request.url is the normalized NextURL, which has already dropped the
+  // "?", so the test reads the raw URL; the target is that normalized URL.
+  if (bareQueryTarget(rawRequestUrl(request))) return NextResponse.redirect(request.nextUrl, 308);
+
   // TOKEN EXCHANGE, FIRST AND BEFORE THE COUNTER.
   //
   // /preferences?token=... is the link in every email we have ever sent, so the

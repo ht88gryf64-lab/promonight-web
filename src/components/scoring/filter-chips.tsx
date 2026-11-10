@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { withQuery } from '@/lib/url-query';
 
 export type FilterChipOption<T extends string> = {
   value: T;
@@ -113,7 +114,7 @@ export function FilterChips<T extends string>({
     // scroll: false so changing filters doesn't reset the user's scroll
     // position. Replace rather than push so the browser back stack stays
     // clean (filter changes aren't navigation events).
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    router.replace(withQuery(pathname, qs), { scroll: false });
   };
 
   return (

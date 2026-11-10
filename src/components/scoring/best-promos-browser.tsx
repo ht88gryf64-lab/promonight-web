@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname, useSearchParams } from 'next/navigation';
+import { withQuery } from '@/lib/url-query';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import type { ScoredPromoWithTeam } from '@/lib/types';
 import { track, type AnalyticsSurface, type ScoringPageSurface } from '@/lib/analytics';
@@ -176,7 +177,7 @@ export function BestPromosBrowser({
         params.set(paramKey, next);
       }
       const qs = params.toString();
-      window.history.replaceState(null, '', qs ? `${pathname}?${qs}` : pathname);
+      window.history.replaceState(null, '', withQuery(pathname, qs));
     },
     [pathname],
   );
