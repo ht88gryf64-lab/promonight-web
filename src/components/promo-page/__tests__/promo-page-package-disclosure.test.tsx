@@ -113,6 +113,6 @@ test('the flag outside NHL and NBA is not read: no disclosure on an MLB, MLS, WN
 
 test('the disclosure copy: no em or en dash, and no claim beyond the card line', () => {
   assert.doesNotMatch(PACKAGE_CTA_DISCLOSURE + PACKAGE_SOURCE_LINK_LABEL, /[\u2013\u2014]/);
-  assert.equal(PACKAGE_CTA_DISCLOSURE, 'This giveaway comes with a special ticket package from the team. Tickets bought through us may not include it.');
+  assert.equal(PACKAGE_CTA_DISCLOSURE, 'This promo comes with a special ticket package from the team. Tickets bought through us may not include it.');
   assert.equal(PACKAGE_SOURCE_LINK_LABEL, 'See the package on the team site');
 });

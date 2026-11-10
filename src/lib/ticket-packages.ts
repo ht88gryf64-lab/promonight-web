@@ -92,7 +92,7 @@ export const TICKET_PACKAGE_ROW_NOTE = 'Comes with a special ticket package.';
  *  2026-11-10, resolves known-issues 97): the primary CTA sells a standard
  *  TicketNetwork ticket, and the item comes with the team's package. Same
  *  meaning as TICKET_PACKAGE_ROW_NOTE, no new claim. */
-export const PACKAGE_CTA_DISCLOSURE = 'This giveaway comes with a special ticket package from the team. Tickets bought through us may not include it.';
+export const PACKAGE_CTA_DISCLOSURE = 'This promo comes with a special ticket package from the team. Tickets bought through us may not include it.';
 
 /** The secondary link after the disclosure, to the row's stored source URL
  *  as stored (no affiliate parameters); absent when the row stores none. */
