@@ -220,7 +220,7 @@ const row = (slug: string, date: string | null): RivalryIndexRow =>
 
 test('ItemList mirrors the ordered rows exactly: count, positions and URLs', () => {
   const rows = [row('iron-bowl', '2026-11-28'), row('egg-bowl', '2026-11-27'), row('dormant', null)];
-  const list = findType(buildRivalryIndexJsonLd(rows, []), 'ItemList')!;
+  const list = findType(buildRivalryIndexJsonLd(rows, [], '2026-11-10'), 'ItemList')!;
   assert.equal(list.numberOfItems, 3);
   const items = list.itemListElement as Array<Record<string, unknown>>;
   assert.deepEqual(items.map((i) => i.position), [1, 2, 3]);
@@ -229,17 +229,17 @@ test('ItemList mirrors the ordered rows exactly: count, positions and URLs', () 
 });
 
 test('CollectionPage carries the WebSite isPartOf and the canonical url', () => {
-  const cp = findType(buildRivalryIndexJsonLd([], []), 'CollectionPage')!;
+  const cp = findType(buildRivalryIndexJsonLd([], [], '2026-11-10'), 'CollectionPage')!;
   assert.equal(cp.url, 'https://www.getpromonight.com/cfb/rivalries');
   assert.deepEqual(cp.isPartOf, { '@type': 'WebSite', name: 'PromoNight', url: 'https://www.getpromonight.com' });
 });
 
 test('FAQPage mirrors the faqs and is omitted when there are none', () => {
   const faqs = [{ question: 'Q1?', answer: 'A1.' }];
-  const withFaq = buildRivalryIndexJsonLd([], faqs);
+  const withFaq = buildRivalryIndexJsonLd([], faqs, '2026-11-10');
   const fp = findType(withFaq, 'FAQPage')!;
   assert.deepEqual(fp.mainEntity, [
     { '@type': 'Question', name: 'Q1?', acceptedAnswer: { '@type': 'Answer', text: 'A1.' } },
   ]);
-  assert.equal(findType(buildRivalryIndexJsonLd([], []), 'FAQPage'), undefined);
+  assert.equal(findType(buildRivalryIndexJsonLd([], [], '2026-11-10'), 'FAQPage'), undefined);
 });

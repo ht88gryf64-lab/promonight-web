@@ -19,6 +19,7 @@ import { buildRivalryIndexJsonLd } from '@/lib/cfb/rivalry-jsonld';
 import { barlowCondensed } from '@/components/cfb/rivalry/fonts';
 import { Spine, RivalryWash, spineVars, CONDENSED, GOLD, RED } from '@/components/cfb/rivalry/spine';
 import { cfbSeasonLabel } from '@/lib/cfb/season';
+import { siteTodayYmd } from '@/lib/site-today';
 
 export const revalidate = 21600; // ISR, same cadence as the CFB hub
 
@@ -28,7 +29,7 @@ export const revalidate = 21600; // ISR, same cadence as the CFB hub
 // read the same rows the page renders; getMatchupIndexRows is request-cached,
 // so the metadata and the body share one read.
 export async function generateMetadata(): Promise<Metadata> {
-  return buildCfbRivalryIndexMetadata(await getMatchupIndexRows());
+  return buildCfbRivalryIndexMetadata(await getMatchupIndexRows(), siteTodayYmd());
 }
 
 const PAGE_BG = '#08070d';
@@ -147,12 +148,16 @@ export default async function Page() {
   const week = rivalryWeekRows(rows);
   const weekDays = groupRivalryWeekByDay(rows);
   const months = groupIndexByMonth(ordered);
-  const faqs = buildRivalryIndexFaqs(rows);
+  // The site's day (America/New_York): past RIVALRY_WEEK_END the answer
+  // sentence, the description and the FAQ read in the past tense. ISR
+  // (revalidate above) regenerates the page within its window of that day.
+  const today = siteTodayYmd();
+  const faqs = buildRivalryIndexFaqs(rows, today);
   // The stored game days inside the Rivalry Week window: the H1, the answer
   // sentence and the section line all print these, never the bounds.
   const range = rivalryWeekRange(rows);
   const heading = rivalryIndexHeading(rows);
-  const schemas = buildRivalryIndexJsonLd(ordered, faqs);
+  const schemas = buildRivalryIndexJsonLd(ordered, faqs, today);
 
   return (
     <div className={`min-h-screen text-white ${barlowCondensed.variable}`} style={{ background: PAGE_BG }} data-ad-region="content">
@@ -185,7 +190,7 @@ export default async function Page() {
           {heading.dates && <>: <span style={{ color: RED }}>{heading.dates}</span></>}
         </h1>
         <p className="mt-2.5 max-w-[46ch] text-sm text-white/60">
-          {range && `${rivalryWeekAnswer(range)} `}
+          {range && `${rivalryWeekAnswer(range, today)} `}
           The date, the kickoff and the stadium for every rivalry we cover, in the order they are played.
         </p>
 

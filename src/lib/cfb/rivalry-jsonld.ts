@@ -30,14 +30,14 @@ type Schema = Record<string, unknown>;
 
 /** rows MUST be the same orderedIndexRows() array the DOM list renders, so
  *  numberOfItems and the item order can never diverge from the served list. */
-export function buildRivalryIndexJsonLd(rows: RivalryIndexRow[], faqs: RivalryFaq[]): Schema[] {
+export function buildRivalryIndexJsonLd(rows: RivalryIndexRow[], faqs: RivalryFaq[], today: string): Schema[] {
   const url = `${BASE}/cfb/rivalries`;
   const schemas: Schema[] = [
     {
       '@context': 'https://schema.org',
       '@type': 'CollectionPage',
       name: rivalryIndexTitle(rows),
-      description: rivalryIndexDescription(rows),
+      description: rivalryIndexDescription(rows, today),
       url,
       isPartOf: {
         '@type': 'WebSite',

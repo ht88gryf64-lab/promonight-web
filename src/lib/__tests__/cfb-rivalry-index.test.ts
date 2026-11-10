@@ -20,6 +20,9 @@ import {
 } from '@/lib/cfb/rivalry-index';
 import { rivalryIndexTitle, rivalryIndexDescription, buildCfbRivalryIndexMetadata } from '@/lib/cfb/metadata';
 
+// The site's day for every present-tense assertion (the ship date).
+const NOW = '2026-11-10';
+
 const row = (slug: string, date: string | null, extra: Partial<RivalryIndexRow> = {}): RivalryIndexRow => ({
   slug,
   name: slug,
@@ -67,7 +70,7 @@ test('FAQ counts derive from the rows, not from constants', () => {
     row('d', null),
     row('e', null),
   ];
-  const faqs = buildRivalryIndexFaqs(rows);
+  const faqs = buildRivalryIndexFaqs(rows, NOW);
   const all = faqs.map((f) => `${f.question} ${f.answer}`).join('\n');
   // total 5, dated 3, rivalry week 2, trophies 2 — every number in the copy.
   assert.match(faqs[0].answer, /tracks 5 named/);
@@ -77,17 +80,17 @@ test('FAQ counts derive from the rows, not from constants', () => {
 });
 
 test('FAQ omits the Rivalry Week question when no game falls in the window', () => {
-  const faqs = buildRivalryIndexFaqs([row('a', '2026-10-10'), row('b', null)]);
+  const faqs = buildRivalryIndexFaqs([row('a', '2026-10-10'), row('b', null)], NOW);
   assert.equal(faqs.some((f) => /Rivalry Week/i.test(f.question)), false);
 });
 
 test('FAQ omits the trophy question when no row carries a trophy', () => {
-  const faqs = buildRivalryIndexFaqs([row('a', '2026-11-28'), row('b', '2026-11-27')]);
+  const faqs = buildRivalryIndexFaqs([row('a', '2026-11-28'), row('b', '2026-11-27')], NOW);
   assert.equal(faqs.some((f) => /trophy/i.test(f.question)), false);
 });
 
 test('FAQ always includes the kickoff/TV answer and it promises TBA, not a guess', () => {
-  const faqs = buildRivalryIndexFaqs([]);
+  const faqs = buildRivalryIndexFaqs([], NOW);
   const kickoff = faqs.find((f) => /kickoff/i.test(f.question));
   assert.ok(kickoff);
   assert.match(kickoff!.answer, /TBA/);
@@ -96,7 +99,7 @@ test('FAQ always includes the kickoff/TV answer and it promises TBA, not a guess
 
 test('no FAQ copy contains an em dash (house rule for user-facing copy)', () => {
   const rows = [row('a', '2026-11-28', { trophy: 'T' }), row('b', null)];
-  for (const f of buildRivalryIndexFaqs(rows)) {
+  for (const f of buildRivalryIndexFaqs(rows, NOW)) {
     assert.equal(/—/.test(f.question + f.answer), false);
   }
 });
@@ -188,7 +191,7 @@ test('a game that a verification moves moves every derived date with it', () => 
   assert.equal(rivalryIndexTitle(moved), 'College Football Rivalry Week 2026: Nov 26-28');
   const allSaturday = season2026.map((r) => (r.date === '2026-11-27' ? { ...r, date: '2026-11-28' } : r));
   assert.equal(rivalryIndexTitle(allSaturday), 'College Football Rivalry Week 2026: Nov 28');
-  assert.match(rivalryIndexDescription(allSaturday), /is Saturday, November 28\./);
+  assert.match(rivalryIndexDescription(allSaturday, NOW), /is Saturday, November 28\./);
 });
 
 test('short form across a month boundary names both months', () => {
@@ -200,30 +203,47 @@ test('title and H1 carry the dates: the approved title, and the H1 is the same s
   assert.equal(`${title} | PromoNight`, 'College Football Rivalry Week 2026: Nov 27-28 | PromoNight');
   assert.ok(`${title} | PromoNight`.length <= 60, 'rendered title stays inside 60');
   assert.equal(headingText(rivalryIndexHeading(season2026)), title);
-  const md = buildCfbRivalryIndexMetadata(season2026);
+  const md = buildCfbRivalryIndexMetadata(season2026, NOW);
   assert.equal(md.title, title);
   assert.equal((md.openGraph as { title: string }).title, `${title} | PromoNight`);
   assert.equal(md.alternates?.canonical, 'https://www.getpromonight.com/cfb/rivalries');
 });
 
 test('the description answers "when" with the dates, in 120 to 155 characters, counts derived', () => {
-  const d = rivalryIndexDescription(season2026);
+  const d = rivalryIndexDescription(season2026, NOW);
   assert.match(d, /^College football Rivalry Week 2026 is Friday, November 27 and Saturday, November 28\./);
   assert.match(d, /Dates and stadiums for its 4 games, plus all 7 rivalries by date\.$/);
   // The real corpus: 16 in the window, 32 in all.
   const full = [...Array.from({ length: 16 }, (_, i) => row(`w${i}`, i < 4 ? '2026-11-27' : '2026-11-28')), ...Array.from({ length: 16 }, (_, i) => row(`o${i}`, '2026-10-10'))];
-  const real = rivalryIndexDescription(full);
+  const real = rivalryIndexDescription(full, NOW);
   assert.ok(real.length >= 120 && real.length <= 155, `${real.length}: ${real}`);
 });
 
 test('no rows in the window: the index title and description of before, no dates', () => {
   const none = [row('a', '2026-10-10'), row('b', null)];
   assert.equal(rivalryIndexTitle(none), 'College Football Rivalries 2026');
-  assert.doesNotMatch(rivalryIndexDescription(none), /Rivalry Week/);
+  assert.doesNotMatch(rivalryIndexDescription(none, NOW), /Rivalry Week/);
 });
 
 test('no em or en dash in any of the derived head copy', () => {
-  for (const s of [rivalryIndexTitle(season2026), rivalryIndexDescription(season2026), ...buildRivalryIndexFaqs(season2026).map((f) => f.answer)]) {
+  for (const s of [rivalryIndexTitle(season2026), rivalryIndexDescription(season2026, NOW), ...buildRivalryIndexFaqs(season2026, NOW).map((f) => f.answer)]) {
     assert.doesNotMatch(s, /[\u2013\u2014]/, s);
   }
+});
+
+// ── tense (Gate 3 follow-up, ruling 2026-11-10) ──────────────────────────────
+test('tense: Nov 20 reads "is" and "are played"; Nov 30 reads "was" and "were played"; title unchanged', async () => {
+  const { rivalryWeekPast } = await import('@/lib/cfb/rivalry-index');
+  assert.equal(rivalryWeekPast('2026-11-20'), false);
+  assert.equal(rivalryWeekPast(RIVALRY_WEEK_END), false, 'the last day of the window is still present tense');
+  assert.equal(rivalryWeekPast('2026-11-30'), true);
+  const before = rivalryIndexDescription(season2026, '2026-11-20');
+  const after = rivalryIndexDescription(season2026, '2026-11-30');
+  assert.match(before, /^College football Rivalry Week 2026 is Friday, November 27 and Saturday, November 28\./);
+  assert.match(after, /^College football Rivalry Week 2026 was Friday, November 27 and Saturday, November 28\./);
+  const faq = (t: string) => buildRivalryIndexFaqs(season2026, t).find((f) => /Rivalry Week/.test(f.question))!.answer;
+  assert.match(faq('2026-11-20'), / is Friday, .* are played on those days\.$/);
+  assert.match(faq('2026-11-30'), / was Friday, .* were played on those days\.$/);
+  assert.equal(rivalryIndexTitle(season2026), 'College Football Rivalry Week 2026: Nov 27-28', 'the title does not take a tense');
+  assert.ok(after.length <= 155, `${after.length}`);
 });
