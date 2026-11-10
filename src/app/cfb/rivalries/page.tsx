@@ -5,6 +5,10 @@ import { buildCfbRivalryIndexMetadata } from '@/lib/cfb/metadata';
 import {
   orderedIndexRows,
   rivalryWeekRows,
+  rivalryWeekRange,
+  rivalryWeekAnswer,
+  rivalryWeekLong,
+  rivalryIndexHeading,
   buildRivalryIndexFaqs,
   groupRivalryWeekByDay,
   groupIndexByMonth,
@@ -19,10 +23,13 @@ import { cfbSeasonLabel } from '@/lib/cfb/season';
 export const revalidate = 21600; // ISR, same cadence as the CFB hub
 
 // Hardcoded season year by house rule: never getFullYear() in SEO copy, bump
-// deliberately when next-season content is ready. Moved into the shared builder
-// so this page picks up the canonical and self-referencing og:url it shipped
-// without; the title and description are unchanged.
-export const metadata: Metadata = buildCfbRivalryIndexMetadata();
+// deliberately when next-season content is ready. The title and description
+// name the stored Rivalry Week game days (fix/gsc-cleanup-2026-11), so they
+// read the same rows the page renders; getMatchupIndexRows is request-cached,
+// so the metadata and the body share one read.
+export async function generateMetadata(): Promise<Metadata> {
+  return buildCfbRivalryIndexMetadata(await getMatchupIndexRows());
+}
 
 const PAGE_BG = '#08070d';
 
@@ -141,6 +148,10 @@ export default async function Page() {
   const weekDays = groupRivalryWeekByDay(rows);
   const months = groupIndexByMonth(ordered);
   const faqs = buildRivalryIndexFaqs(rows);
+  // The stored game days inside the Rivalry Week window: the H1, the answer
+  // sentence and the section line all print these, never the bounds.
+  const range = rivalryWeekRange(rows);
+  const heading = rivalryIndexHeading(rows);
   const schemas = buildRivalryIndexJsonLd(ordered, faqs);
 
   return (
@@ -163,15 +174,18 @@ export default async function Page() {
             College Football
           </Link>
         </nav>
-        {/* Same H1 string as always; the year span is styling only, so the
-            textContent stays byte-identical: "College Football Rivalries 2026". */}
+        {/* The H1 is the <title> (rivalryIndexTitle): "College Football Rivalry
+            Week {season}: {first-last game day}". The spans are styling only,
+            so the textContent is exactly headingText(heading). */}
         <h1
           className="mt-1.5 font-extrabold uppercase leading-[0.98] tracking-[0.01em]"
           style={{ fontFamily: CONDENSED, fontSize: 'clamp(38px, 9vw, 56px)' }}
         >
-          College Football Rivalries <span style={{ color: RED }}>{cfbSeasonLabel()}</span>
+          {heading.lead} <span style={{ color: RED }}>{heading.season}</span>
+          {heading.dates && <>: <span style={{ color: RED }}>{heading.dates}</span></>}
         </h1>
         <p className="mt-2.5 max-w-[46ch] text-sm text-white/60">
+          {range && `${rivalryWeekAnswer(range)} `}
           The date, the kickoff and the stadium for every rivalry we cover, in the order they are played.
         </p>
 
@@ -193,9 +207,11 @@ export default async function Page() {
                 {gamesLabel(week.length)}
               </span>
             </div>
-            <p className="mt-1 text-[13px] text-white/40">
-              The last weekend of the regular season, November 21 through 29.
-            </p>
+            {range && (
+              <p className="mt-1 text-[13px] text-white/40">
+                {`${rivalryWeekLong(range)}.`}
+              </p>
+            )}
             {weekDays.map((g) => (
               <div key={g.key}>
                 <DayLabel g={g} />

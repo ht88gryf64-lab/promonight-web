@@ -26,17 +26,82 @@ export interface RivalryIndexRow {
 
 // The 2026 Rivalry Week window. The BOUNDS are the definition (season year
 // hardcoded by house rule — bump deliberately for 2027, never getFullYear());
-// everything downstream of them — which games qualify, how many — is derived
-// from live rows at render time.
-export const RIVALRY_WEEK_START = '2026-11-21';
-export const RIVALRY_WEEK_END = '2026-11-29';
+// everything downstream of them — which games qualify, how many, and the
+// dates the page names — is derived from live rows at render time.
+//
+// Thanksgiving week, Thursday to Saturday (ruling 2026-11-10, Gate 1 option
+// a). The page never prints these bounds: it prints the first and last
+// stored game date inside them (rivalryWeekRange), so a game a verification
+// moves moves the copy with it. Big Game (Nov 21 in the 2026 data) sits
+// outside the window and stays in the full list.
+export const RIVALRY_WEEK_START = '2026-11-26';
+export const RIVALRY_WEEK_END = '2026-11-28';
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-/** "November 21 and November 29, 2026": the Rivalry Week bounds above, printed
- *  from the dates themselves so the copy can never name another year. */
-function rivalryWeekPhrase(): string {
-  const md = (ymd: string) => `${MONTH_NAMES[Number(ymd.slice(5, 7)) - 1]} ${Number(ymd.slice(8, 10))}`;
-  return `${md(RIVALRY_WEEK_START)} and ${md(RIVALRY_WEEK_END)}, ${RIVALRY_WEEK_END.slice(0, 4)}`;
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/** The stored game dates inside the window, distinct and ascending. Null when
+ *  no row falls in it: every surface then drops its dates rather than print
+ *  the bounds. */
+export interface RivalryWeekRange {
+  start: string;
+  end: string;
+  /** Every distinct game day, ascending (start and end included). */
+  days: string[];
+}
+
+export function rivalryWeekRange(rows: ReadonlyArray<{ date: string | null }>): RivalryWeekRange | null {
+  const days = [...new Set(rivalryWeekRows(rows).map((r) => r.date!))].sort();
+  if (days.length === 0) return null;
+  return { start: days[0], end: days[days.length - 1], days };
+}
+
+const ymdParts = (ymd: string) => ({ y: Number(ymd.slice(0, 4)), m: Number(ymd.slice(5, 7)), d: Number(ymd.slice(8, 10)) });
+const weekdayOf = (ymd: string) => {
+  const { y, m, d } = ymdParts(ymd);
+  return WEEKDAY_NAMES[new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay()];
+};
+const shortMonth = (ymd: string) => MONTH_NAMES[ymdParts(ymd).m - 1].slice(0, 3);
+/** "Saturday, November 28". No zone arithmetic: a YYYY-MM-DD is a calendar day. */
+const longDay = (ymd: string) => `${weekdayOf(ymd)}, ${MONTH_NAMES[ymdParts(ymd).m - 1]} ${ymdParts(ymd).d}`;
+
+/** The title and H1 form: "Nov 27-28", "Nov 28", "Nov 30-Dec 1". A plain
+ *  hyphen, as the approved title has it (no en or em dash). */
+export function rivalryWeekShort(range: RivalryWeekRange): string {
+  const a = ymdParts(range.start);
+  const b = ymdParts(range.end);
+  if (range.start === range.end) return `${shortMonth(range.start)} ${a.d}`;
+  if (a.m === b.m) return `${shortMonth(range.start)} ${a.d}-${b.d}`;
+  return `${shortMonth(range.start)} ${a.d}-${shortMonth(range.end)} ${b.d}`;
+}
+
+/** The sentence form: "Friday, November 27 and Saturday, November 28" for one
+ *  or two game days, "Thursday, November 26 to Saturday, November 28" for
+ *  three or more. */
+export function rivalryWeekLong(range: RivalryWeekRange): string {
+  if (range.days.length === 1) return longDay(range.start);
+  if (range.days.length === 2) return `${longDay(range.days[0])} and ${longDay(range.days[1])}`;
+  return `${longDay(range.start)} to ${longDay(range.end)}`;
+}
+
+/** The page's answer sentence, shared by the lede, the meta description and
+ *  the FAQ so the three can never name different days. */
+export function rivalryWeekAnswer(range: RivalryWeekRange): string {
+  return `College football Rivalry Week ${cfbSeasonLabel()} is ${rivalryWeekLong(range)}.`;
+}
+
+/** The H1 (and <title>) in parts, so the page can style the year and the
+ *  dates while the textContent stays exactly the title:
+ *  "College Football Rivalry Week 2026: Nov 27-28". With no game in the
+ *  window there are no dates and the page keeps its index heading. */
+export function rivalryIndexHeading(rows: ReadonlyArray<{ date: string | null }>): { lead: string; season: string; dates: string | null } {
+  const range = rivalryWeekRange(rows);
+  if (!range) return { lead: 'College Football Rivalries', season: cfbSeasonLabel(), dates: null };
+  return { lead: 'College Football Rivalry Week', season: cfbSeasonLabel(), dates: rivalryWeekShort(range) };
+}
+
+export function headingText(h: { lead: string; season: string; dates: string | null }): string {
+  return h.dates ? `${h.lead} ${h.season}: ${h.dates}` : `${h.lead} ${h.season}`;
 }
 
 /** Dated rows soonest-first, then undated. THE display order: the full DOM
@@ -49,7 +114,7 @@ export function orderedIndexRows(rows: RivalryIndexRow[]): RivalryIndexRow[] {
 
 /** The Rivalry Week subset in date order. Bounds inclusive; string comparison
  *  is exact on YYYY-MM-DD. */
-export function rivalryWeekRows(rows: RivalryIndexRow[]): RivalryIndexRow[] {
+export function rivalryWeekRows<T extends { date: string | null }>(rows: ReadonlyArray<T>): T[] {
   return rows
     .filter((r) => r.date && r.date >= RIVALRY_WEEK_START && r.date <= RIVALRY_WEEK_END)
     .sort((a, b) => a.date!.localeCompare(b.date!));
@@ -75,10 +140,11 @@ export function buildRivalryIndexFaqs(rows: RivalryIndexRow[]): RivalryFaq[] {
       answer: `This page tracks ${total} named college football rivalries. ${dated} of them have a scheduled ${cfbSeasonLabel()} meeting, and every rivalry links to a page with the date, the stadium and how to plan the trip.`,
     });
   }
-  if (week > 0) {
+  const range = rivalryWeekRange(rows);
+  if (week > 0 && range) {
     faqs.push({
       question: `When is college football Rivalry Week in ${cfbSeasonLabel()}?`,
-      answer: `Rivalry Week is the final weekend of the regular season. ${week} of the ${total} rivalries tracked here are played between ${rivalryWeekPhrase()}, most of them over Thanksgiving weekend.`,
+      answer: `${rivalryWeekAnswer(range)} ${week} of the ${total} rivalries tracked here are played ${range.days.length === 1 ? 'that day' : 'on those days'}.`,
     });
   }
   if (trophies > 0) {

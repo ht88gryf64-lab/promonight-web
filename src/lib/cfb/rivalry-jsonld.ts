@@ -36,8 +36,8 @@ export function buildRivalryIndexJsonLd(rows: RivalryIndexRow[], faqs: RivalryFa
     {
       '@context': 'https://schema.org',
       '@type': 'CollectionPage',
-      name: rivalryIndexTitle(),
-      description: rivalryIndexDescription(),
+      name: rivalryIndexTitle(rows),
+      description: rivalryIndexDescription(rows),
       url,
       isPartOf: {
         '@type': 'WebSite',
@@ -48,7 +48,7 @@ export function buildRivalryIndexJsonLd(rows: RivalryIndexRow[], faqs: RivalryFa
     {
       '@context': 'https://schema.org',
       '@type': 'ItemList',
-      name: rivalryIndexTitle(),
+      name: rivalryIndexTitle(rows),
       numberOfItems: rows.length,
       itemListElement: rows.map((r, i) => ({
         '@type': 'ListItem',
