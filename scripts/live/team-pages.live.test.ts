@@ -45,8 +45,8 @@
 // Empty query (fix/gsc-cleanup-2026-11). No anchor on any sitemap team or
 //    promo page, nor on the other sitemap pages (every hub, aggregator and
 //    CFB page, and a spread of venue pages), has an href ending in a bare
-//    "?". Search Console indexed /nba/minnesota-timberwolves? as its own URL;
-//    the middleware 308s it, and this keeps the site from ever linking one.
+//    "?". Search Console indexed /nba/minnesota-timberwolves? as its own URL
+//    (canonical already clean); this keeps the site from ever linking one.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

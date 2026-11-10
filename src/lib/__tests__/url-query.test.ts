@@ -1,12 +1,11 @@
 // The empty query string (fix/gsc-cleanup-2026-11): "/nba/minnesota-timberwolves?"
-// was indexed as its own URL. No builder may leave a bare "?", and the
-// middleware sends one to the path in one 308 hop.
+// was indexed as its own URL. No builder may leave a bare "?". (The served-HTML
+// twin is the test:live guard; there is no middleware redirect, see url-query.ts.)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { NextRequest } from 'next/server';
-import { withQuery, bareQueryTarget, rawRequestUrl } from '../url-query';
+import { withQuery } from '../url-query';
 import { withSearch } from '../social-bridge';
 import { stripShareParams } from '../promo-share';
 import { buildUtmUrl } from '../utm';
@@ -34,32 +33,4 @@ test('the URL-synced filters join their query through withQuery', () => {
     assert.match(src, /withQuery\(pathname, qs\)/, f);
     assert.doesNotMatch(src, /`\$\{pathname\}\?\$\{qs\}`/, f);
   }
-});
-
-test('bareQueryTarget: only an empty query, read from the raw URL', () => {
-  assert.equal(bareQueryTarget('https://www.getpromonight.com/nba/minnesota-timberwolves?'), 'https://www.getpromonight.com/nba/minnesota-timberwolves');
-  assert.equal(bareQueryTarget('https://www.getpromonight.com/?'), 'https://www.getpromonight.com/');
-  assert.equal(bareQueryTarget('https://www.getpromonight.com/nba/minnesota-timberwolves'), null);
-  assert.equal(bareQueryTarget('https://www.getpromonight.com/nba/minnesota-timberwolves?utm_source=x'), null);
-  assert.equal(bareQueryTarget('https://www.getpromonight.com/teams?league='), null, 'a named parameter, even empty, is a real query');
-});
-
-test('rawRequestUrl keeps the bare "?" that NextRequest.url drops', () => {
-  const r = new NextRequest('https://www.getpromonight.com/nba/minnesota-timberwolves?');
-  assert.equal(r.url, 'https://www.getpromonight.com/nba/minnesota-timberwolves', 'the normalized url');
-  assert.equal(rawRequestUrl(r), 'https://www.getpromonight.com/nba/minnesota-timberwolves?');
-  assert.equal(rawRequestUrl(new NextRequest('https://www.getpromonight.com/teams')), 'https://www.getpromonight.com/teams');
-});
-
-test('middleware: "path?" is one 308 to "path"; "path" and "path?x=1" pass', async () => {
-  const { middleware } = await import('../../middleware');
-  const ev = { waitUntil() {} } as never;
-  const bare = await middleware(new NextRequest('https://www.getpromonight.com/nba/minnesota-timberwolves?'), ev);
-  assert.equal(bare!.status, 308);
-  assert.equal(bare!.headers.get('location'), 'https://www.getpromonight.com/nba/minnesota-timberwolves');
-  // The target is not itself redirected: one hop.
-  const target = await middleware(new NextRequest(bare!.headers.get('location')!), ev);
-  assert.equal(target!.headers.get('location'), null);
-  const real = await middleware(new NextRequest('https://www.getpromonight.com/nba/minnesota-timberwolves?utm_source=x'), ev);
-  assert.equal(real!.headers.get('location'), null);
 });
