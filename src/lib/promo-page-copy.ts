@@ -299,6 +299,57 @@ export function promoPageTitle(title: string, teamName: string, dates: readonly 
   return shapes.find((s) => renderedTitleLength(s) <= TITLE_MAX) ?? name;
 }
 
+/** The longest a package page's absolute title may run when nothing shorter
+ *  keeps the team (ruling 2026-11-10: Google truncates; a missing team name
+ *  costs more than a cut-off tail). */
+export const PACKAGE_TITLE_HARD_MAX = 70;
+
+/** A stored name less a leading word run that only repeats the team or the
+ *  season ("Islanders Scout Patch" on the Islanders, "2026-27 Pride Jersey"),
+ *  with the separator after it. Never empties the name; nothing else is cut. */
+export function stripRedundantPrefix(name: string, opts: { teamName: string; nickname?: string | null; city?: string | null; season?: string | null }): string {
+  const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const prefixes = [opts.teamName, opts.city && opts.nickname ? `${opts.city} ${opts.nickname}` : null, opts.nickname, opts.city, opts.season]
+    .filter((x): x is string => !!x && !!x.trim())
+    .sort((a, b) => b.length - a.length);
+  for (const pre of prefixes) {
+    const m = new RegExp(`^${esc(pre.trim())}(?:'s)?(?:\\s*[:|,-]\\s*|\\s+)(.+)$`, 'i').exec(name);
+    if (m && m[1].trim()) return m[1].trim();
+  }
+  return name;
+}
+
+/**
+ * The <title> of a package page whose name carries " Ticket Package" (rule
+ * 2), never without the team (ruling 2026-11-10, Gate 2 item 3):
+ *   1. promoPageTitle's shapes that name the team, suffix " | PromoNight"
+ *      appended by the layout, while one fits 60;
+ *   2. `{Item} Ticket Package | {Nickname}` as an ABSOLUTE title (no suffix),
+ *      while it fits 60;
+ *   3. the same with the stored name less a prefix that repeats the team or
+ *      season (stripRedundantPrefix), while it fits 60;
+ *   4. that last form up to 70; past 70 it is still the title (the team is
+ *      never dropped) and the report names it.
+ * `absolute` tells the route to bypass the layout's title template.
+ */
+export function packagePageTitle(
+  packagedName: string,
+  storedName: string,
+  teamName: string,
+  dates: readonly string[],
+  season: string | null,
+  team: { nickname?: string | null; city?: string | null },
+): { title: string; absolute: boolean } {
+  const withTeam = promoPageTitle(packagedName, teamName, dates, season, team.nickname);
+  if (withTeam !== cleanText(packagedName) && renderedTitleLength(withTeam) <= TITLE_MAX) return { title: withTeam, absolute: false };
+  const nick = team.nickname && team.nickname.trim() ? team.nickname.trim() : teamName;
+  const a = `${packagedName} | ${nick}`;
+  if (a.length <= TITLE_MAX) return { title: a, absolute: true };
+  const stripped = stripRedundantPrefix(cleanText(storedName), { teamName, nickname: team.nickname, city: team.city, season });
+  const b = `${stripped} ${PACKAGE_QUALIFIER} | ${nick}`;
+  return { title: b, absolute: true };
+}
+
 /** The rendered length of a bare title, suffix included, for the report. */
 export function renderedTitleLength(bareTitle: string): number {
   return (bareTitle + TITLE_SUFFIX).length;

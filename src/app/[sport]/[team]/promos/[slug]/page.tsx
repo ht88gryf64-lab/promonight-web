@@ -80,10 +80,12 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const r = await resolve(params);
   if (!r || r.kind === 'redirect') return {};
   const head = promoPageHead(r.page, r.ctx, r.today, r.imageSize);
-  const socialTitle = `${head.title} | PromoNight`;
+  // An absolute title (a package page whose team would not fit with the
+  // suffix, ruling 2026-11-10) is the whole <title>: no " | PromoNight".
+  const socialTitle = head.titleAbsolute ? head.title : `${head.title} | PromoNight`;
   return {
     // Bare: the root layout's title.template appends " | PromoNight".
-    title: head.title,
+    title: head.titleAbsolute ? { absolute: head.title } : head.title,
     description: head.description,
     alternates: { canonical: head.canonical },
     // A complete openGraph, never a partial one: the root's would otherwise be

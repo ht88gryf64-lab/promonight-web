@@ -465,3 +465,35 @@ test('canonicalGroups rule 1 extension: giveaway and theme with the same words g
   const [m] = canonicalGroups([c('dia-de-los-muertos-2026-27', 'Día de los Muertos', 'giveaway', null), c('dia-de-los-muertos-night', 'Día de los Muertos Night', 'theme')]);
   assert.equal(m.winner.pageSlug, 'dia-de-los-muertos-night');
 });
+
+test('packagePageTitle: never drops the team (ruling 2026-11-10, Gate 2 item 3)', async () => {
+  const { packagePageTitle, PACKAGE_TITLE_HARD_MAX } = await import('../promo-page-copy');
+  const wolves = { nickname: 'Timberwolves', city: 'Minnesota' };
+  // 1. A team shape with the suffix still fits 60: the normal cascade.
+  assert.deepEqual(packagePageTitle('Pride Tank Top Ticket Package', 'Pride Tank Top', 'Washington Capitals', ['2027-01-19'], '2026-27', { nickname: 'Capitals', city: 'Washington' }), { title: 'Pride Tank Top Ticket Package | Capitals Jan 19', absolute: false });
+  // 62 with the suffix: absolute, the team kept.
+  assert.deepEqual(packagePageTitle('Paint Night Blanket Ticket Package', 'Paint Night Blanket', 'Minnesota Timberwolves', ['2026-11-19'], '2026-27', wolves), { title: 'Paint Night Blanket Ticket Package | Timberwolves', absolute: true });
+  // 2. Only without the suffix: an absolute "{Item} Ticket Package | {Nickname}".
+  assert.deepEqual(packagePageTitle('AAPI Baseball Jersey Ticket Package', 'AAPI Baseball Jersey', 'Minnesota Timberwolves', ['2027-01-31'], '2026-27', wolves), { title: 'AAPI Baseball Jersey Ticket Package | Timberwolves', absolute: true });
+  // 3. A stored prefix that repeats the team is the only cut.
+  const isles = packagePageTitle('Islanders Hockey Fights Cancer Lavender Warmup Jersey Ticket Package', 'Islanders Hockey Fights Cancer Lavender Warmup Jersey', 'New York Islanders', ['2026-11-21'], '2026-27', { nickname: 'Islanders', city: 'New York' });
+  assert.deepEqual(isles, { title: 'Hockey Fights Cancer Lavender Warmup Jersey Ticket Package | Islanders', absolute: true });
+  // 4. Over 60 with nothing to cut: up to 70 is accepted, team kept.
+  const mil = packagePageTitle('Military Appreciation Baseball Jersey Ticket Package', 'Military Appreciation Baseball Jersey', 'Minnesota Timberwolves', ['2026-11-12'], '2026-27', wolves);
+  assert.deepEqual(mil, { title: 'Military Appreciation Baseball Jersey Ticket Package | Timberwolves', absolute: true });
+  assert.ok(mil.title.length <= PACKAGE_TITLE_HARD_MAX);
+  // Past 70 it is still the title with the team (reported at Gate 3, never cut).
+  const nah = packagePageTitle('Native American Heritage Night Baseball Jersey Ticket Package', 'Native American Heritage Night Baseball Jersey', 'Minnesota Timberwolves', ['2026-11-17'], '2026-27', wolves);
+  assert.ok(nah.title.endsWith(' | Timberwolves') && nah.absolute);
+});
+
+test('stripRedundantPrefix: only a leading team or season run, never the whole name', async () => {
+  const { stripRedundantPrefix } = await import('../promo-page-copy');
+  const o = { teamName: 'New York Islanders', nickname: 'Islanders', city: 'New York', season: '2026-27' };
+  assert.equal(stripRedundantPrefix('Islanders Scout Patch', o), 'Scout Patch');
+  assert.equal(stripRedundantPrefix('New York Islanders: Scout Patch', o), 'Scout Patch');
+  assert.equal(stripRedundantPrefix('2026-27 Pride Jersey', o), 'Pride Jersey');
+  assert.equal(stripRedundantPrefix('Scout Patch Islanders', o), 'Scout Patch Islanders', 'not a prefix');
+  assert.equal(stripRedundantPrefix('Islanders', o), 'Islanders', 'never empties the name');
+  assert.equal(stripRedundantPrefix('Islandersfest Hat', o), 'Islandersfest Hat', 'whole words only');
+});

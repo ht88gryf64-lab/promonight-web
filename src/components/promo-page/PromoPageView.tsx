@@ -42,6 +42,7 @@ import {
   formatMonDay,
   formatMonDayYear,
   packagePageName,
+  packagePageTitle,
   pageImage,
   promoFaqs,
   promoPageDescription,
@@ -136,7 +137,13 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
     ticketPackage: isTicketPackageLeague(team.league) && primary.ticketPackageRequired === true,
     sameGameTitles: ctx.alsoAtGame.map((p) => p.title),
   });
-  const title = promoPageTitle(name, teamName, removed ? page.removedDates : dates, page.season, team.name);
+  // A qualified package name runs its own cascade, which never drops the
+  // team (ruling 2026-11-10): it may end in an absolute title, no suffix.
+  const titleDates = removed ? page.removedDates : dates;
+  const { title, absolute: titleAbsolute } =
+    name !== cleanText(primary.title)
+      ? packagePageTitle(name, primary.title, teamName, titleDates, page.season, { nickname: team.name, city: team.city })
+      : { title: promoPageTitle(name, teamName, titleDates, page.season, team.name), absolute: false };
   const description = promoPageDescription({
     description: primary.description,
     title: primary.title,
@@ -166,7 +173,7 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
     height: CARD_HEIGHT,
     alt: shareCardDate ? `${cleanText(primary.title)}: ${teamName}, ${formatMonDayYear(shareCardDate)}` : `${cleanText(primary.title)}: ${teamName}`,
   };
-  return { teamName, canonical, title, description, image, imageUrl, indexable, venueName, shareCard };
+  return { teamName, canonical, title, titleAbsolute, description, image, imageUrl, indexable, venueName, shareCard };
 }
 
 function ticketHref(page: PromoPage): string {
