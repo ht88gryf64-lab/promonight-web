@@ -44,7 +44,7 @@ import { isSplitSeasonLeague } from './season-label';
 import type { SeasonEligible } from './seasons/season-window';
 import { groupLeagueTeams, leagueSuperGroups, type HubSuperGroup, type HubTeamGroup } from './hub-grouping';
 import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
-import { ticketNetworkEventUrlFor } from './affiliates';
+import { ticketNetworkEventLinkFor } from './affiliates';
 
 function tsToIso(v: unknown): string | null {
   if (!v) return null;
@@ -915,8 +915,11 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
   if (typeof d.espnGameId === 'string') game.espnGameId = d.espnGameId;
   if (d.ingestedAt) game.ingestedAt = tsToIso(d.ingestedAt) ?? undefined;
   // tnEventUrl ONLY (ruling 6, 2026-11-02): a public URL that is published as
-  // an href anyway. tnEventId, tnObservedAt and tnCheckedAt stay unmapped.
-  const tnUrl = ticketNetworkEventUrlFor(d.tnEventUrl, game.date);
+  // an href anyway. tnEventId, tnEventDate, tnObservedAt and tnCheckedAt stay
+  // unmapped. The stored tnEventUrl wins; only without it is the event page
+  // built from tnEventId, and only when tnEventDate is the game's date (Gate 1
+  // ruling, 2026-11-13).
+  const tnUrl = ticketNetworkEventLinkFor({ tnEventUrl: d.tnEventUrl, tnEventId: d.tnEventId, tnEventDate: d.tnEventDate }, game.date);
   if (tnUrl) game.tnEventUrl = tnUrl;
   return game;
 }

@@ -334,9 +334,11 @@ export interface Game {
   // The TicketNetwork event page for this game, written by the pipeline
   // (promo-pipeline scripts/tn-event-links.js) only after an exact match on
   // home club + venue-local date + opponent. mapGameDoc exposes it only when it
-  // is a TicketNetwork /tickets/{id}/ URL. The pipeline's other tn* fields
-  // (tnEventId, tnObservedAt, tnCheckedAt) are never mapped, so they never
-  // reach a client component or the RSC payload.
+  // is a TicketNetwork /tickets/{id}/ URL whose slug date is the game date, or,
+  // without one, https://www.ticketnetwork.com/tickets/{tnEventId} when the
+  // stored tnEventDate is the game date. The pipeline's other tn* fields
+  // (tnEventId, tnEventDate, tnObservedAt, tnCheckedAt) are never mapped, so
+  // they never reach a client component or the RSC payload.
   tnEventUrl?: string;
 }
 
