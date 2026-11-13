@@ -274,8 +274,18 @@ export function ticketNetworkLandingUrl(team: Pick<Team, 'id' | 'ticketNetworkSl
 // and the link falls back to the team performer page, never to a guess.
 const TN_EVENT_URL_RE = /^https:\/\/www\.ticketnetwork\.com\/tickets\/\d+\/[^\s"<>]+$/;
 
+// The same event page addressed by its id alone, /tickets/{eventId}, which
+// TicketNetwork serves directly (200, no redirect; Phase 1 samples
+// 2026-11-13). The web builds it from tnEventId and nothing else
+// (ticketNetworkEventIdUrlFor); a stored tnEventUrl in this form is never
+// accepted, because it carries no date to check.
+const TN_EVENT_ID_URL_RE = /^https:\/\/www\.ticketnetwork\.com\/tickets\/[1-9]\d*$/;
+
+/** Either form of a TicketNetwork event page: the stored slug form or the
+ *  id-only form built from tnEventId. Shape only; the date is checked once, in
+ *  mapGameDoc (ticketNetworkEventLinkFor). */
 export function isTicketNetworkEventUrl(u: unknown): u is string {
-  return typeof u === 'string' && TN_EVENT_URL_RE.test(u);
+  return typeof u === 'string' && (TN_EVENT_URL_RE.test(u) || TN_EVENT_ID_URL_RE.test(u));
 }
 
 // A TicketNetwork event slug carries its venue-local date,
@@ -289,9 +299,34 @@ export function ticketNetworkEventDate(u: string): string | null {
   if (!m) return null;
   return `${m[3]}-${String(TN_MONTHS.indexOf(m[1]) + 1).padStart(2, '0')}-${m[2].padStart(2, '0')}`;
 }
-/** The stored event URL when it is a TicketNetwork event page FOR THIS DATE. */
+/** The stored event URL when it is a TicketNetwork event page (slug form)
+ *  FOR THIS DATE. Unchanged by the id path: the id-only form is not accepted
+ *  here. */
 export function ticketNetworkEventUrlFor(u: unknown, gameDate: string): string | null {
-  return isTicketNetworkEventUrl(u) && ticketNetworkEventDate(u) === gameDate ? u : null;
+  return typeof u === 'string' && TN_EVENT_URL_RE.test(u) && ticketNetworkEventDate(u) === gameDate ? u : null;
+}
+
+// Event link from the id (Gate 1 ruling, 2026-11-13). The pipeline's catalog
+// matcher writes tnEventId with tnEventDate, the catalog event's date (its
+// LaunchDate read as a UTC date). The id becomes a link ONLY when that date is
+// a real YYYY-MM-DD equal to the game's date: a missing date, a date one day
+// off (LaunchDate read in local time) or a game without a date links nothing.
+const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
+export function ticketNetworkEventIdUrlFor(eventId: unknown, eventDate: unknown, gameDate: string): string | null {
+  if (typeof eventId !== 'number' || !Number.isSafeInteger(eventId) || eventId <= 0) return null;
+  if (typeof eventDate !== 'string' || !YMD_RE.test(eventDate)) return null;
+  if (eventDate !== gameDate) return null;
+  return `https://www.ticketnetwork.com/tickets/${eventId}`;
+}
+
+/** The game's TicketNetwork event page, or null (the performer page then).
+ *  The stored tnEventUrl first, exactly as before; the id path only when that
+ *  is absent or rejected. */
+export function ticketNetworkEventLinkFor(
+  d: { tnEventUrl?: unknown; tnEventId?: unknown; tnEventDate?: unknown },
+  gameDate: string,
+): string | null {
+  return ticketNetworkEventUrlFor(d.tnEventUrl, gameDate) ?? ticketNetworkEventIdUrlFor(d.tnEventId, d.tnEventDate, gameDate);
 }
 
 /** Whether a ticket link for ONE game (or a promo, or a team-level CTA) may
