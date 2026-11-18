@@ -104,7 +104,7 @@ Title and heading rules:
 - Watch item: family shows sell mostly at face value on Ticketmaster with thinner resale demand, so events may be where TicketNetwork out-earns StubHub even if StubHub wins the leagues. Track events as their own EPC line.
 
 ## Schema
-One Event per performance (own startDate and offer), not one per page.
+One Event per performance (own startDate and offer), not one per page. The offer's url is the stop page URL: no affiliate or tracking URL appears anywhere in structured data (ruling 2026-11-18, Phase 2B). No price.
 
 ## Lifecycle
 - Between seasons the page stays up. Past showtimes lose their buttons and move to a "Last visit" block; the top reads "Returns in {year}, dates TBA" until new dates arrive.

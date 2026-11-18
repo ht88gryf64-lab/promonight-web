@@ -148,7 +148,7 @@ performer page; `ticket_link_level` on `affiliate_click` says which.
 
 | subId1 | surface | where |
 |---|---|---|
-| web_event_page_{show}_{venueSlug} | web_event_page | Event stop page per-performance "Tickets" (and its JSON-LD `offers.url`); the same token rides SpotHero's aff_sub on the stop page's Parking button. A stop has no team, so the key is the show and the venue slug: partner-side sales report per stop, apart from team sales. Built by `eventSubId` (src/lib/affiliates.ts) |
+| web_event_page_{show}_{venueSlug} | web_event_page | Event stop page per-performance "Tickets". NOT in structured data: an event page's JSON-LD `offers.url` is the stop page URL, and no affiliate or tracking URL appears in it (ruling 2026-11-18); the same token rides SpotHero's aff_sub on the stop page's Parking button. A stop has no team, so the key is the show and the venue slug: partner-side sales report per stop, apart from team sales. Built by `eventSubId` (src/lib/affiliates.ts) |
 | web_event_hub_{show}_{venueSlug} | web_event_hub | Reserved for a ticket link on the show hub or the /events index. Neither page renders one today; the surface is registered so the day one does, it is attributed |
 | web_promo_page_{team} | web_promo_page | Promo page primary "Get tickets", and its JSON-LD `offers.url` |
 | web_promo_date_{team} | web_promo_date (sub ID only; the click reports web_promo_page) | Promo page per-date "Tickets" links on a series |

@@ -220,6 +220,9 @@ test('parking notes: a sentence with a price, a tenant, a league or a game-day w
   assert.deepEqual(tenantNameWords(['Minnesota Vikings', 'Minnesota United FC', 'Boston Red Sox'], ['Minneapolis', 'Minnesota', 'Boston']).sort(), ['Boston Red Sox', 'Minnesota United FC', 'Minnesota Vikings', 'Sox', 'United', 'Vikings']);
   const note = 'Connected to the stadium by skyway. Rates start at $25 on game days. Vikings season ticket holders park here. Opens 4 hours before kickoff. Entrance on 4th Street.';
   assert.equal(eventSafeParkingNote(note, tenants), 'Connected to the stadium by skyway. Entrance on 4th Street.');
+  // Phase 2B: a tailgate sentence is game-day copy.
+  for (const bad of ['Bus and RV tailgate spots available; purchase in advance.', 'The only lot in which tailgating is permitted.', 'Tailgates must end at kickoff.']) assert.equal(eventSafeParkingNote(bad, tenants), '', bad);
+  assert.equal(eventSafeTransitNote('Tailgating shuttles run from Lot C.', []), '');
   for (const bad of ['Costs $40.', 'Parking is 30 dollars cash.', 'Reserved for NFL games.', 'Open on game day only.', 'Lots open before first pitch.', 'Passes are sold for the season.', 'Vikings permit lot.', 'Opens at kick-off.']) assert.equal(eventSafeParkingNote(bad, tenants), '', bad);
   assert.equal(eventSafeParkingNote(null, tenants), '');
   assert.equal(eventSafeParkingNote('On the east side at St. Paul Ave. Enter from 5th.', []), 'On the east side at St. Paul Ave. Enter from 5th.');
@@ -270,20 +273,32 @@ test('"today" is the venue\'s day: a visit that starts tomorrow in Los Angeles i
   assert.equal(stopTimeline({ ...stop, timezone: 'America/Los_Angeles' }, at('2026-12-31T09:00:00Z')).returnsYear, null);
 });
 
-test('JSON-LD: one Event per performance with its offset, the building, a status and an offer without a price', () => {
+test('JSON-LD: one Event per performance with its offset, the building, a status and an offer on the STOP PAGE, with no price and no tracking URL', () => {
   const venue = { name: 'U.S. Bank Stadium', city: 'Minneapolis', state: 'Minnesota', lat: 44.9736, lng: -93.2575 };
-  const ld = performanceJsonLd({ showName: 'Monster Jam', stopUrl: 'https://www.getpromonight.com/events/monster-jam/us-bank-stadium', imageUrl: 'https://www.getpromonight.com/api/event-card/monster-jam~us-bank-stadium?v=1', venue, performance: STOP.performances[0], ticketUrl: 'https://ticketnetwork.lusg.net/c/x' }) as Record<string, any>;
+  const stopUrl = 'https://www.getpromonight.com/events/monster-jam/us-bank-stadium';
+  const base = { showName: 'Monster Jam', stopUrl, imageUrl: 'https://www.getpromonight.com/api/event-card/monster-jam~us-bank-stadium?v=1', venue };
+  const ld = performanceJsonLd({ ...base, performance: STOP.performances[0] }) as Record<string, any>;
   assert.equal(ld['@type'], 'Event');
   assert.equal(ld.startDate, '2027-02-20T17:00:00-06:00');
   assert.equal(ld.eventStatus, 'https://schema.org/EventScheduled');
   assert.deepEqual(ld.location.address, { '@type': 'PostalAddress', addressLocality: 'Minneapolis', addressRegion: 'Minnesota', addressCountry: 'US' });
-  assert.deepEqual(ld.offers, { '@type': 'Offer', url: 'https://ticketnetwork.lusg.net/c/x', availability: 'https://schema.org/InStock' });
+  // Ruling 2026-11-18 (Phase 2B): the offer's url is the stop page, never the tracked affiliate link.
+  assert.deepEqual(ld.offers, { '@type': 'Offer', url: stopUrl, availability: 'https://schema.org/InStock' });
   assert.equal(/"price|priceCurrency|lowPrice/.test(JSON.stringify(ld)), false);
-  const sold = performanceJsonLd({ showName: 'Monster Jam', stopUrl: 'u', imageUrl: 'i', venue, performance: { ...STOP.performances[0], status: 'soldout' }, ticketUrl: 'https://t' }) as Record<string, any>;
-  assert.equal(sold.offers.availability, 'https://schema.org/SoldOut');
-  // No link, or a status nobody read: no offer at all, never a guessed one.
-  assert.equal('offers' in performanceJsonLd({ showName: 'Monster Jam', stopUrl: 'u', imageUrl: 'i', venue, performance: STOP.performances[0], ticketUrl: null }), false);
-  assert.equal('offers' in performanceJsonLd({ showName: 'Monster Jam', stopUrl: 'u', imageUrl: 'i', venue, performance: { ...STOP.performances[0], status: 'unknown' }, ticketUrl: 'https://t' }), false);
+  const sold = performanceJsonLd({ ...base, performance: { ...STOP.performances[0], status: 'soldout' } }) as Record<string, any>;
+  assert.deepEqual(sold.offers, { '@type': 'Offer', url: stopUrl, availability: 'https://schema.org/SoldOut' });
+  // A status nobody read: no offer at all, never a guessed one.
+  assert.equal('offers' in performanceJsonLd({ ...base, performance: { ...STOP.performances[0], status: 'unknown' } }), false);
+  // No affiliate or tracking URL anywhere in structured data, whatever the performance carries:
+  // every URL in the block is on our own domain, and no partner host or sub ID appears.
+  for (const status of ['onsale', 'soldout', 'unknown'] as const) {
+    const wire = JSON.stringify(performanceJsonLd({ ...base, performance: { ...STOP.performances[0], status } }));
+    assert.equal(/lusg\.net|ticketnetwork|spothero|subId|aff_|impact|evyy\.net|utm_/i.test(wire), false, status);
+    const urls = [...wire.matchAll(/https?:\/\/[^"\\]+/g)].map((m) => m[0]).filter((u) => !u.startsWith('https://schema.org/'));
+    assert.ok(urls.length >= 2 && urls.every((u) => u.startsWith('https://www.getpromonight.com/')), urls.join(' '));
+  }
+  // The builder has no parameter a tracked link could arrive through (a compile-time fact, pinned here by arity of its input).
+  assert.equal('ticketUrl' in ({ ...base, performance: STOP.performances[0] } as Record<string, unknown>), false);
 });
 
 test('FAQs come from stored fields only: no run time, no noise, no ages, no strollers', () => {

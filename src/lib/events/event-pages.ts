@@ -295,7 +295,7 @@ export const showsBagRule = (b: BagBlock | null): boolean => !!b && b.kind !== '
 // ── parking notes: what survives on an event day ────────────────────────────
 
 const LEAGUE_WORDS = ['NFL', 'NBA', 'NHL', 'MLB', 'MLS', 'WNBA', 'NCAA'];
-const GAME_WORDS_RE = /\b(?:games?|gamedays?|first pitch|kick[- ]?offs?|seasons?|pre-?games?|post-?games?|tip-?offs?|puck drop|match(?:es)?|match ?days?|supporters?)\b/i;
+const GAME_WORDS_RE = /\b(?:games?|gamedays?|first pitch|kick[- ]?offs?|seasons?|pre-?games?|post-?games?|tip-?offs?|puck drop|match(?:es)?|match ?days?|supporters?|tailgat\w*)\b/i;
 /** Transit only (review 2026-11-18): a clock time, a fare claim, or a
  *  before-and-after service note belongs to the event it was written for. */
 const TRANSIT_WORDS_RE = /\b\d{1,2}:\d{2}\s?(?:a\.?m\.?|p\.?m\.?)?|\b\d{1,2}\s?(?:a\.?m\.?|p\.?m\.?)\b|\b(?:pre-event|post-event|fares?|free|promo(?:tion)?s?|kids?|children)\b/i;
@@ -410,12 +410,20 @@ export function stopDescription(o: { showName: string; searchCity: string; venue
 
 export interface EventJsonLdVenue { name: string; city: string | null; state: string | null; lat: number | null; lng: number | null }
 
-/** One Event per upcoming performance: startDate with its offset, the
- *  building, the status, and an offer with a url and availability. No price. */
-export function performanceJsonLd(o: { showName: string; stopUrl: string; imageUrl: string; venue: EventJsonLdVenue; performance: EventPerformance; ticketUrl: string | null }): Record<string, unknown> {
+/**
+ * One Event per upcoming performance: startDate with its offset, the
+ * building, the status, and an offer with a url and availability. No price.
+ *
+ * THE OFFER URL IS THE STOP PAGE (ruling 2026-11-18, Phase 2B). No affiliate
+ * or tracking URL appears anywhere in structured data: the ticket link lives
+ * on the page's button, and the page is where the offer is presented. The
+ * offer is emitted only for a status the source printed (on sale or sold
+ * out); a performance whose status nobody read carries no offer.
+ */
+export function performanceJsonLd(o: { showName: string; stopUrl: string; imageUrl: string; venue: EventJsonLdVenue; performance: EventPerformance }): Record<string, unknown> {
   const p = o.performance;
-  const offer = o.ticketUrl && p.status !== 'unknown'
-    ? { offers: { '@type': 'Offer', url: o.ticketUrl, availability: p.status === 'soldout' ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock' } }
+  const offer = p.status !== 'unknown'
+    ? { offers: { '@type': 'Offer', url: o.stopUrl, availability: p.status === 'soldout' ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock' } }
     : {};
   return {
     '@context': 'https://schema.org',

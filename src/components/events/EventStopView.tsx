@@ -166,7 +166,7 @@ export function EventStopView({ stop, hub, floor, now, teams, otherStops }: Even
 
   const jsonLd: Array<Record<string, unknown>> = [
     breadcrumbJsonLd([{ name: 'Events', path: EVENTS_INDEX_PATH }, { name: show.name, path: hubHref }, { name: venueName, path: eventStopPath(stop.show, stop.venueSlug) }]),
-    ...upcoming.map((p) => performanceJsonLd({ showName: show.name, stopUrl: head.canonical, imageUrl: head.card.url, venue: { name: venueName, city: hub.city, state: hub.state, lat: hub.lat, lng: hub.lng }, performance: p, ticketUrl: ticketUrlFor(p) })),
+    ...upcoming.map((p) => performanceJsonLd({ showName: show.name, stopUrl: head.canonical, imageUrl: head.card.url, venue: { name: venueName, city: hub.city, state: hub.state, lat: hub.lat, lng: hub.lng }, performance: p })),
   ];
   const indexLink = eventPageHref({ kind: 'index' }, 'events_hub_list');
   const hubLink = eventPageHref({ kind: 'hub', show: stop.show }, 'events_hub_list');
