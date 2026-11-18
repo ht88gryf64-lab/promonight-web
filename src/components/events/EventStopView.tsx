@@ -5,7 +5,7 @@ import { EventPageLink } from '@/components/events/EventPageLink';
 import { ShowtimeGate } from '@/components/events/ShowtimeGate';
 import { buildEventTicketLink, buildSpotHeroUrl, eventSubId, eventTicketVendor } from '@/lib/affiliates';
 import { cityState, displayVenueName, rendersTransit, spotHeroCovers, type TenantTeamLink, type VenueHub } from '@/lib/venue-hub';
-import { rendersParking } from '@/lib/venue-field-exclusions';
+import { parkingLotsModel } from '@/components/venue-hub/venue-logistics';
 import type { EventFloor, EventStopSummary } from '@/lib/events/event-stops';
 import {
   EVENTS_INDEX_PATH,
@@ -21,7 +21,6 @@ import {
   eventCardPath,
   eventHubPath,
   eventPageHref,
-  eventLot,
   eventSafeTransitLines,
   eventSafeTransitNote,
   eventShowOf,
@@ -69,25 +68,23 @@ export interface EventStopViewProps {
 }
 
 /** Everything the head and the body both need, computed once. */
-/** What the Parking and Transit cards print for this stop: the hub's lots and
- *  transit, cut for an event day (src/lib/events/event-pages.ts eventLot,
- *  eventSafeTransitNote). Computed once, for the cards AND the description,
- *  so the head never promises a card the page does not carry. */
-export function stopLogistics(hub: VenueHub, floor: EventFloor, teams: TenantTeamLink[]) {
+/** What the Transit card prints for this stop: the hub's lines and note, cut
+ *  for an event day (src/lib/events/event-pages.ts eventSafeTransitNote).
+ *  Computed once, for the card AND the description. There is no parking list:
+ *  the hub's lots were written for the home team's game days, and no filter
+ *  made them safe to print for a touring show (ruling 2026-11-18, Phase 2C). */
+export function stopTransit(hub: VenueHub, floor: EventFloor, teams: TenantTeamLink[]) {
   const tenantWords = tenantNameWords([...teams.map((t) => t.name), ...hub.tenantOverlays.map((t) => t.displayName ?? '')]);
   // The building's own names are places, not tenants ("Nationals Park").
   const own = [hub.name, displayVenueName(hub.name), ...hub.formerNames];
-  const lots = floor.parking && rendersParking({ ...hub, officialParkingUrls: [], parkingLotMapUrl: null })
-    ? hub.parkingLots.flatMap((l) => { const lot = eventLot(l, tenantWords, own); return lot ? [lot] : []; })
-    : [];
   const hubTransit = floor.transit && rendersTransit(hub) && hub.publicTransit ? hub.publicTransit : null;
   const lines = hubTransit ? eventSafeTransitLines(hubTransit.lines, tenantWords, own) : [];
   const notes = hubTransit && typeof hubTransit.notes === 'string' ? eventSafeTransitNote(hubTransit.notes, tenantWords, own) : '';
-  return { lots, transit: lines.length || notes ? { lines, notes } : null };
+  return lines.length || notes ? { lines, notes } : null;
 }
 
 export function eventStopHead(stop: EventStop, hub: VenueHub, floor: EventFloor, now: Date, teams: TenantTeamLink[] = []) {
-  const { lots, transit } = stopLogistics(hub, floor, teams);
+  const transit = stopTransit(hub, floor, teams);
   const show = eventShowOf(stop.show)!;
   const venueName = displayVenueName(hub.name);
   const tl = stopTimeline(stop, now);
@@ -117,13 +114,13 @@ export function eventStopHead(stop: EventStop, hub: VenueHub, floor: EventFloor,
       : `${show.name} ${stop.searchCity} at ${venueName}`;
   const description = stop.tombstoned
     ? `${show.name} at ${venueName} in ${stop.searchCity} has been removed from the schedule.`
-    : stopDescription({ showName: show.name, searchCity: stop.searchCity, venueName, dates: upcoming.map((p) => p.date), visitCount: tl.upcoming.length, bagRule: showsBagRule(bag), parking: lots.length > 0, transit: !!transit, pitParty: pitParty.length > 0 });
+    : stopDescription({ showName: show.name, searchCity: stop.searchCity, venueName, dates: upcoming.map((p) => p.date), visitCount: tl.upcoming.length, bagRule: showsBagRule(bag), transit: !!transit, pitParty: pitParty.length > 0 });
   // A removed stop has no card (the card route answers 404 for it).
   const hasCard = !stop.tombstoned;
   const card = { url: `${EVENTS_SITE_URL}${eventCardPath(stop)}`, width: EVENT_CARD_WIDTH, height: EVENT_CARD_HEIGHT, alt: `${show.name}${year ? ` ${year}` : ''} at ${venueName}, ${stop.searchCity}` };
   // A removed stop, or one with nothing upcoming and nothing played, is not indexed.
   const indexable = !stop.tombstoned && (upcoming.length > 0 || !!tl.lastVisit);
-  return { show, venueName, tl, upcoming, bag, pitParty, gateTimes, year, canonical, title, description, card, hasCard, indexable, lots, transit, bagScopeNote };
+  return { show, venueName, tl, upcoming, bag, pitParty, gateTimes, year, canonical, title, description, card, hasCard, indexable, transit, bagScopeNote };
 }
 
 const H2 = ({ children }: { children: ReactNode }) => (
@@ -171,8 +168,11 @@ export function EventStopView({ stop, hub, floor, now, teams, otherStops }: Even
   const parkingHref = !stop.tombstoned && upcoming.length && spotHeroCovers(hub) && hub.lat !== null && hub.lng !== null ? buildSpotHeroUrl({ latitude: hub.lat, longitude: hub.lng, subKey }) : null;
   const eventContext = { show: stop.show, venueSlug: stop.venueSlug };
 
-  const { lots, transit } = head;
-  const LOTS_SHOWN = 6;
+  const { transit } = head;
+  // The venue page's own parking section, when it has one (the same model its card renders from).
+  const venueParkingHref = parkingLotsModel(hub) ? `${venueHref}#parking` : null;
+  // Parking facts the VENUE printed for this event (eventPolicies on the stop). None is stored today.
+  const parkingFacts = stop.parkingFacts.filter((r) => tl.upcoming.some((g) => g.visit.visitId === r.visitId));
   const reEntry = stop.reEntry.filter((r) => tl.upcoming.some((g) => g.visit.visitId === r.visitId));
   const faqs = stop.tombstoned ? [] : stopFaqs({ showName: show.name, searchCity: stop.searchCity, venueName, upcoming, bag, bagScope: bag && bag.kind === 'event-rule' ? bag.rules.map((r) => head.bagScopeNote(r.text)).filter((x): x is string => !!x).join(' ') : '', pitParty, gateTimes });
   const perfOf = (key: string) => upcoming.find((p) => p.key === key);
@@ -301,7 +301,7 @@ export function EventStopView({ stop, hub, floor, now, teams, otherStops }: Even
         </figure>
         ) : null}
 
-        {!stop.tombstoned && (bag || lots.length || transit || pitParty.length || gateTimes.length || reEntry.length) ? (
+        {!stop.tombstoned && (bag || parkingFacts.length || ((parkingHref || venueParkingHref) && upcoming.length) || transit || pitParty.length || gateTimes.length || reEntry.length) ? (
           <section className="mt-6 flex flex-col gap-2.5">
             <H2>Before you go</H2>
             {bag ? (
@@ -330,32 +330,51 @@ export function EventStopView({ stop, hub, floor, now, teams, otherStops }: Even
               </Card>
             ) : null}
 
-            {lots.length ? (
-              <Card label="Parking">
-                {(() => {
-                  const row = (l: { name: string; note: string }, i: number) => (
-                    <li key={i} className="flex flex-col gap-0.5">
-                      <span className="font-rd text-[14px] font-semibold text-rd-ink">{l.name}</span>
-                      {l.note ? <span className="font-rd text-[14px] leading-[1.45] text-rd-ink-soft">{l.note}</span> : null}
-                    </li>
-                  );
-                  // A long lot list folds after the first few (Raymond James lists 23).
-                  const shown = lots.length > LOTS_SHOWN + 2 ? lots.slice(0, LOTS_SHOWN) : lots;
-                  const folded = lots.slice(shown.length);
-                  return (
-                    <>
-                      <ul className="m-0 flex list-none flex-col gap-2 p-0" data-parking="lots">{shown.map(row)}</ul>
-                      {folded.length ? (
-                        <details className="m-0">
-                          <summary className="flex min-h-11 cursor-pointer items-center font-rd text-[14px] font-medium text-rd-link">{`Show all ${lots.length} lots`}</summary>
-                          <ul className="m-0 mt-2 flex list-none flex-col gap-2 p-0">{folded.map(row)}</ul>
-                        </details>
-                      ) : null}
-                    </>
-                  );
-                })()}
-                <Body>Rates and lot access on an event day can differ from game days.</Body>
+            {/* THE PARKING CARD SLOT: only what the venue printed for this event
+                (eventPolicies on the stop), each fact with its source. None is
+                stored today, so no card renders. */}
+            {parkingFacts.length ? (
+              <Card label={`Parking for this event at ${venueName}`}>
+                {parkingFacts.map((r, i) => (
+                  <div key={i} className="flex flex-col gap-1.5" data-parking="event-fact">
+                    <Body>{r.text}</Body>
+                    <Source url={r.sourceUrl} observedAt={r.observedAt} />
+                  </div>
+                ))}
               </Card>
+            ) : null}
+
+            {/* In place of a lot list (ruling 2026-11-18): the reserve button, one
+                link to the venue page's parking section, and one line. The hub's
+                lots were written for the home team's game days and are not
+                printed on a stop page. */}
+            {upcoming.length && (parkingHref || venueParkingHref) ? (
+              <div className="flex flex-col gap-2 rounded-[14px] border border-rd-line bg-rd-card p-3.5" data-parking="links">
+                <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">Parking</span>
+                <Body>Event-day lots and prices can differ from game days.</Body>
+                {parkingHref ? (
+                  <TrackedAffiliateLink
+                    href={parkingHref}
+                    partner="spothero"
+                    teamId=""
+                    sport=""
+                    surface={EVENT_PAGE_SURFACE}
+                    placement="event_page_parking_block"
+                    eventContext={eventContext}
+                    target="_blank"
+                    rel="noopener noreferrer sponsored"
+                    ariaLabel={`Reserve parking near ${venueName} on SpotHero`}
+                    className="flex h-11 items-center justify-center rounded-xl border border-rd-line-strong bg-rd-card font-rd text-[14px] font-medium text-rd-ink no-underline hover:border-rd-ink"
+                  >
+                    Reserve parking
+                  </TrackedAffiliateLink>
+                ) : null}
+                {venueParkingHref ? (
+                  <EventPageLink href={venueParkingHref} linkSurface="event_to_venue" show={stop.show} venueSlug={stop.venueSlug} data-parking-link="" className="inline-flex min-h-11 items-center self-start font-rd text-[14px] font-medium text-rd-link no-underline hover:underline">
+                    {`Parking lots on the ${venueName} guide`}
+                  </EventPageLink>
+                ) : null}
+              </div>
             ) : null}
 
             {transit ? (

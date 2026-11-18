@@ -146,6 +146,8 @@ export interface EventStop {
   pitParty: EventPitParty[];
   gateTimes: EventGateTime[];
   reEntry: EventRuleFact[];
+  /** Parking facts the venue printed for THIS event (eventPolicies.parking). None is stored today. */
+  parkingFacts: EventRuleFact[];
   visits: EventVisit[];
   /** Live (not tombstoned) performances, oldest first. */
   performances: EventPerformance[];
@@ -292,7 +294,8 @@ export function bagBlockFor(stop: Pick<EventStop, 'bagPolicy' | 'bagRules'>, ven
 /** Whether the page prints a bag RULE (a pointer is not one). */
 export const showsBagRule = (b: BagBlock | null): boolean => !!b && b.kind !== 'pointer';
 
-// ── parking notes: what survives on an event day ────────────────────────────
+// ── transit notes: what survives on an event day ────────────────────────────
+// (There is no parking filter: a stop page prints no hub lot. Ruling 2026-11-18.)
 
 const LEAGUE_WORDS = ['NFL', 'NBA', 'NHL', 'MLB', 'MLS', 'WNBA', 'NCAA'];
 const GAME_WORDS_RE = /\b(?:games?|gamedays?|first pitch|kick[- ]?offs?|(?:pre|post)?-?seasons?|pre-?games?|post-?games?|tip-?offs?|puck drop|face-?offs?|final whistle|playoffs?|openers?|match(?:es)?|match ?days?|supporters?|tailgat\w*|football|baseball|basketball|hockey|soccer)\b/i;
@@ -301,14 +304,8 @@ const GAME_WORDS_RE = /\b(?:games?|gamedays?|first pitch|kick[- ]?offs?|(?:pre|p
 const CLOCK_WORDS_RE = /\b\d{1,2}:\d{2}\s?(?:a\.?m\.?|p\.?m\.?)?|\b\d{1,2}\s?(?:a\.?m\.?|p\.?m\.?)\b|\b(?:midnight|noon)\b/i;
 const TRANSIT_WORDS_RE = /\b(?:pre-event|post-event|fares?|free(?!-)|complimentary|no charge|promo(?:tion)?s?|kids?|children)\b/i;
 const CURRENCY_RE = /[$£€]\s?\d|\d\s?(?:dollars?|bucks)\b|\bUSD\b|\bdollars?\b|\b\d+\s+per\s+(?:car|vehicle|space|day)\b|\b\d+(?:\.\d{2})?\s+cash\b|\bcash only\b|\b(?:flat )?rates?\b|\bfree\b(?!-)|\bcomplimentary\b|\bno charge\b|\bprepaid\b/i;
-/** Words that say a LOT is reserved or conditioned: a permit, a pass, a
- *  premium seat class, members, an overflow or complimentary lot, a lot sold
- *  per game. A lot whose note carries one is not general parking and is left
- *  off an event page. A note that merely mentions the home team or a game
- *  (a game-day rate, an opening time) loses that sentence and keeps the lot. */
-const LOT_CONDITION_RE = /\b(?:permits?|pass(?:es)?|pass ?holders?|season ticket\w*|suites?|club|vip|members?|reserved|overflow|complimentary|individual-game)\b/i;
 
-/** Sentences of a hub parking note. Splits on a full stop, question mark or
+/** Sentences of a hub note. Splits on a full stop, question mark or
  *  exclamation mark followed by a space and a capital, so "St. Paul" and
  *  "4.5 by 6.5" stay whole in the common cases. */
 export function splitSentences(text: string): string[] {
@@ -325,20 +322,6 @@ export function splitSentences(text: string): string[] {
 }
 const ABBREVIATION_END_RE = /(?:^|[\s(])(?:U\.S|St|Ste|Ave|Blvd|Dr|Jr|Sr|Rd|Mt|Ft|Hwy|Pkwy|No|approx|a\.m|p\.m|[A-Z])\.$/;
 
-/**
- * The sentences of a parking note that are safe on an event page. A sentence
- * is dropped when it carries a currency amount, a tenant or league name, or
- * the words game, first pitch, kickoff or season: the hub's notes were written
- * for the home team's game days, and a rate or a game-day rule may not hold
- * for a touring show. Returns '' when nothing survives (the lot name then
- * prints alone).
- */
-export function eventSafeParkingNote(note: string | null | undefined, tenantNames: string[], ownNames: string[] = []): string {
-  const nameRe = tenantNameRe(tenantNames);
-  return splitSentences(note ?? '')
-    .filter((x) => { const t = withoutOwnNames(x, ownNames); return !CURRENCY_RE.test(t) && !GAME_WORDS_RE.test(t) && !CLOCK_WORDS_RE.test(t) && !(nameRe && nameRe.test(t)); })
-    .join(' ');
-}
 function tenantNameRe(tenantNames: string[]): RegExp | null {
   const names = [...LEAGUE_WORDS, ...tenantNames].map((n) => n.trim()).filter((n) => n.length >= 3);
   return names.length ? new RegExp(`\\b(?:${names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'i') : null;
@@ -350,35 +333,6 @@ function withoutOwnNames(text: string, ownNames: string[]): string {
   let out = text;
   for (const n of ownNames.map((x) => String(x || '').trim()).filter((x) => x.length >= 4).sort((a, b) => b.length - a.length)) out = out.split(new RegExp(n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')).join(' ');
   return out;
-}
-
-/**
- * ONE lot for an event page, or null when the lot must not be listed.
- * A lot is LEFT OFF when:
- *   - its name carries a price, a tenant, a game-day word or a reserved class;
- *   - any sentence of its note says it is reserved or conditioned (a permit, a
- *     pass, a suite or club, members, overflow, complimentary, per-game): that
- *     sentence was the only thing saying the lot is not general parking, so
- *     cutting it and keeping the name would list a Predators-only shuttle lot
- *     or a permit lot as parking for a touring show (review 2026-11-18);
- *   - it was stored with a note and nothing of the note survives the filter.
- * A lot stored with NO note prints its name alone.
- */
-export function eventLot(lot: { name?: string | null; notes?: string | null }, tenantNames: string[], ownNames: string[] = []): { name: string; note: string } | null {
-  const name = eventSafeLotName(lot.name, tenantNames, ownNames);
-  if (!name) return null;
-  const stored = String(lot.notes ?? '').trim();
-  if (!stored) return { name, note: '' };
-  if (splitSentences(stored).some((x) => LOT_CONDITION_RE.test(withoutOwnNames(x, ownNames)))) return null;
-  const note = eventSafeParkingNote(stored, tenantNames, ownNames);
-  return note ? { name, note } : null;
-}
-/** A lot NAME that carries a price, a tenant, a game-day word or a reserved class is not printed at all. */
-export function eventSafeLotName(name: string | null | undefined, tenantNames: string[], ownNames: string[] = []): string {
-  const n = String(name ?? '').trim();
-  const t = withoutOwnNames(n, ownNames);
-  const nameRe = tenantNameRe(tenantNames);
-  return n && !CURRENCY_RE.test(t) && !GAME_WORDS_RE.test(t) && !LOT_CONDITION_RE.test(t) && !(nameRe && nameRe.test(t)) ? n : '';
 }
 /**
  * The hub's transit note, cut for an event page: the parking rule plus the
@@ -453,11 +407,12 @@ export function hubTitle(showName: string, year: number | null): string {
   return `${showName}${year ? ` ${year}` : ''}: Dates, Tickets and Venue Guides`;
 }
 
-export function stopDescription(o: { showName: string; searchCity: string; venueName: string; dates: string[]; visitCount?: number; bagRule: boolean; parking: boolean; transit: boolean; pitParty: boolean }): string {
+export function stopDescription(o: { showName: string; searchCity: string; venueName: string; dates: string[]; visitCount?: number; bagRule: boolean; transit: boolean; pitParty: boolean }): string {
   // Nothing upcoming: say so, and promise nothing.
   if (!o.dates.length) return `${o.showName} at ${o.venueName} in ${o.searchCity}. No upcoming dates are listed right now.`;
   const when = (o.visitCount ?? 1) > 1 ? `${o.showName} has ${showsPhrase(o.dates, o.visitCount ?? 1)} at ${o.venueName} in ${o.searchCity}.` : `${o.showName} is at ${o.venueName} in ${o.searchCity} on ${formatDatesLine(o.dates)}.`;
-  const has = [o.bagRule ? 'the bag policy' : null, o.parking ? 'parking' : null, o.transit ? 'transit' : null, o.pitParty ? 'Pit Party times' : null].filter(Boolean) as string[];
+  // Never "parking": the page prints no parking list, only a reserve button and a link (ruling 2026-11-18).
+  const has = [o.bagRule ? 'the bag policy' : null, o.transit ? 'transit' : null, o.pitParty ? 'Pit Party times' : null].filter(Boolean) as string[];
   const list = has.length > 1 ? `${has.slice(0, -1).join(', ')} and ${has[has.length - 1]}` : has[0];
   return `${when} Showtimes and tickets${list ? `, plus ${list}` : ''}.`;
 }

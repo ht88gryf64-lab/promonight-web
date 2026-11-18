@@ -155,6 +155,8 @@ export function mapEventStop(id: string, d: Doc, visits: Array<{ id: string; dat
     pitParty: mapPitParty(ep.pitParty),
     gateTimes: mapGateTimes(ep.doorsTime),
     reEntry: mapRules(ep.reEntry),
+    // The slot for event-day parking facts. The pipeline writes no such key yet, so this is always [].
+    parkingFacts: mapRules(ep.parking),
     visits: visits.flatMap((v) => { const m = mapEventVisit(v.id, v.data); return m ? [m] : []; }).sort((a, b) => a.visitId.localeCompare(b.visitId)),
     performances: performances.flatMap((p) => { const m = mapEventPerformance(p.id, p.data); return m ? [m] : []; }).sort((a, b) => a.key.localeCompare(b.key)),
     updatedAt: stamps.length ? stamps[stamps.length - 1] : null,

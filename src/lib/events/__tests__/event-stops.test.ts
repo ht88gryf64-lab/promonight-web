@@ -39,13 +39,19 @@ test('the mapper copies named fields only: quotes, contexts, provider read times
   const map = mapWith(m);
   void mapEventStop; void mapEventPerformance; void mapEventVisit; void eventFloorOf; void map;
   const stop = map()!;
-  assert.deepEqual(Object.keys(stop).sort(), ['bagPolicy', 'bagRules', 'gateTimes', 'hubId', 'performances', 'pitParty', 'previousSlugs', 'reEntry', 'searchCity', 'show', 'timezone', 'tombstoned', 'updatedAt', 'venueSlug', 'visits']);
+  assert.deepEqual(Object.keys(stop).sort(), ['bagPolicy', 'bagRules', 'gateTimes', 'hubId', 'parkingFacts', 'performances', 'pitParty', 'previousSlugs', 'reEntry', 'searchCity', 'show', 'timezone', 'tombstoned', 'updatedAt', 'venueSlug', 'visits']);
   assert.deepEqual(stop.pitParty, [{ visitId: '2027-02-20', sourceUrl: 'https://www.usbankstadium.com/news/detail/get-ready', observedAt: '2026-11-18T13:55:21.901Z', performance: '2027-02-20T1700', start: '12:30', end: '15:30' }]);
   assert.deepEqual(stop.performances[0], { key: '2027-02-20T1700', date: '2027-02-20', startTime: '17:00', startsAt: '2027-02-20T17:00:00-06:00', visitId: '2027-02-20', status: 'onsale', tnEventId: 8258515 });
   assert.deepEqual(stop.visits, [{ visitId: '2027-02-20', startDate: '2027-02-20', endDate: '2027-02-21' }]);
   assert.deepEqual(stop.bagPolicy, { mode: 'pointer', sourceUrl: 'https://www.usbankstadium.com/plan-your-visit/safety' });
   const wire = JSON.stringify(stop);
   for (const hidden of ['Pit Party open from', 'Saturday, February 20, 2027', 'impact-catalog', 'tnVenueId', '22700', 'minneapolis-us-bank-stadium', 'lineup', 'sourceReadAt', 'observedAtByField']) assert.equal(wire.includes(hidden), false, hidden);
+  // The parking slot: empty today (the pipeline writes no such key); a stored, quoted fact would map like any rule,
+  // and one without its quote or its venue page would not.
+  assert.deepEqual(stop.parkingFacts, []);
+  const fact = { visitId: '2027-02-20', text: 'Lots open at noon for this event.', quote: 'Lots open at noon.', sourceUrl: 'https://www.usbankstadium.com/events/detail/monster-jam-10', observedAt: '2026-11-18T13:55:11.703Z' };
+  assert.deepEqual(map({ ...STOP_DOC, eventPolicies: { ...STOP_DOC.eventPolicies, parking: [fact] } })!.parkingFacts, [{ visitId: fact.visitId, sourceUrl: fact.sourceUrl, observedAt: fact.observedAt, text: fact.text }]);
+  assert.deepEqual(map({ ...STOP_DOC, eventPolicies: { ...STOP_DOC.eventPolicies, parking: [{ ...fact, quote: '' }, { ...fact, sourceUrl: 'https://www.monsterjam.com/x' }] } })!.parkingFacts, []);
   // A key the mapper does not name, of any kind, is not carried.
   const extra = map({ ...STOP_DOC, priceRange: '$55.20 to $3006.10', imageUrl: 'https://maps.seatics.com/x.png', internalNote: 'do not publish' })!;
   assert.equal(/55\.20|seatics|do not publish/.test(JSON.stringify(extra)), false);
