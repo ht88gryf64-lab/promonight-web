@@ -423,8 +423,9 @@ function tnSubIdToken(token: string): string {
 //           (withShareSubId2, src/lib/promo-share.ts). Never in served HTML.
 //   subId3  the promo page's slug (page.slug, the URL the visitor is on),
 //           server-rendered on every promo-page Impact link: the primary
-//           TicketNetwork CTA, the per-date "Tickets" links, the JSON-LD
-//           offers, and the Ticketmaster wrap (appended to the wrap, never
+//           TicketNetwork CTA, the per-date "Tickets" links, and the
+//           Ticketmaster wrap (never in JSON-LD: an offer's url is the
+//           page since 2026-11-18) (appended to the wrap, never
 //           folded into sharedid). Fanatics accepts it through the same
 //           builder option, though promo pages render no Fanatics link today.
 // Cleaned exactly like subId1 ([a-z0-9_-], lowercase, at most 64 characters).

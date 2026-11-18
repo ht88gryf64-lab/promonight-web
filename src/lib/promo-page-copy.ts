@@ -1008,10 +1008,12 @@ export interface PromoJsonLdInput {
   /** Absolute image URL (the og:image). */
   imageUrl: string;
   location: PromoPageLocation | null;
+  /** The page's primary ticket link. Read ONLY as "this page sells tickets":
+   *  it never enters the structured data (ruling 2026-11-18). */
   ticketUrl: string | null;
-  /** Per-date ticket link. When given, each Event's offers.url is ITS row's
-   *  link (a series' Dec 11 Event must not offer the Nov 18 game's tickets);
-   *  ticketUrl is the fallback for a row it returns null for. */
+  /** Per-date ticket link, read the same way. When given it decides alone: a
+   *  date it returns null for (a played date) gets no offer. The offer's url
+   *  is the page. */
   ticketUrlFor?: (row: PromoPageRow) => string | null;
   /** The latest updatedAt across the page's rows. */
   dateModified: string | null;
@@ -1062,8 +1064,15 @@ export function promoPageJsonLd(input: PromoJsonLdInput): Schema[] {
       if (place) e.location = place;
       const doors = cleanText(r.gateOpenTime);
       if (doors) e.doorTime = doors;
-      const offer = (input.ticketUrlFor ? input.ticketUrlFor(r) : null) ?? input.ticketUrl;
-      if (offer && !input.removed && !input.past) e.offers = { '@type': 'Offer', url: offer, availability: 'https://schema.org/InStock' };
+      // THE OFFER URL IS THE PROMO PAGE (ruling 2026-11-18). No affiliate or
+      // tracking URL appears anywhere in structured data: the ticket link
+      // lives on the page's button, and the page is where the offer is
+      // presented. The ticket links are read here only as a fact: an offer is
+      // claimed for a date only when the page has a ticket link for it.
+      // The per-date answer is final where the caller gives one (null = no
+      // ticket control for that date); ticketUrl speaks only when it does not.
+      const hasTicketLink = !!(input.ticketUrlFor ? input.ticketUrlFor(r) : input.ticketUrl);
+      if (hasTicketLink && !input.removed && !input.past) e.offers = { '@type': 'Offer', url: input.canonical, availability: 'https://schema.org/InStock' };
       return e;
     });
 
