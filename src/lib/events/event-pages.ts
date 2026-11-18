@@ -298,11 +298,11 @@ export const showsBagRule = (b: BagBlock | null): boolean => !!b && b.kind !== '
 // (There is no parking filter: a stop page prints no hub lot. Ruling 2026-11-18.)
 
 const LEAGUE_WORDS = ['NFL', 'NBA', 'NHL', 'MLB', 'MLS', 'WNBA', 'NCAA'];
-const GAME_WORDS_RE = /\b(?:games?|gamedays?|first pitch|kick[- ]?offs?|(?:pre|post)?-?seasons?|pre-?games?|post-?games?|tip-?offs?|puck drop|face-?offs?|final whistle|playoffs?|openers?|match(?:es)?|match ?days?|supporters?|tailgat\w*|football|baseball|basketball|hockey|soccer)\b/i;
+const GAME_WORDS_RE = /\b(?:games?|gamedays?|first pitch|kick[- ]?offs?|(?:pre|post)?-?seasons?|pre-?games?|post-?games?|tip-?offs?|puck drop|face-?offs?|final whistle|playoffs?|openers?|match(?:es)?|match ?days?|supporters?|tailgat\w*|ballgames?|ballparks?|homestands?|home stands?|opening day|football|baseball|basketball|hockey|soccer)\b/i;
 /** Transit only (review 2026-11-18): a clock time, a fare claim, or a
  *  before-and-after service note belongs to the event it was written for. */
 const CLOCK_WORDS_RE = /\b\d{1,2}:\d{2}\s?(?:a\.?m\.?|p\.?m\.?)?|\b\d{1,2}\s?(?:a\.?m\.?|p\.?m\.?)\b|\b(?:midnight|noon)\b/i;
-const TRANSIT_WORDS_RE = /\b(?:pre-event|post-event|fares?|free(?!-)|complimentary|no charge|promo(?:tion)?s?|kids?|children)\b/i;
+const TRANSIT_WORDS_RE = /\b(?:pre-event|post-event|fares?|free(?!-)|no cost|discount\w*|costs?|every \d+ minutes|\d+ (?:minutes?|hours?) (?:before|after)|(?:one|two|three|four) hours? (?:before|after)|event days?|complimentary|no charge|promo(?:tion)?s?|kids?|children)\b/i;
 const CURRENCY_RE = /[$£€]\s?\d|\d\s?(?:dollars?|bucks)\b|\bUSD\b|\bdollars?\b|\b\d+\s+per\s+(?:car|vehicle|space|day)\b|\b\d+(?:\.\d{2})?\s+cash\b|\bcash only\b|\b(?:flat )?rates?\b|\bfree\b(?!-)|\bcomplimentary\b|\bno charge\b|\bprepaid\b/i;
 
 /** Sentences of a hub note. Splits on a full stop, question mark or
@@ -320,7 +320,7 @@ export function splitSentences(text: string): string[] {
   }
   return out;
 }
-const ABBREVIATION_END_RE = /(?:^|[\s(])(?:U\.S|St|Ste|Ave|Blvd|Dr|Jr|Sr|Rd|Mt|Ft|Hwy|Pkwy|No|approx|a\.m|p\.m|[A-Z])\.$/;
+const ABBREVIATION_END_RE = /(?:^|[\s(])(?:U\.S|St|Ste|Ave|Blvd|Dr|Jr|Sr|Rd|Mt|Ft|Hwy|Pkwy|No|approx|a\.m|p\.m)\.$/;
 
 function tenantNameRe(tenantNames: string[]): RegExp | null {
   const names = [...LEAGUE_WORDS, ...tenantNames].map((n) => n.trim()).filter((n) => n.length >= 3);
@@ -352,6 +352,8 @@ export function eventSafeTransitLines(lines: unknown, tenantNames: string[], own
   return (Array.isArray(lines) ? lines : []).filter((l): l is string => typeof l === 'string' && !!l.trim()).map((l) => l.trim())
     .filter((l) => { const t = withoutOwnNames(l, ownNames); return !CURRENCY_RE.test(t) && !GAME_WORDS_RE.test(t) && !(nameRe && nameRe.test(t)); });
 }
+/** `fullNameOnly` lists names that contribute no nickname at all: a college
+ *  tenant's name is its school or place ("South Florida"), not "City Nickname". */
 export function tenantNameWords(names: string[], _placeWords: string[] = []): string[] {
   // The full name, and the nickname (its last word) when the nickname is not
   // an ordinary word. "Minnesota Vikings" gives "Vikings"; "Chicago Fire",
@@ -365,8 +367,11 @@ export function tenantNameWords(names: string[], _placeWords: string[] = []): st
     const clean = String(n || '').trim();
     if (!clean) continue;
     out.add(clean);
-    const last = clean.split(/\s+/).pop() ?? '';
-    if (last.length >= 3 && !ORDINARY_NICKNAMES.has(last.toLowerCase())) out.add(last);
+    // A one-word name is a school or a place ("Miami", "South Florida" arrives as two words but is a place too:
+    // the caller passes college names in full only), never a nickname.
+    const words = clean.split(/\s+/);
+    const last = words.length > 1 ? words[words.length - 1] : '';
+    if (!_placeWords.includes(clean) && last.length >= 3 && !ORDINARY_NICKNAMES.has(last.toLowerCase())) out.add(last);
   }
   return [...out];
 }
@@ -471,7 +476,7 @@ export interface EventFaq { q: string; a: string }
 
 /** Questions the page can answer from what is stored. Nothing about run time,
  *  noise, ages or strollers: none of that is stored. */
-export function stopFaqs(o: { showName: string; searchCity: string; venueName: string; upcoming: EventPerformance[]; bag: BagBlock | null; bagScope?: string; pitParty: EventPitParty[]; gateTimes: EventGateTime[] }): EventFaq[] {
+export function stopFaqs(o: { showName: string; searchCity: string; venueName: string; upcoming: EventPerformance[]; bag: BagBlock | null; bagAnswer?: string; pitParty: EventPitParty[]; gateTimes: EventGateTime[] }): EventFaq[] {
   const out: EventFaq[] = [];
   const perfLine = (p: EventPerformance) => `${formatLongDay(p.date)} at ${formatClock(p.startTime)}`;
   if (o.upcoming.length) {
@@ -482,7 +487,7 @@ export function stopFaqs(o: { showName: string; searchCity: string; venueName: s
     const joined = list.length === 2 ? `${list[0]} and ${list[1]}` : list.length > 2 ? `${list.slice(0, -1).join('; ')}; and ${list[list.length - 1]}` : list[0];
     if (list.length) out.push({ q: `When is ${o.showName} in ${o.searchCity}?`, a: `${joined}, at ${o.venueName}. Times are local to the venue.` });
   }
-  if (o.bag && o.bag.kind === 'event-rule') out.push({ q: `What is the bag policy for ${o.showName} at ${o.venueName}?`, a: [o.bag.rules.map((r) => r.text).join(' '), o.bagScope].filter(Boolean).join(' ') });
+  if (o.bag && o.bag.kind === 'event-rule') out.push({ q: `What is the bag policy for ${o.showName} at ${o.venueName}?`, a: o.bagAnswer || o.bag.rules.map((r) => r.text).join(' ') });
   else if (o.bag && o.bag.kind === 'operator-rule') out.push({ q: `What is the bag policy at ${o.venueName}?`, a: o.bag.text });
   else if (o.bag && o.bag.kind === 'other-event-rule') out.push({ q: `What is the bag policy at ${o.venueName}?`, a: `${o.bag.text} ${o.bag.caveat}` });
   const upKeys = new Set(o.upcoming.map((p) => p.key));

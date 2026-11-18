@@ -231,6 +231,15 @@ test('the note filter: tenant words, sentence splitting and the building\'s own 
   assert.equal(eventSafeTransitNote('Trains run until 1 a.m. Friday and Saturday.', []), '');
   assert.equal(eventSafeTransitNote('Buses leave from Dr. Martin Luther King Jr. Blvd. after Saints games only.', ['Saints']), '');
   assert.equal(eventSafeTransitNote('On Vikings game days, trains near U.S. Bank Stadium fill early. The station is on 4th Street.', tenants), 'The station is on 4th Street.');
+  // Review 2026-11-18 (Part B): more game-day, price and schedule copy that must go.
+  for (const bad of ['Trains run 30 minutes after ballgames.', 'Extra trains run during homestands.', 'Light rail runs on Opening Day and for every home stand.', 'Show your event ticket to ride at no cost.', 'Service is discounted with a ticket.', 'A round trip costs 2.50 each way.', 'Trolleys run every 15 minutes on event days.', 'Shuttles begin two hours before each event and run for one hour after.', 'OCTA runs bus service to the ballpark.']) assert.equal(eventSafeTransitNote(bad, []), '', bad);
+  // A single capital is not an abbreviation: two real sentences stay two, so a dropped one does not take its neighbour.
+  assert.deepEqual(splitSentences('Take Exit B. Trains run late.'), ['Take Exit B.', 'Trains run late.']);
+  assert.equal(eventSafeTransitNote('Walk to Platform A. Vikings fans ride from there.', tenants), 'Walk to Platform A.');
+  // A college tenant's name is a place: matched in full, never split into a nickname.
+  const cfb = tenantNameWords(['South Florida', 'Miami', 'Tampa Bay Buccaneers'], ['South Florida', 'Miami']);
+  assert.deepEqual(cfb.sort(), ['Buccaneers', 'Miami', 'South Florida', 'Tampa Bay Buccaneers']);
+  assert.equal(eventSafeTransitNote('The stop is on Florida Avenue.', cfb), 'The stop is on Florida Avenue.');
   // Transit lines: kept unless they carry a price, a game-day word or a tenant; a value that is not a list never throws.
   assert.deepEqual(eventSafeTransitLines(['METRO Blue Line', 'Gameday Express', '', 42, 'Vikings Shuttle'], tenants), ['METRO Blue Line']);
   assert.deepEqual(eventSafeTransitLines('METRO Blue Line', tenants), []);
@@ -317,7 +326,7 @@ test('FAQs come from stored fields only: no run time, no noise, no ages, no stro
   assert.match(all, /gates open at 1:30 PM/);
   for (const word of ['hour', 'loud', 'ear', 'stroller', 'toddler', 'under 2', 'ages', 'kids', 'children']) assert.equal(new RegExp(`\\b${word}`, 'i').test(all + JSON.stringify(faqs)), false, word);
   // An event rule the venue printed for one visit of two: the FAQ answer carries the same scope sentence as the card (ux-review N1).
-  const scoped = stopFaqs({ showName: 'Monster Jam', searchCity: 'Houston', venueName: 'NRG Stadium', upcoming, bag: bagBlockFor({ bagPolicy: null, bagRules: [{ visitId: '2027-02-20', text: 'Bags over 11 by 17 inches are not allowed.', sourceUrl: 'https://venue.example/e', observedAt: '2026-11-18T13:54:17.868Z' }] }, 'NRG Stadium', ['2027-02-20']), bagScope: 'NRG Stadium prints this for the Feb 6 to 7 shows. It has not published a rule for the other dates on this page.', pitParty: [], gateTimes: [] });
+  const scoped = stopFaqs({ showName: 'Monster Jam', searchCity: 'Houston', venueName: 'NRG Stadium', upcoming, bag: bagBlockFor({ bagPolicy: null, bagRules: [{ visitId: '2027-02-20', text: 'Bags over 11 by 17 inches are not allowed.', sourceUrl: 'https://venue.example/e', observedAt: '2026-11-18T13:54:17.868Z' }] }, 'NRG Stadium', ['2027-02-20']), bagAnswer: 'Bags over 11 by 17 inches are not allowed. NRG Stadium prints this for the Feb 6 to 7 shows. It has not published a rule for the other dates on this page.', pitParty: [], gateTimes: [] });
   assert.equal(scoped.find((f) => /bag policy/i.test(f.q))?.a, 'Bags over 11 by 17 inches are not allowed. NRG Stadium prints this for the Feb 6 to 7 shows. It has not published a rule for the other dates on this page.');
   // A pointer is not an answer to "what is the bag policy".
   assert.equal(faqs.some((f) => /bag policy/i.test(f.q)), false);

@@ -74,7 +74,8 @@ export interface EventStopViewProps {
  *  the hub's lots were written for the home team's game days, and no filter
  *  made them safe to print for a touring show (ruling 2026-11-18, Phase 2C). */
 export function stopTransit(hub: VenueHub, floor: EventFloor, teams: TenantTeamLink[]) {
-  const tenantWords = tenantNameWords([...teams.map((t) => t.name), ...hub.tenantOverlays.map((t) => t.displayName ?? '')]);
+  // A college tenant's name is its school or place: it is matched in full and gives no nickname.
+  const tenantWords = tenantNameWords([...teams.map((t) => t.name), ...hub.tenantOverlays.map((t) => t.displayName ?? '')], teams.filter((t) => t.isCfb).map((t) => t.name));
   // The building's own names are places, not tenants ("Nationals Park").
   const own = [hub.name, displayVenueName(hub.name), ...hub.formerNames];
   const hubTransit = floor.transit && rendersTransit(hub) && hub.publicTransit ? hub.publicTransit : null;
@@ -99,7 +100,11 @@ export function eventStopHead(stop: EventStop, hub: VenueHub, floor: EventFloor,
   const bagScopeNote = (ruleText: string): string | null => {
     const covered = tl.upcoming.filter((g) => stop.bagRules.some((x) => x.visitId === g.visit.visitId && x.text === ruleText));
     if (tl.upcoming.length < 2 || covered.length === tl.upcoming.length || !covered.length) return null;
-    return `${venueName} prints this for the ${covered.map((g) => formatRange(g.performances[0].date, g.performances[g.performances.length - 1].date)).join(' and ')} shows. It has not published a rule for the other dates on this page.`;
+    const shows = covered.reduce((n, g) => n + g.performances.length, 0);
+    const which = `${venueName} prints this for the ${covered.map((g) => formatRange(g.performances[0].date, g.performances[g.performances.length - 1].date)).join(' and ')} ${shows === 1 ? 'show' : 'shows'}.`;
+    // "No rule for the other dates" only when some upcoming visit really has none (another visit may carry its own rule).
+    const someUncovered = tl.upcoming.some((g) => !stop.bagRules.some((x) => x.visitId === g.visit.visitId));
+    return someUncovered ? `${which} It has not published a rule for the other dates on this page.` : which;
   };
   const upKeys = new Set(upcoming.map((p) => p.key));
   const pitParty = stop.pitParty.filter((p) => upKeys.has(p.performance));
@@ -174,7 +179,7 @@ export function EventStopView({ stop, hub, floor, now, teams, otherStops }: Even
   // Parking facts the VENUE printed for this event (eventPolicies on the stop). None is stored today.
   const parkingFacts = stop.parkingFacts.filter((r) => tl.upcoming.some((g) => g.visit.visitId === r.visitId));
   const reEntry = stop.reEntry.filter((r) => tl.upcoming.some((g) => g.visit.visitId === r.visitId));
-  const faqs = stop.tombstoned ? [] : stopFaqs({ showName: show.name, searchCity: stop.searchCity, venueName, upcoming, bag, bagScope: bag && bag.kind === 'event-rule' ? bag.rules.map((r) => head.bagScopeNote(r.text)).filter((x): x is string => !!x).join(' ') : '', pitParty, gateTimes });
+  const faqs = stop.tombstoned ? [] : stopFaqs({ showName: show.name, searchCity: stop.searchCity, venueName, upcoming, bag, bagAnswer: bag && bag.kind === 'event-rule' ? bag.rules.map((r) => [r.text, head.bagScopeNote(r.text)].filter(Boolean).join(' ')).join(' ') : '', pitParty, gateTimes });
   const perfOf = (key: string) => upcoming.find((p) => p.key === key);
 
   const jsonLd: Array<Record<string, unknown>> = [
