@@ -9,6 +9,7 @@
 //
 //   Allow: /api/promo-card/   the promo pages' Event JSON-LD image
 //   Allow: /api/share-card/   the promo pages' og:image and twitter:image
+//   Allow: /api/event-card/   the event stop pages' image, og:image and JSON-LD image
 //   Disallow: /api/           everything else under /api/
 //   Allow: /                  every page, /ads.txt and /app-ads.txt
 //
@@ -25,6 +26,7 @@
 export const ROBOTS_GROUP_LINES = [
   'Allow: /api/promo-card/',
   'Allow: /api/share-card/',
+  'Allow: /api/event-card/',
   'Disallow: /api/',
   'Allow: /',
 ] as const;

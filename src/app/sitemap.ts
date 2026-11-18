@@ -7,6 +7,8 @@ import { isCfbHubLive, LEAGUE_HUBS } from '@/lib/league-hubs';
 import { getIndexableVenueHubSitemapEntries } from '@/lib/venue-hub';
 import { ABOUT_LAST_REVIEWED } from '@/lib/about-copy';
 import { getPastPromoSitemap, getPromoPageSitemapEntries } from '@/lib/promo-pages';
+import { getEventSitemapEntries } from '@/lib/events/event-stops';
+import { isEventsPagesLive } from '@/lib/events/event-pages';
 import { siteTodayYmd } from '@/lib/site-today';
 
 const BASE_URL = 'https://www.getpromonight.com';
@@ -194,6 +196,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('[sitemap] promos read failed; refusing to serve a sitemap missing the promo pages', err);
     throw err;
   });
+  // Event pages (Phase 2, 2026-11-18): /events, each show hub and each stop
+  // with an upcoming performance, listed only while EVENTS_PAGES_LIVE is true
+  // (absent, not a list of 404s, with the flag off). lastmod is the latest
+  // write under the stop, never the build clock. Fail-loud like the promo read.
+  const eventEntries = isEventsPagesLive()
+    ? await getEventSitemapEntries(now).catch((err) => {
+        console.error('[sitemap] events read failed; refusing to serve a sitemap missing the event pages', err);
+        throw err;
+      })
+    : [];
+  const eventPages = eventEntries.map((e) => ({
+    url: `${BASE_URL}${e.path}`,
+    ...(e.lastModified ? { lastModified: e.lastModified } : {}),
+    changeFrequency: 'weekly' as const,
+    priority: 0.7,
+  }));
   const promoPages = promoEntries.map((e) => ({
     url: `${BASE_URL}${e.path}`,
     ...(e.lastModified ? { lastModified: e.lastModified } : {}),
@@ -254,6 +272,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...venuePages,
     ...promoPages,
     ...archivePages,
+    ...eventPages,
     {
       url: `${BASE_URL}/about`,
       // Bound to the same editorial constant the page renders as its visible

@@ -217,11 +217,6 @@ export const TRANSIT_SUPPRESSED: ReadonlyArray<TransitSuppression> = [
     applies: ['hub'],
   },
   {
-    hub: 'moda-center',
-    reason: "Portland: TriMet truncated the MAX Green Line to Clackamas Town Center and Gateway Transit Center on 23 August 2026, so it no longer reaches Rose Quarter Transit Center; TriMet's own Rose Quarter page now lists Blue, Red and Yellow only. Bus 77 also moved off NE 9th Ave.",
-    applies: ['hub'],
-  },
-  {
     hub: 'mt-bank-stadium',
     reason: "Baltimore: the stored RavensRide park-and-ride charter buses are not confirmed by the operator for the 2026 season, so fans planning to park at a listed lot and ride in may find no service.",
     applies: ['hub'],

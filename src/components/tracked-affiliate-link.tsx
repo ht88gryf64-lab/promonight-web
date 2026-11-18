@@ -35,6 +35,10 @@ export type TrackedAffiliateLinkProps = {
   /** Ticket links only: 'event' (the game's own event page) or 'team'.
    *  Sent as ticket_link_level on affiliate_click; omit for other partners. */
   ticketLinkLevel?: 'event' | 'team';
+  /** Event pages only (/events): the show, the venue slug, the performance
+   *  the button belongs to and the ticket provider, sent on affiliate_click.
+   *  A stop has no team: teamId is '' and sport is '' on these links. */
+  eventContext?: { show: string; venueSlug: string; performanceKey?: string; provider?: string };
 };
 
 // Fires on mousedown (not click) so the event is captured even when the
@@ -58,6 +62,7 @@ export function TrackedAffiliateLink({
   rel = 'noopener sponsored',
   ariaLabel,
   ticketLinkLevel,
+  eventContext,
 }: TrackedAffiliateLinkProps) {
   const builtHref = buildAffiliateUrl(partner as AffiliateUrlPartner, href, {
     surface,
@@ -89,6 +94,9 @@ export function TrackedAffiliateLink({
       affiliate_tracking_active: trackingActive,
       ...(ticketLinkLevel ? { ticket_link_level: ticketLinkLevel } : {}),
       ...(shareSession ? { share_id: shareSession.shareId, share_self_open: shareSession.selfOpen } : {}),
+      ...(eventContext
+        ? { show: eventContext.show, venue_slug: eventContext.venueSlug, performance_key: eventContext.performanceKey, provider: eventContext.provider }
+        : {}),
     });
   };
 

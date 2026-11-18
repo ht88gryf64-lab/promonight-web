@@ -4315,6 +4315,44 @@ ux-review of `fix/gsc-cleanup-2026-11` (C4), present on production. On /cfb the 
 
 ux-review of `fix/gsc-cleanup-followup` (P3). The CTA section is `flex items-stretch`, so the date tile beside the buttons grows with the column; the package disclosure (known-issues 97) makes the column taller, and at 390 the tile goes from 189 to 285px with its 91px of content floating in it (137 to 213px at 768 and 1280). Cosmetic. Fix: align the tile to the top (`self-start`) or center its content, checked against the non-package pages, whose layout must not move.
 
+## 100. The venue page's "Upcoming events" module pushes "Plan your visit" below the fold at 390px (waived at build, logged 2026-11-18)
+
+ux-review of `feature/events-pages` (defect 2). On /venues/us-bank-stadium the module adds 167px at 390, which moves the SpotHero and Expedia card from y 749 to y 916. It renders only while EVENTS_PAGES_LIVE is on and a stop is upcoming at the building. Waived: the module is the spec's main bridge into /events. Read after launch: event_link_click with link_surface venue_events_module against affiliate_click on web_venue for the same buildings, before and after the flag.
+
+## 101. Event stop pages carry no parking detail of their own (deferred, logged 2026-11-18; rewritten the same day)
+
+First logged as "event stop pages print the hub's lot notes, which were written for the home team". **Resolved differently by ruling (Phase 2C, 2026-11-18):** a stop page prints NO hub lot. In place of the list it has a Reserve parking button, one link to the venue page's parking section and the line "Event-day lots and prices can differ from game days." What is still open is the data: an event-day parking read from the operator's page per stop, stored on the stop under `eventPolicies` with its quote, page and read time, like the bag rule. The view has the slot (it renders only from such facts) and the mapper reads `eventPolicies.parking`; the pipeline writes no such key yet and its write guard would refuse one.
+
+## 102. Event stop pages: small "source" links, and no source line on the hub's parking and transit facts (deferred, logged 2026-11-18)
+
+ux-review of `feature/events-pages` (defects 12 and 13). The "source" links under venue-printed facts are 33x12px and all share the name "source". The Parking and Transit cards print the hub's published facts without their source line; the "Also at" card links the venue guide, which carries them.
+
+## 103. Event stop and index pages shift 0.024 to 0.027 at 768px (deferred, logged 2026-11-18)
+
+ux-review of `feature/events-pages` (defect 19). Measured on the branch dev server at 768 only; the cause was not confirmed (the generated card has width and height set). Under the 0.1 threshold. Re-measure on a production build before the flag is turned on.
+
+**Re-measured on a production build, 2026-11-18 (Phase 2B).** At 390: 0 on /events and the hub, 0.0002 on the U.S. Bank Stadium stop, 0.0004 on Angel Stadium. At 768: 0.0318 on /events, 0.0278 on the U.S. Bank Stadium stop, 0.0003 on the hub, 0.0006 on Angel Stadium. Cause: one shift about 50ms in, when the display face loads and the H1 takes one more line at that width, moving everything under it down 38px. The promo pages set their H1 the same way. Under the 0.1 threshold; a fix would be a fallback face with matched metrics for the display font, which is a site-wide change.
+
+## 104. Back from a footer link on a team page does not restore scroll (pre-existing, logged 2026-11-18)
+
+Found by the ux-review of `feature/events-pages` (defect 20) and present on production: after following a footer link from /nfl/minnesota-vikings, browser back lands 226 to 2,379px from the saved position. The new footer "Events" link inherits it. Not caused by the events branch.
+
+## 105. Event stop pages: what the server HTML can show for up to an hour after a show starts (accepted, logged 2026-11-18)
+
+Adversarial review of `feature/events-pages` (finding 2). The stop page is ISR with an hour's revalidate. The Tickets button is dropped in the browser at the start instant by a client leaf (ShowtimeGate), but the server HTML, and the Event JSON-LD offer in it, can carry the started show until the next regeneration. The live guard tolerates two hours. A sold-out performance has no offer in the JSON-LD at all (no link is built for it), so the SoldOut availability is never emitted.
+
+## 106. /mlb/atlanta-braves is over the 950,000-byte team page cap in production (found 2026-11-18, not caused by the events branch)
+
+Measured while sizing the events team link: production /mlb/atlanta-braves served 955,720 bytes on 2026-11-18, over the cap the live battery enforces; /mlb/minnesota-twins was 931,434. The events branch adds 383 bytes to every page (the footer Events link) once EVENTS_PAGES_LIVE is on, and 1,062 bytes to a team page whose building has an upcoming stop (none of those is within 50,000 bytes of the cap). The Braves page needs its own trim before the next live battery run.
+
+## 107. Events pages: small layout items from the second ux-review (deferred, logged 2026-11-18)
+
+ux-review of `feature/events-pages`, second round (N3, N6, N8). On the hub a stop with several visits is listed under each month with the same words, without saying which dates fall in that month, and a same-year row prints the year twice. The parking list's fold keeps the label "Show all N lots" when open and has no chevron. The venue page's "Upcoming events" card uses the 16px radius and border of "Next giveaways here", not the 12px radius and shadow of the cards below it.
+
+## 108. Event stop pages listed reserved and game-only lots by bare name (RESOLVED 2026-11-18 by removing the lot list)
+
+Second adversarial review of `feature/events-pages` (finding 1, high). A hub lot whose note said it was a permit, pass, suite, club, members, overflow, complimentary or per-game lot printed by its bare name once the note was filtered away (Bridgestone Arena's Predators-game shuttle lot, Ball Arena's permit lots). A stricter filter fixed the listed cases but dropped 29 of 100 lots, general ones among them. **Resolved by ruling (Phase 2C):** the lot list and its filter are deleted; see known-issues 101 for what the page shows instead.
+
 ## 109. The team page byte cap is held by a cap on structured data, with thin headroom on the largest pages (logged 2026-11-18)
 
 `fix/jsonld-hygiene`. /mlb/atlanta-braves reached 955,720 bytes when its 73 promos for 2027 were written on 2026-11-17: each upcoming promo was one Event block, and each block costs about 1,200 bytes in served HTML (the script tag plus its copy in the flight payload). The team page now names at most the next 20 upcoming promos as Events. That is a ceiling of about 24,000 bytes of Events per page, not a guarantee: /mlb/minnesota-twins is 931,434 bytes in production with no Event at all (18,566 under the cap), so about fifteen upcoming Twins promos would cross it on Event blocks alone, and each promo also adds row markup. The lasting fix is the page's base size (the season promo rows and the scoring fields in the flight payload), before the other MLB clubs' 2027 schedules land. Adversarial review finding 2.

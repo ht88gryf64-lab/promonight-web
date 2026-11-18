@@ -52,6 +52,11 @@ export type AnalyticsEvent =
   // every inbound surface (team rows, the aggregators, the homepage cards and
   // ribbon, the venue block, /best-promos) fires it through PromoPageLink.
   | 'promo_link_click'
+  // A link into /events from the rest of the site, or out of /events to a
+  // venue, team or promo page (Phase 2, 2026-11-18). link_surface names the
+  // placement (src/lib/events/event-pages.ts EVENT_LINK_SURFACES and
+  // EVENT_OUT_SURFACES); every such anchor fires it through EventPageLink.
+  | 'event_link_click'
   | 'tonight_card_tap'
   | 'this_week_card_tap'
   | 'team_page_engaged'
@@ -143,6 +148,13 @@ export type AnalyticsSurface =
   // its promo_link_click rows carry destination 'ebay'. Its own surface so a
   // listing click is never read as a click into a promo page.
   | 'web_promo_page_ebay'
+  // Event tour-stop pages (/events/{show}/{venue}) and their ticket and
+  // parking CTAs, and the show hub and /events index (Phase 2, 2026-11-18).
+  // Their own surfaces so events read on their own: no click here is ever
+  // counted as a team-page or promo-page click. The sub-ID is
+  // {surface}_{show}_{venueSlug}, since a stop has no team.
+  | 'web_event_page'
+  | 'web_event_hub'
   | 'web_playoffs'
   // A league's bracket page (/playoffs/mlb, /playoffs/wnba). Split from
   // web_playoffs, the hub, so a ticket click from inside a bracket is not
@@ -270,6 +282,14 @@ export type PageViewProperties = {
   // they override the hit-level values for this event only.
   page_location: string;
   page_referrer: string;
+  // /events pages only (Phase 2, 2026-11-18): which kind of events page, the
+  // show and the venue slug, and GA4's content_group, so the family reads on
+  // its own in both sinks. Absent on every other page_view, so those rows
+  // keep their exact shape. src/lib/events/event-pages.ts eventsPageIdentity.
+  page_type?: 'events_index' | 'event_hub' | 'event_stop';
+  show?: string;
+  venue_slug?: string;
+  content_group?: 'events';
   // The one event allowed to set its own page_path, because PageViewTracker can
   // emit after the router has moved on (a visitor who leaves inside the 500ms
   // deadline still gets a page_view, sent as they go) and track()'s default
@@ -419,6 +439,24 @@ export type AffiliateClickProperties = {
   // on, and whether it was the visitor's own share. Absent otherwise.
   share_id?: string;
   share_self_open?: boolean;
+  // Event pages only (Phase 2, 2026-11-18): the show, the venue slug, the
+  // performance the button belongs to ({date}T{HHmm}) and the ticket
+  // provider. Absent on every other click.
+  show?: string;
+  venue_slug?: string;
+  performance_key?: string;
+  provider?: string;
+};
+
+// event_link_click: surface is the page the click happened on; link_surface
+// is the placement (a link into /events, or out of it); destination_url is
+// the path.
+export type EventLinkClickProperties = {
+  surface: AnalyticsSurface;
+  link_surface: string;
+  destination_url: string;
+  show?: string;
+  venue_slug?: string;
 };
 
 export type AppDownloadClickProperties = {
@@ -1112,6 +1150,7 @@ export type EventPropertiesMap = {
   web_app_cta_click: WebAppCtaClickProperties;
   promo_card_tap: PromoCardTapProperties;
   promo_link_click: PromoLinkClickProperties;
+  event_link_click: EventLinkClickProperties;
   tonight_card_tap: TonightCardTapProperties;
   this_week_card_tap: ThisWeekCardTapProperties;
   team_page_engaged: TeamPageEngagedProperties;
@@ -1539,6 +1578,10 @@ export type AffiliateClickPayload = {
   ticket_link_level?: 'event' | 'team';
   share_id?: string;
   share_self_open?: boolean;
+  show?: string;
+  venue_slug?: string;
+  performance_key?: string;
+  provider?: string;
 };
 
 export const trackAffiliateClick = (payload: AffiliateClickPayload) => {
@@ -1571,6 +1614,11 @@ export const trackAffiliateClick = (payload: AffiliateClickPayload) => {
     ...(payload.ticket_link_level ? { ticket_link_level: payload.ticket_link_level } : {}),
     // Shared-link sessions only, so every other click keeps its exact shape.
     ...(payload.share_id ? { share_id: payload.share_id, share_self_open: payload.share_self_open === true } : {}),
+    // Event pages only, so every other click keeps its exact shape.
+    ...(payload.show ? { show: payload.show } : {}),
+    ...(payload.venue_slug ? { venue_slug: payload.venue_slug } : {}),
+    ...(payload.performance_key ? { performance_key: payload.performance_key } : {}),
+    ...(payload.provider ? { provider: payload.provider } : {}),
   });
 };
 
@@ -1594,6 +1642,8 @@ export const KNOWN_SURFACE_VALUES = [
   'web_promo_detail',
   'web_promo_page',
   'web_promo_page_ebay',
+  'web_event_page',
+  'web_event_hub',
   'web_playoffs',
   'web_playoffs_league',
   'web_league_index',
@@ -1708,6 +1758,11 @@ export function inferSurfaceFromPath(path: string): AnalyticsSurface {
   if (path === '/nhl') return 'web_nhl_hub';
   // And bare /nba, for the same reason ('nba' is in the allowlist below).
   if (path === '/nba') return 'web_nba_hub';
+  // /events (the index and each show hub) and /events/{show}/{venue} (a stop
+  // page). 'events' is not a sport, so without these branches the family
+  // would fall to web_other. Nothing typechecks this branch.
+  if (/^\/events(?:\/[a-z0-9-]+)?\/?$/.test(path)) return 'web_event_hub';
+  if (/^\/events\/[a-z0-9-]+\/[a-z0-9-]+\/?$/.test(path)) return 'web_event_page';
   // A per-promo page, /{league}/{team}/promos/{slug} (Phase 3b): its own
   // page type on page_view, web_promo_page, the surface its CTAs already
   // carry. MUST precede the generic sport match below, which would otherwise

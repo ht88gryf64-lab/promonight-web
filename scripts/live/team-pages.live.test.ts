@@ -576,6 +576,88 @@ test(`every live package page carries the disclosure inside its CTA block, and n
   assert.deepEqual(stray, [], `non-package pages with the disclosure:\n${stray.join('\n')}`);
 });
 
+// ── guard: the /events family (events build, 2026-11-18) ────────────────────
+// The sitemap lists /events, each show hub and each stop page only while
+// EVENTS_PAGES_LIVE is "true". While it is off the family must not exist at
+// all: the three route shapes answer 404 and no page links in. Once it is on,
+// every sitemap /events URL answers 200 with its own canonical and the
+// not-affiliated line; no stop page names or links the tour operator's sites
+// or prints a price; every ticket link is a TicketNetwork event link keyed
+// web_event_page_{show}_{venue}; no showtime row that started more than two
+// hours ago still carries a ticket button in the server HTML (the page is
+// regenerated hourly and the browser drops the button at the start instant);
+// and the generated card answers an image.
+const EVENT_PATH_RE = /^\/events(?:\/[a-z0-9-]+){0,2}$/;
+test(`the /events family: absent while the flag is off; with it on, every page is whole, unpriced and free of the tour operator (${HOST})`, { timeout: 300_000 }, async (t) => {
+  const paths = (await sitemap()).filter((p) => EVENT_PATH_RE.test(p));
+  // The branch is decided by the ROUTE, not by the sitemap being empty: with
+  // the flag on and no show upcoming (between tours) the sitemap lists no
+  // /events URL while the pages stay up, and that is not "flag off".
+  const indexStatus = (await fetch(`${HOST}/events`, { redirect: 'manual' })).status;
+  if (indexStatus === 404) {
+    // Flag off: the family must not exist at all.
+    const probes = ['/events/monster-jam', '/events/monster-jam/us-bank-stadium', '/api/event-card/monster-jam~us-bank-stadium'];
+    const statuses = await Promise.all(probes.map(async (p) => (await fetch(`${HOST}${p}`, { redirect: 'manual' })).status));
+    t.diagnostic(`/events 404 (flag off); ${probes.map((p, i) => `${p} ${statuses[i]}`).join(', ')}`);
+    assert.deepEqual(statuses, [404, 404, 404], '/events is a 404 but another route of the family answers');
+    assert.deepEqual(paths, [], 'the sitemap lists /events pages while /events is a 404');
+    // No inbound link anywhere it could render: the homepage (footer), a venue page (the module) and a team page (the rail link).
+    for (const p of ['/', '/venues/us-bank-stadium', '/nfl/minnesota-vikings']) {
+      const html = await get(p);
+      assert.equal([...anchorHrefs(html)].some((h) => EVENT_PATH_RE.test(h)), false, `${p} links into /events while the family is off`);
+      assert.equal(html.includes('data-event-link'), false, `${p} renders an events link component while the family is off`);
+    }
+    return;
+  }
+  assert.equal(indexStatus, 200, `/events answered ${indexStatus}`);
+  if (paths.length === 0) {
+    t.diagnostic('/events is live and the sitemap lists no /events URL: no show is upcoming; nothing more to check');
+    return;
+  }
+  const stops = paths.filter((p) => p.split('/').length === 4);
+  assert.ok(paths.includes('/events') && stops.length > 0, 'the sitemap lists /events pages but not the index or no stop');
+  const now = Date.now();
+  const problems: string[] = [];
+  let buttons = 0;
+  for (const path of paths) {
+    const html = await get(path);
+    const canonical = /<link rel="canonical" href="([^"]+)"/.exec(html)?.[1];
+    if (canonical !== `https://www.getpromonight.com${path}`) problems.push(`${path}: canonical ${canonical}`);
+    if (!html.includes('PromoNight is not affiliated with Monster Jam or Feld Entertainment.')) problems.push(`${path}: the not-affiliated line is missing`);
+    if (/monsterjam\.com|feldentertainment\.com/i.test(html)) problems.push(`${path}: names or links a tour operator site`);
+    // No affiliate or tracking URL in structured data (ruling 2026-11-18), on the index, the hub and every stop.
+    for (const m of html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
+      if (/lusg\.net|ticketnetwork|spothero|ticketmaster|expedia|fanatics|evyy\.net|subId\d|aff_sub|utm_/i.test(m[1])) problems.push(`${path}: a partner or tracking URL in JSON-LD`);
+    }
+    if (path.split('/').length !== 4) continue;
+    const article = /<article[^>]*data-event-stop="[^"]*"[^>]*>([\s\S]*?)<\/article>/.exec(html)?.[1] ?? '';
+    if (!article) { problems.push(`${path}: no stop article`); continue; }
+    if (!/<div class="[^"]*\bpn-promo-page\b[^"]*">(?:<script[^>]*>[\s\S]*?<\/script>)*<article class="page-content/.test(html)) problems.push(`${path}: div.pn-promo-page is not the direct parent of article.page-content`);
+    if (/[$£€]\s?\d/.test(article.replace(/<script[\s\S]*?<\/script>/g, ''))) problems.push(`${path}: a price in the article`);
+    const [, show, venue] = /^\/events\/([a-z0-9-]+)\/([a-z0-9-]+)$/.exec(path)!;
+    // One chunk per showtime row: from its data-performance marker to the next.
+    for (const chunk of article.split('data-performance="').slice(1)) {
+      const start = /<time datetime="([^"]+)"/i.exec(chunk)?.[1];
+      const href = /href="(https:\/\/ticketnetwork\.lusg\.net[^"]+)"/.exec(chunk)?.[1]?.replace(/&amp;/g, '&');
+      if (!href) continue;
+      buttons += 1;
+      // The server HTML is regenerated hourly, and the browser drops the
+      // button at the start instant (ShowtimeGate). So the served page may
+      // carry a button for at most that hour; two hours past the start is a
+      // page that is not being regenerated.
+      if (!start || !(Date.parse(start) > now - 2 * 3600 * 1000)) problems.push(`${path}: a ticket button on a show that started more than two hours ago (${start})`);
+      if (!new RegExp(`[?&]u=https%3A%2F%2Fwww\\.ticketnetwork\\.com%2Ftickets%2F\\d+&`).test(href)) problems.push(`${path}: a ticket link that is not an event link`);
+      if (!href.endsWith(`&subId1=web_event_page_${show}_${venue}`)) problems.push(`${path}: subId1 is not web_event_page_${show}_${venue}`);
+    }
+    const card = /<meta property="og:image" content="([^"]+)"/.exec(html)?.[1]?.replace(/&amp;/g, '&');
+    if (!card || !/\/api\/event-card\//.test(card)) { problems.push(`${path}: og:image is not the generated card`); continue; }
+    const img = await fetch(card.replace('https://www.getpromonight.com', HOST));
+    if (img.status !== 200 || !/^image\//.test(img.headers.get('content-type') ?? '')) problems.push(`${path}: the card answered ${img.status} ${img.headers.get('content-type')}`);
+  }
+  t.diagnostic(`${paths.length} /events URLs in the sitemap, ${stops.length} stop pages, ${buttons} ticket buttons`);
+  assert.deepEqual(problems, [], problems.join('\n'));
+  assert.ok(buttons > 0, 'no ticket button on any stop page in the sitemap');
+});
 
 // ── guard: no affiliate or tracking URL in structured data (ruling 2026-11-18) ──
 // An Offer's url is the page that presents the offer; the tracked partner link

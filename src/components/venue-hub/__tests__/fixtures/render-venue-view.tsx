@@ -6,7 +6,16 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { VenueHubView } from '../../VenueHubView';
 import type { VenueHub } from '../../../../lib/venue-hub';
 
-export function renderVenueView(hub: VenueHub): string {
+/** The zero-size anchor an event stop page links to (/venues/{slug}#parking),
+ *  added to the parking card on 2026-11-18 (events Phase 2C). It is the ONE
+ *  named addition since the baselines were cut: renderVenueView removes
+ *  exactly this string, so "identical to main" keeps its literal meaning for
+ *  everything else, and venue-parking-anchor.test.tsx pins the anchor itself
+ *  (present once wherever the parking card renders, absent otherwise). */
+export const PARKING_ANCHOR = '<span id="parking" class="block scroll-mt-24"></span>';
+
+/** The markup exactly as rendered, anchor included. */
+export function renderVenueViewRaw(hub: VenueHub): string {
   return renderToStaticMarkup(
     <VenueHubView
       hub={hub}
@@ -18,4 +27,8 @@ export function renderVenueView(hub: VenueHub): string {
       vendors={[]}
     />,
   );
+}
+
+export function renderVenueView(hub: VenueHub): string {
+  return renderVenueViewRaw(hub).split(PARKING_ANCHOR).join('');
 }

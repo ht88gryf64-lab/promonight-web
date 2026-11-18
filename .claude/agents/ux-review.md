@@ -28,6 +28,19 @@ same path is used on both.
 | aggregator | /promos/bobbleheads                                              |
 | archive    | /nhl/minnesota-wild/promos/past                                  |
 | home       | /                                                                |
+| event-stop | /events/monster-jam/us-bank-stadium                              |
+| event-hub  | /events/monster-jam                                              |
+| events     | /events                                                          |
+
+**The event samples** (events build, 2026-11-18) exist only while
+`EVENTS_PAGES_LIVE=true`: with the flag off all three answer 404, in
+production too until the flag is turned on there, so a baseline run against
+production reports the page as new rather than comparing it. For an event
+stop the "game date" check reads the showtime rows: a row whose start time
+has passed and still shows a Tickets button is a defect. The inbound links
+the build added are checked on the venue sample `/venues/us-bank-stadium`
+(the "Upcoming events at" module) and the team sample
+`/nfl/minnesota-vikings` (the "Also at" link), both only with the flag on.
 
 **The archive sample** is a team's past-promos page (step 6, 2026-11-08):
 `/{league}/{team}/promos/past`, grouped by season. It answers 404 for a

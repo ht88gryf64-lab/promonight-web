@@ -65,12 +65,12 @@ describe('robots.txt', async () => {
     assert.equal(existsSync(join(__dirname, '..', 'robots.ts')), false);
   });
 
-  it('every group, in order, reads Allow: /api/promo-card/, Allow: /api/share-card/, Disallow: /api/, Allow: /', () => {
+  it('every group, in order, reads Allow: /api/promo-card/, Allow: /api/share-card/, Allow: /api/event-card/, Disallow: /api/, Allow: /', () => {
     const g = groups(text);
     assert.deepEqual(g.map(([a]) => a), [...NAMED_GROUPS, '*']);
     assert.deepEqual(g.map(([a]) => a), [...ROBOTS_AGENTS]);
     for (const [agent, lines] of g) {
-      assert.deepEqual(lines, ['Allow: /api/promo-card/', 'Allow: /api/share-card/', 'Disallow: /api/', 'Allow: /'], agent);
+      assert.deepEqual(lines, ['Allow: /api/promo-card/', 'Allow: /api/share-card/', 'Allow: /api/event-card/', 'Disallow: /api/', 'Allow: /'], agent);
     }
   });
 
@@ -86,6 +86,10 @@ describe('robots.txt', async () => {
         assert.equal(read('/api/promo-card/c42db7fce52ee28c', ua), true);
         assert.equal(read(SHARE_CARD, ua), true);
         assert.equal(read('/api/share-card/c42db7fce52ee28c', ua), true);
+        // The event stop pages' card (Phase 2, 2026-11-18): their image, og:image and JSON-LD image.
+        assert.equal(read('/api/event-card/monster-jam~us-bank-stadium?v=1795019919481', ua), true);
+        assert.equal(read('/api/event-card/monster-jam~us-bank-stadium', ua), true);
+        assert.equal(read('/events/monster-jam/us-bank-stadium', ua), true);
         assert.equal(read('/api/subscribe', ua), false);
         assert.equal(read('/api/revalidate', ua), false);
         assert.equal(read('/api/', ua), false);

@@ -22,6 +22,7 @@
  * Auth: Vercel Cron sends `Authorization: Bearer <CRON_SECRET>`; anything else
  * is rejected, as on the other cron routes. The fan-out needs REVALIDATE_SECRET.
  */
+import { isEventsPagesLive } from '@/lib/events/event-pages';
 import { NextResponse } from 'next/server';
 import { getAllTeams } from '@/lib/data';
 import { getAllVenueHubSlugs } from '@/lib/venue-hub';
@@ -122,6 +123,13 @@ export async function GET(request: Request) {
       cfbMatchupSlugs: getAllMatchupSlugs,
       promoPagesDatedYesterday,
       promoPagesWithNewShorts,
+      // Loaded only while the flag is on: with it off this route reads nothing
+      // of the events family, not even its module.
+      eventPagePaths: async () => {
+        if (!isEventsPagesLive()) return [];
+        const { getEventSitemapEntries } = await import('@/lib/events/event-stops');
+        return (await getEventSitemapEntries(new Date())).map((e) => e.path);
+      },
     },
     batch,
   );

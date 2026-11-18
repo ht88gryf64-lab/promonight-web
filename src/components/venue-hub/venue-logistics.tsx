@@ -296,6 +296,8 @@ export function ParkingLotsCard({ hub }: { hub: VenueHub }) {
   if (!m) return null;
   return (
       <Card>
+        {/* The anchor an event stop page links to (/venues/{slug}#parking). Zero-size. */}
+        <span id="parking" className="block scroll-mt-24" />
         <CardLabel>Parking lots</CardLabel>
         {m.lots.length > 0 ? (
           <div className="grid grid-cols-1 gap-2.5 font-rd text-[13px] leading-[1.5] text-rd-ink md:grid-cols-2">
