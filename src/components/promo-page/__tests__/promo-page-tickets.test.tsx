@@ -3,7 +3,8 @@
 //    event page when matched, else the team performer page; subId1
 //    web_promo_page_{team};
 //  - Ticketmaster is the secondary text link "Also on Ticketmaster";
-//  - JSON-LD offers.url is the primary href;
+//  - JSON-LD offers.url is the PAGE's own URL (ruling 2026-11-18): the ticket
+//    link is on the button and never enters structured data;
 //  - a series gives each date still to be played its own "Tickets" link.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -55,19 +56,33 @@ const eventOffers = (html: string) => {
   return out;
 };
 const offersUrl = (html: string) => eventOffers(html)[0]?.[1] ?? null;
+/** The page's own URL, as its WebPage block names it. Since 2026-11-18 every
+ *  offer's url is THIS, never the ticket link on the button. */
+const pageUrl = (html: string): string => {
+  for (const m of html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
+    const d = JSON.parse(m[1]);
+    if (d['@type'] === 'WebPage') return d.url;
+  }
+  throw new Error('no WebPage block');
+};
+/** No partner host and no sub ID in any JSON-LD block. */
+const ldClean = (html: string) => ![...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].some((m) => /lusg\.net|ticketnetwork\.com|ticketmaster\.com|subId\d|evyy\.net/i.test(m[1]));
 
-test('matched single-date page: primary wraps the event, Ticketmaster is the secondary text link, offers.url follows', () => {
+test('matched single-date page: primary wraps the event, Ticketmaster is the secondary text link, offers.url is the page', () => {
   const html = render([row({ tnEventUrl: BRUINS })]);
   assert.equal(anchor(html, 'Get tickets'), tn(BRUINS));
   assert.match(anchor(html, 'Also on Ticketmaster'), /ticketmaster\.com/);
-  assert.equal(offersUrl(html), tn(BRUINS));
+  assert.equal(offersUrl(html), pageUrl(html));
+  assert.match(pageUrl(html), /^https:\/\/www\.getpromonight\.com\//);
+  assert.ok(ldClean(html), 'the tracked link is on the button, not in JSON-LD');
   assert.equal(anchors(html, 'Tickets'), 0); // a single date carries no per-date link
 });
 
 test('unmatched page: primary falls back to the team performer page', () => {
   const html = render([row({ tnEventUrl: null })]);
   assert.equal(anchor(html, 'Get tickets'), tn(PERFORMER));
-  assert.equal(offersUrl(html), tn(PERFORMER));
+  assert.equal(offersUrl(html), pageUrl(html));
+  assert.ok(ldClean(html));
   assert.equal(anchors(html, 'Also on Ticketmaster'), 1);
 });
 
@@ -83,8 +98,9 @@ test('series: primary is the next upcoming date; every upcoming date links its o
   const perDate = [...html.matchAll(/<a [^>]*href="([^"]+)"[^>]*>Tickets<\/a>/g)].map((m) => m[1]);
   assert.deepEqual(perDate, [tnDate(BRUINS), tnDate(HAWKS), tnDate(PERFORMER)]);
   assert.ok(!html.includes(`<a href="${tnDate(EV(1, 'played'))}`));
-  // Each date's Event offers its own game, never another date's.
-  assert.deepEqual(eventOffers(html).filter(([d]) => d >= '2026-11-02'), [['2026-11-18', tn(BRUINS)], ['2026-12-12', tn(HAWKS)], ['2027-01-30', tn(PERFORMER)]]);
+  // Each upcoming date has an offer, and every offer's url is the page (the per-date links are the anchors above).
+  assert.deepEqual(eventOffers(html).filter(([d]) => d >= '2026-11-02'), [['2026-11-18', pageUrl(html)], ['2026-12-12', pageUrl(html)], ['2027-01-30', pageUrl(html)]]);
+  assert.ok(ldClean(html));
 });
 
 // ── subId1 on every TicketNetwork href (ruling 2026-11-02, before merge) ────
@@ -106,7 +122,8 @@ for (const [name, team, rows] of FIXTURES) {
   test(`every TicketNetwork href on ${name} carries a valid subId1`, () => {
     const html = render(rows, '2026-11-02', team);
     const hrefs = [...html.matchAll(/https:\/\/ticketnetwork\.lusg\.net\/c\/[^"\s]+/g)].map((m) => m[0]);
-    assert.ok(hrefs.length >= 2, 'the anchor and the JSON-LD offer at least');
+    assert.ok(hrefs.length >= 1, 'the Get tickets anchor at least');
+    assert.ok(ldClean(html), 'no TicketNetwork href in JSON-LD');
     for (const h of hrefs) {
       const sub = new URL(h).searchParams.get('subId1');
       assert.ok(sub, `subId1 present: ${h}`);
@@ -137,9 +154,10 @@ test('a page whose dates have all been played sells nothing (ruling 2026-11-08):
   assert.match(html, /<a [^>]*href="\/nhl\/detroit-red-wings"[^>]*>Next Detroit Red Wings promo<\/a>/);
 });
 
-test('a series links no played date in its JSON-LD offers', () => {
+test('a series carries no ticket link in its JSON-LD offers', () => {
   const html = render([row({ promoId: 'a', date: '2026-10-20', tnEventUrl: EV(1, 'played') }), row({ promoId: 'b', date: '2026-11-18', tnEventUrl: BRUINS })]);
-  assert.deepEqual(eventOffers(html), [['2026-10-20', tn(PERFORMER)], ['2026-11-18', tn(BRUINS)]]);
+  assert.deepEqual(eventOffers(html), [['2026-10-20', pageUrl(html)], ['2026-11-18', pageUrl(html)]]);
+  assert.ok(ldClean(html), 'no ticket link, played or not, in JSON-LD');
 });
 
 // ── tnHomeUnavailable (2026-11-03): TicketNetwork lists no events at the
@@ -161,12 +179,13 @@ test('flagged club, single date: Ticketmaster is the primary with the unflagged 
   assert.equal(anchor(html, 'Get tickets'), tm);
   assert.equal(anchors(html, 'Also on Ticketmaster'), 0);
   assert.equal(anchors(html, 'Tickets'), 0);
-  assert.equal(offersUrl(html), tm);
+  assert.equal(offersUrl(html), pageUrl(html));
+  assert.ok(ldClean(html), 'the Ticketmaster link is on the button, not in JSON-LD');
   assert.ok(!/ticketnetwork/i.test(html), 'no TicketNetwork href, label or offer');
   assert.ok(html.includes('on Ticketmaster"'), 'the primary is labelled for Ticketmaster');
 });
 
-test('flagged club, series: no per-date links, every Event offers Ticketmaster', () => {
+test('flagged club, series: no per-date links, every Event offers the page', () => {
   const rows = [
     leafsRow({ promoId: 'a', date: '2026-10-20', displayOpponent: 'Rangers' }),
     leafsRow({ promoId: 'b', date: '2026-11-21' }),
@@ -176,7 +195,8 @@ test('flagged club, series: no per-date links, every Event offers Ticketmaster',
   const tm = anchor(render(rows, '2026-11-02', LEAFS_PLAIN), 'Also on Ticketmaster');
   assert.equal(anchor(html, 'Get tickets'), tm);
   assert.equal(anchors(html, 'Tickets'), 0);
-  assert.deepEqual(eventOffers(html), [['2026-10-20', tm], ['2026-11-21', tm], ['2026-12-12', tm]]);
+  assert.deepEqual(eventOffers(html), [['2026-10-20', pageUrl(html)], ['2026-11-21', pageUrl(html)], ['2026-12-12', pageUrl(html)]]);
+  assert.ok(ldClean(html));
   assert.ok(!/ticketnetwork/i.test(html));
 });
 

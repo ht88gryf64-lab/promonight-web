@@ -5,7 +5,7 @@
 //   subId3  page.slug, server-rendered on every promo-page Impact link.
 // This file pins:
 //   - the served HTML (no share session): TicketNetwork (primary, per-date,
-//     JSON-LD offers) and the Ticketmaster Impact wrap carry subId1 + subId3,
+//     NOT the JSON-LD offers since 2026-11-18) and the Ticketmaster Impact wrap carry subId1 + subId3,
 //     sharedid is untouched, and nothing carries subId2;
 //   - a share-session click on the promo page: the href the browser opens and
 //     the affiliate_click destination_url carry subId1, subId2=share and
@@ -96,10 +96,12 @@ test('served HTML: every Impact link carries subId1 and subId3=slug; the Ticketm
     assert.equal(sp(h).get('subId3'), SLUG, h);
   }
   assert.equal(sp(anchor(html, 'Get tickets')).get('subId1'), 'web_promo_page_detroit-red-wings');
-  // The JSON-LD offers follow the anchors.
+  // The JSON-LD offers name the page, never the anchors' links.
   for (const m of html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
     const d = JSON.parse(m[1]);
-    if (d['@type'] === 'Event' && d.offers) assert.equal(sp(d.offers.url).get('subId3'), SLUG, d.offers.url);
+    // Ruling 2026-11-18: an offer's url is the page; no sub ID of any kind reaches structured data.
+    if (d['@type'] === 'Event' && d.offers) assert.match(d.offers.url, /^https:\/\/www\.getpromonight\.com\/[a-z]+\/[a-z0-9-]+\/promos\//, d.offers.url);
+    assert.equal(/subId\d|lusg\.net|ticketnetwork\.com/i.test(m[1] ?? JSON.stringify(d)), false, 'a sub ID or partner URL in JSON-LD');
   }
 
   const tm = anchor(html, 'Also on Ticketmaster');

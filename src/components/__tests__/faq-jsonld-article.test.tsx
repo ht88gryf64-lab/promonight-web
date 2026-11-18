@@ -78,3 +78,30 @@ test('no FAQPage answer emits an article immediately before a vowel-initial word
     }
   }
 });
+
+// ── the Event cap (2026-11-18) ──────────────────────────────────────────────
+// One Event per upcoming promo was unbounded; the Braves' 73 promos for 2027
+// took their team page over the 950,000-byte cap. The structured data names
+// the next TEAM_EVENT_JSONLD_MAX, soonest first.
+import { TEAM_EVENT_JSONLD_MAX } from '../json-ld';
+import type { Promo } from '@/lib/types';
+
+test('the team page names at most the next 20 upcoming promos as Events, soonest first, and no partner URL', () => {
+  const day = (i: number) => new Date(Date.UTC(2027, 3, 1 + i)).toISOString().slice(0, 10);
+  // The known-bad input: 73 upcoming promos, handed over in reverse order.
+  const promos = Array.from({ length: 73 }, (_, i) => ({ title: `Promo ${i}`, date: day(i), type: 'giveaway', description: '' }) as unknown as Promo).reverse();
+  const html = renderToStaticMarkup(
+    <JsonLd team={team('Atlanta', 'Braves', 'atlanta-braves')} upcomingPromos={promos} venue={venue} upcomingCounts={counts} coverage={coverage} />,
+  );
+  const blocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#x27;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')));
+  const events = blocks.filter((b) => b['@type'] === 'Event');
+  assert.equal(TEAM_EVENT_JSONLD_MAX, 20);
+  assert.equal(events.length, 20);
+  assert.deepEqual(events.map((e) => e.startDate), Array.from({ length: 20 }, (_, i) => day(i)));
+  // No partner URL or sub ID. (A partner's NAME in an FAQ answer is prose, not a link.)
+  const hit = /lusg\.net|ticketnetwork\.com|ticketmaster\.com|spothero\.com|expedia\.com|fanatics\.com|subId\d|aff_sub|evyy\.net/i.exec(JSON.stringify(blocks));
+  assert.equal(hit, null, hit?.[0]);
+  // Fewer than the cap: every one is named.
+  const few = renderToStaticMarkup(<JsonLd team={team('Atlanta', 'Braves', 'atlanta-braves')} upcomingPromos={promos.slice(0, 3)} venue={venue} upcomingCounts={counts} coverage={coverage} />);
+  assert.equal((few.match(/"@type":"Event"|&quot;@type&quot;:&quot;Event&quot;/g) ?? []).length, 3);
+});

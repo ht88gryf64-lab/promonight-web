@@ -357,10 +357,20 @@ test('JSON-LD: WebPage with dateModified = updatedAt, one Event per date with im
   assert.equal(ev.startDate, '2026-10-29');
   assert.deepEqual(ev.image, ['https://firebasestorage.googleapis.com/v0/b/promonight.firebasestorage.app/o/promo-images%2Fc7057219198efd77.png?alt=media']);
   assert.equal(ev.location.address.addressLocality, 'St Paul');
-  assert.equal(ev.offers.url, 'https://www.ticketmaster.com/minnesota-wild-tickets/artist/805974');
+  // Ruling 2026-11-18: the offer's url is the promo page, never the ticket link the page's button carries.
+  assert.deepEqual(ev.offers, { '@type': 'Offer', url: 'https://www.getpromonight.com/nhl/minnesota-wild/promos/blaze-orange-hat', availability: 'https://schema.org/InStock' });
+  assert.equal(/ticketmaster|ticketnetwork|lusg\.net|subId|evyy\.net/i.test(JSON.stringify(out)), false, 'a partner or tracking URL in structured data');
   assert.equal(ev.eventStatus, 'https://schema.org/EventScheduled');
   assert.equal((out[2] as Record<string, any>).startDate, '2026-11-18');
   assert.equal((out[4] as Record<string, any>).itemListElement.length, 2);
+  // The known-bad inputs: a fully tracked Impact link per date, and no ticket link at all.
+  const base = { canonical: 'https://www.getpromonight.com/nhl/minnesota-wild/promos/blaze-orange-hat', title: 't', description: 'd', promoName: 'p', teamName: 'T', rows, removed: false, imageUrl: 'https://www.getpromonight.com/i.png', location: null, dateModified: null, faqs: [], breadcrumbs: [] };
+  const tracked = promoPageJsonLd({ ...base, ticketUrl: null, ticketUrlFor: (r) => `https://ticketnetwork.lusg.net/c/7236189/120057/2322?u=https%3A%2F%2Fwww.ticketnetwork.com%2Ftickets%2F1&subId1=web_promo_page_minnesota-wild&subId3=${r.date}` });
+  assert.equal(/lusg\.net|ticketnetwork|subId/i.test(JSON.stringify(tracked)), false);
+  assert.deepEqual(tracked.filter((x) => x['@type'] === 'Event').map((e) => (e as Record<string, any>).offers.url), [base.canonical, base.canonical]);
+  // No ticket link for a date: no offer for it (the page cannot sell it), never a guessed one.
+  const noLink = promoPageJsonLd({ ...base, ticketUrl: null, ticketUrlFor: (r) => (r.date === '2026-11-18' ? 'https://ticketnetwork.lusg.net/c/x' : null) });
+  assert.deepEqual(noLink.filter((x) => x['@type'] === 'Event').map((e) => 'offers' in e), [false, true]);
   // Removed: cancelled, no offer. No stamp: no dateModified.
   const gone = promoPageJsonLd({ canonical: 'c', title: 't', description: 'd', promoName: 'p', teamName: 'T', rows: [row({ tombstoned: true })], removed: true, imageUrl: 'i', location: null, ticketUrl: 'x', dateModified: null, faqs: [], breadcrumbs: [] });
   assert.equal((gone[1] as Record<string, any>).eventStatus, 'https://schema.org/EventCancelled');

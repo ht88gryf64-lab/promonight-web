@@ -574,3 +574,44 @@ test(`every live package page carries the disclosure inside its CTA block, and n
   assert.deepEqual(missing, [], `package pages without the disclosure in the CTA block:\n${missing.join('\n')}`);
   assert.deepEqual(stray, [], `non-package pages with the disclosure:\n${stray.join('\n')}`);
 });
+
+
+// ── guard: no affiliate or tracking URL in structured data (ruling 2026-11-18) ──
+// An Offer's url is the page that presents the offer; the tracked partner link
+// lives on the page's button. Read on every sitemap team page, a spread of
+// promo pages and a spread of venue pages: no JSON-LD block may name a partner
+// host or carry a sub ID. The team page also names at most 20 Events (the cap
+// that keeps a club with a full season of promos under the byte limit).
+const PARTNER_IN_LD_RE = /lusg\.net|ticketnetwork\.com|ticketmaster\.com|spothero\.com|expedia\.com|fanatics\.|93n6tx\.net|evyy\.net|subId\d|aff_sub|pubref|utm_/i;
+test(`no JSON-LD block on a team, promo or venue page carries an affiliate or tracking URL, and a team page names at most 20 Events (${HOST})`, { timeout: 600_000 }, async (t) => {
+  const paths = await sitemap();
+  const teams = paths.filter((p) => /^\/(?:mlb|nba|nhl|nfl|mls|wnba)\/[a-z0-9-]+$/.test(p));
+  const promos = paths.filter((p) => /^\/(?:mlb|nba|nhl|nfl|mls|wnba)\/[a-z0-9-]+\/promos\/(?!past$)[a-z0-9-]+$/.test(p));
+  const venues = paths.filter((p) => /^\/venues\/[a-z0-9-]+$/.test(p));
+  const spread = (list: string[], n: number) => (list.length <= n ? list : Array.from({ length: n }, (_, i) => list[Math.floor((i * list.length) / n)]));
+  const sample = [...teams, ...spread(promos, 40), ...spread(venues, 20)];
+  assert.ok(teams.length > 100 && promos.length > 0 && venues.length > 0, `sitemap: ${teams.length} team pages, ${promos.length} promo pages, ${venues.length} venue pages`);
+  const problems: string[] = [];
+  let blocks = 0;
+  let offers = 0;
+  for (let i = 0; i < sample.length; i += CONCURRENCY) {
+    await Promise.all(sample.slice(i, i + CONCURRENCY).map(async (path) => {
+      const html = await get(path);
+      const ld = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+      blocks += ld.length;
+      for (const block of ld) {
+        if (PARTNER_IN_LD_RE.test(block)) problems.push(`${path}: a partner or tracking URL in JSON-LD (${PARTNER_IN_LD_RE.exec(block)?.[0]})`);
+        for (const m of block.matchAll(/"offers":\{[^}]*"url":"([^"]+)"/g)) {
+          offers += 1;
+          if (!m[1].startsWith('https://www.getpromonight.com/')) problems.push(`${path}: an offer url off our domain (${m[1].slice(0, 60)})`);
+        }
+      }
+      if (teams.includes(path)) {
+        const events = ld.filter((b) => /"@type":"Event"/.test(b)).length;
+        if (events > 20) problems.push(`${path}: ${events} Event blocks, over the cap of 20`);
+      }
+    }));
+  }
+  t.diagnostic(`${sample.length} pages (${teams.length} team, ${Math.min(promos.length, 40)} promo, ${Math.min(venues.length, 20)} venue), ${blocks} JSON-LD blocks, ${offers} offers`);
+  assert.deepEqual(problems, [], problems.join('\n'));
+});

@@ -321,7 +321,8 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
   // the event page of the primary row's game when the pipeline matched it
   // (primary is the next upcoming date, so a series links its next game),
   // else the team performer page; subId1 web_promo_page_{team}. Ticketmaster
-  // is the secondary text link. JSON-LD offers.url follows the primary href.
+  // is the secondary text link. JSON-LD offers.url is the PAGE's own URL
+  // (ruling 2026-11-18): no affiliate or tracking URL enters structured data.
   // subId3 (ruling 2026-11-04) is page.slug on every Impact link here, the
   // per-date links and the Ticketmaster wrap included (withPageSubId3).
   const ticketmaster = ticketHref(page);
@@ -332,8 +333,8 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
   const primaryEventUrl = eventUrlOf(primary);
   // A club whose building TicketNetwork lists no events for (tnHomeUnavailable,
   // 2026-11-03: Maple Leafs, Raptors, Senators): Ticketmaster is the primary,
-  // there is no "Also on" line, no per-date TicketNetwork link, and every
-  // Event offers the Ticketmaster href. Ticketmaster tagging is unchanged.
+  // there is no "Also on" line and no per-date TicketNetwork link.
+  // Ticketmaster tagging is unchanged.
   const tnAllowed = ticketNetworkForGame(null, team);
   const ticketNetwork = tnAllowed ? buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: primaryEventUrl, pageSlug: page.slug }) : null;
   const tickets = ticketNetwork ?? ticketmaster;
@@ -399,12 +400,8 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
     imageUrl: head.imageUrl,
     location: ctx.location,
     ticketUrl: tickets,
-    // Each date's Event offers that date's own game: the event page when the
-    // pipeline matched it and the date is still to be played, else the team
-    // performer page. On a single-date page
-    // this is the primary href (rulings 2026-11-02); on a series it keeps the
-    // Dec 11 Event from offering the Nov 18 game. Falls back to the primary
-    // href only if TicketNetwork cannot be built at all.
+    // Read by the JSON-LD only as "this date has a ticket link" (ruling
+    // 2026-11-18): the offer's url is the page, never one of these links.
     ticketUrlFor: (r) => (tnAllowed ? buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: eventUrlOf(r), pageSlug: page.slug }) : ticketmaster),
     dateModified: page.updatedAt,
     faqs: storedFaqs,
