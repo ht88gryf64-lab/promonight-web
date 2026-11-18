@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { ComponentProps } from 'react';
-import { inferSurfaceFromPath, track } from '@/lib/analytics';
+import { inferSurfaceFromPath, track, type AnalyticsSurface } from '@/lib/analytics';
 import type { EventLinkSurface, EventOutSurface } from '@/lib/events/event-pages';
 
 // The anchor for every link INTO /events (href and surface from the one
@@ -16,12 +16,16 @@ export type EventPageLinkProps = Omit<ComponentProps<typeof Link>, 'href' | 'onC
   linkSurface: EventLinkSurface | EventOutSurface;
   show?: string | null;
   venueSlug?: string | null;
+  /** The surface of the page the link sits on, when the path alone does not
+   *  say it: a venue page is web_venue, which no path rule infers (its CTAs
+   *  name their surface themselves). Omitted, the path decides. */
+  pageSurface?: AnalyticsSurface;
 };
 
-export function EventPageLink({ href, linkSurface, show, venueSlug, children, ...rest }: EventPageLinkProps) {
+export function EventPageLink({ href, linkSurface, show, venueSlug, pageSurface, children, ...rest }: EventPageLinkProps) {
   const handleClick = () => {
     track('event_link_click', {
-      surface: inferSurfaceFromPath(window.location.pathname),
+      surface: pageSurface ?? inferSurfaceFromPath(window.location.pathname),
       link_surface: linkSurface,
       destination_url: href,
       ...(show ? { show } : {}),

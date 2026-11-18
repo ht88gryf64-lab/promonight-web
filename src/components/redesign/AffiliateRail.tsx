@@ -78,7 +78,7 @@ export async function AffiliateRail({ team, venue, className }: AffiliateRailPro
           />
         ) : null}
         {alsoAt && alsoAtStop && hub ? (
-          <EventPageLink href={alsoAt.href} linkSurface={alsoAt.surface} show={alsoAtStop.show} venueSlug={alsoAtStop.venueSlug} data-also-at="" className="inline-flex min-h-11 items-center font-rd text-[14px] font-medium text-rd-link no-underline hover:underline">
+          <EventPageLink href={alsoAt.href} linkSurface={alsoAt.surface} pageSurface="web_team_page" show={alsoAtStop.show} venueSlug={alsoAtStop.venueSlug} data-also-at="" className="inline-flex min-h-11 items-center font-rd text-[14px] font-medium text-rd-link no-underline hover:underline">
             {`Also at ${hub.displayName}: ${EVENT_SHOWS[alsoAtStop.show].name}, ${alsoAtStop.visitStarts.length > 1 ? `from ${formatRangeWithYear(alsoAtStop.nextDate, alsoAtStop.nextDate)}` : formatRangeWithYear(alsoAtStop.nextDate, alsoAtStop.lastDate)}`}
           </EventPageLink>
         ) : null}

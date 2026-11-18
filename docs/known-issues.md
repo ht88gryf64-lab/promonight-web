@@ -4331,6 +4331,8 @@ ux-review of `feature/events-pages` (defects 12 and 13). The "source" links unde
 
 ux-review of `feature/events-pages` (defect 19). Measured on the branch dev server at 768 only; the cause was not confirmed (the generated card has width and height set). Under the 0.1 threshold. Re-measure on a production build before the flag is turned on.
 
+**Re-measured on a production build, 2026-11-18 (Phase 2B).** At 390: 0 on /events and the hub, 0.0002 on the U.S. Bank Stadium stop, 0.0004 on Angel Stadium. At 768: 0.0318 on /events, 0.0278 on the U.S. Bank Stadium stop, 0.0003 on the hub, 0.0006 on Angel Stadium. Cause: one shift about 50ms in, when the display face loads and the H1 takes one more line at that width, moving everything under it down 38px. The promo pages set their H1 the same way. Under the 0.1 threshold; a fix would be a fallback face with matched metrics for the display font, which is a site-wide change.
+
 ## 104. Back from a footer link on a team page does not restore scroll (pre-existing, logged 2026-11-18)
 
 Found by the ux-review of `feature/events-pages` (defect 20) and present on production: after following a footer link from /nfl/minnesota-vikings, browser back lands 226 to 2,379px from the saved position. The new footer "Events" link inherits it. Not caused by the events branch.
