@@ -371,7 +371,7 @@ export function EventStopView({ stop, hub, floor, now, teams, otherStops }: Even
                 ) : null}
                 {venueParkingHref ? (
                   <EventPageLink href={venueParkingHref} linkSurface="event_to_venue" show={stop.show} venueSlug={stop.venueSlug} data-parking-link="" className="inline-flex min-h-11 items-center self-start font-rd text-[14px] font-medium text-rd-link no-underline hover:underline">
-                    {`Parking lots on the ${venueName} guide`}
+                    {`Parking on the ${venueName} guide`}
                   </EventPageLink>
                 ) : null}
               </div>
