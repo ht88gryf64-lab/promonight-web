@@ -10,8 +10,10 @@ import { EVENTS_ACCENT, EVENT_HERO, type EventShowSlug } from '@/lib/events/even
 // NO CROP (ruling 2026-11-18). The photo renders in its own natural 3:2 box
 // (width and height attributes, h-auto, no object-fit), so the whole frame is
 // shown at every width: the truck with its grille, the crushed cars and the
-// sky above. On a wide screen the box stops at 640px and the dark band fills
-// the sides; nothing is ever cut to make it fit.
+// sky above. The box stops at 640px (the band's width on a tablet), and on a
+// desktop at 440px, so the first Tickets button stays on the first screen of a
+// 1280x800 laptop (ux-review 2026-11-18); the dark band fills the sides. The box
+// only ever gets smaller: nothing is cut to make it fit.
 //
 // A decorative show photo is a ruled exception to the never-stock rule and
 // the ONLY fetched image on an /events page; the generated text card stays
@@ -25,14 +27,14 @@ export function EventHero({ show, breadcrumb, children }: { show: EventShowSlug;
     <>
       <div className="-mx-4 bg-rd-ink text-white" data-event-hero={show}>
         <div className="px-4">{breadcrumb}</div>
-        <div className="relative mx-auto w-full max-w-[640px]">
+        <div className="relative mx-auto w-full max-w-[640px] lg:max-w-[440px]">
           <Image
             src={hero.src}
             alt={hero.alt}
             width={hero.width}
             height={hero.height}
             priority
-            sizes="(max-width: 640px) 100vw, 640px"
+            sizes="(min-width: 1024px) 440px, (max-width: 640px) 100vw, 640px"
             className="block h-auto w-full"
             data-event-hero-photo=""
           />

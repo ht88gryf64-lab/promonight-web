@@ -28,8 +28,11 @@ test('the parking anchor: once per page where the parking card renders, never el
     assert.equal(count, hasCard ? 1 : 0, `${h.slug}: ${count} anchor(s), parking card ${hasCard}`);
     assert.equal(ids, count, `${h.slug}: an id="parking" that is not the anchor`);
     // The anchor is the whole difference: 53 bytes, in one place.
-    // With the transit anchor put back, the baseline render plus the parking anchor is the raw render, byte for byte.
-    assert.equal(renderVenueView(h).length + count * PARKING_ANCHOR.length, raw.split('<div id="transit" class="scroll-mt-24">').join('<div>').length, h.slug);
+    // Independent of how the fixture strips them: the baseline render carries neither anchor, and the anchor's
+    // class appears in the raw render exactly once per anchor (review 2026-11-18: the old byte sums were true by construction).
+    const stripped = renderVenueView(h);
+    assert.equal(/id="parking"|id="transit"|scroll-mt-24/.test(stripped), false, `${h.slug}: an anchor survives in the baseline render`);
+    assert.equal(raw.split('scroll-mt-24').length - 1, count + (raw.split('id="transit"').length - 1), `${h.slug}: scroll-mt-24 outside the two anchors`);
     if (hasCard) {
       withCard += 1;
       // It opens the parking card: the card's label follows it directly.
@@ -53,7 +56,8 @@ test('the transit anchor: once per page where the Transit row renders, never els
     assert.equal(count, has ? 1 : 0, `${h.slug}: ${count} anchor(s), transit row ${has}`);
     assert.equal(ids, count, `${h.slug}: an id="transit" that is not the anchor`);
     const parking = raw.split(PARKING_ANCHOR).length - 1;
-    assert.equal(Buffer.byteLength(raw) - Buffer.byteLength(renderVenueView(h)), parking * Buffer.byteLength(PARKING_ANCHOR) + count * (Buffer.byteLength(TRANSIT_ANCHOR_OPEN) - Buffer.byteLength('<div>')), h.slug);
+    // The only bytes the two anchors add: removing exactly those strings by hand gives the baseline render.
+    assert.equal(raw.split(PARKING_ANCHOR).join('').split(TRANSIT_ANCHOR_OPEN).join('<div>') === renderVenueView(h) && parking <= 1, true, h.slug);
     if (has) {
       withRow += 1;
       assert.ok(raw.includes(`${TRANSIT_ANCHOR_OPEN}<strong>Transit.</strong>`), `${h.slug}: the anchor is not the Transit row`);

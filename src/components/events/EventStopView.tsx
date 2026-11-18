@@ -503,7 +503,7 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
                 return (
                   <EventPageLink key={s.venueSlug} href={link.href} linkSurface={link.surface} show={s.show} venueSlug={s.venueSlug} className="flex min-h-[88px] min-w-0 flex-col gap-1 overflow-hidden rounded-[14px] bg-rd-ink p-3 text-white no-underline hover:brightness-110">
                     <span className={`font-rd text-[10px] font-semibold uppercase tracking-[0.12em] ${EVENTS_ACCENT_TEXT}`}>{stopTileDates(s)}</span>
-                    <span className="rd-display text-[19px] uppercase leading-[1.05] [overflow-wrap:anywhere]">{s.searchCity}</span>
+                    <span className="rd-display text-[min(19px,4.6vw)] uppercase leading-[1.05] [overflow-wrap:break-word]">{s.searchCity}</span>
                     <span className="font-rd text-[12px] leading-[1.35] text-[#d8d1c4]">{`${displayVenueName(s.venueName)} · ${s.upcomingCount} ${s.upcomingCount === 1 ? 'show' : 'shows'}`}</span>
                   </EventPageLink>
                 );
