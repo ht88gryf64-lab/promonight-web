@@ -177,7 +177,8 @@ test('titles: the search city leads, the year is the last upcoming performance, 
   assert.equal(stopTitle('Monster Jam', 'Minneapolis', 2027, true), 'Monster Jam Minneapolis 2027: Dates, Tickets and Bag Policy');
   assert.equal(stopTitle('Monster Jam', 'Minneapolis', 2027, false), 'Monster Jam Minneapolis 2027: Dates and Tickets');
   assert.equal(stopTitle('Monster Jam', 'Minneapolis', null, false), 'Monster Jam Minneapolis: Dates and Tickets');
-  assert.equal(stopH1('Monster Jam', 'Anaheim', 'Angel Stadium'), 'Monster Jam Anaheim at Angel Stadium');
+  // The H1 is the show and the search city (ruling 2026-11-18); the venue is on the line under it.
+  assert.equal(stopH1('Monster Jam', 'Anaheim'), 'Monster Jam Anaheim');
   assert.equal(hubTitle('Monster Jam', 2027), 'Monster Jam 2027: Dates, Tickets and Venue Guides');
   // A stop that spans New Year takes the LAST upcoming performance's year.
   const span = { visits: [], performances: [perf('2026-12-30T1900'), perf('2027-01-02T1900')] };

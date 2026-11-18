@@ -247,7 +247,7 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
               <span className={`rounded-md px-2 py-1 font-rd text-[11px] font-semibold uppercase tracking-[0.12em] ${stop.tombstoned ? 'bg-[#50483f] text-white' : `${EVENTS_ACCENT_BG} text-rd-ink`}`}>{stop.tombstoned ? 'Removed' : 'Live event'}</span>
               {head.firstDate ? <EventCountdown shows={upcoming.map((p) => ({ date: p.date, startsAt: p.startsAt }))} timeZone={stop.timezone ?? null} initial={head.countdown} className={`font-rd text-[11px] font-semibold uppercase tracking-[0.12em] ${EVENTS_ACCENT_TEXT}`} /> : null}
             </div>
-            <h1 className="rd-display m-0 text-[36px] uppercase leading-[0.94] tracking-[-0.01em] text-white lg:text-[48px]">{stopH1(show.name, stop.searchCity, venueName)}</h1>
+            <h1 className="rd-display m-0 text-[54px] uppercase leading-[0.9] tracking-[-0.01em] text-white [overflow-wrap:anywhere]">{stopH1(show.name, stop.searchCity)}</h1>
             <p className="m-0 font-rd text-[16px] leading-[1.4] text-[#e9e3d8]">
               <strong className="text-white">{place ? `${venueName}, ${place}` : venueName}</strong>
               <br />

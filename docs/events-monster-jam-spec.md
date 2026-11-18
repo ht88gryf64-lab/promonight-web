@@ -89,7 +89,7 @@ Not targeted: "monster jam" 154,000 and "monster jam tickets" 12,000.
 
 Title and heading rules:
 - Stop page title: "Monster Jam {City} {Year}: Dates, Tickets and Bag Policy | PromoNight". The year is the year of the last upcoming performance and is in the title, never in the URL. When the page prints no bag rule (pointer only) the title is "Monster Jam {City} {Year}: Dates and Tickets | PromoNight".
-- Stop page H1: "Monster Jam {City} at {Venue}". City first, since the city term carries about ten times the venue term.
+- Stop page H1: "Monster Jam {City}" (ruling 2026-11-18, Phase 3A; it was "Monster Jam {City} at {Venue}" until then). The venue is on the line under the H1. Title tags, descriptions and JSON-LD still name the venue as before.
 - {City} is the city fans search, which is not always the venue's postal city (Anaheim, Arlington, Foxborough, East Rutherford, Elmont). Store it as an explicit field per stop; do not derive it from the address.
 - Hub title: "Monster Jam {Year}: Dates, Tickets and Venue Guides | PromoNight" (changed 2026-11-18: the hub lists stops at venues PromoNight covers, so it does not claim to be the schedule or every stop).
 - No hardcoded counts in copy; derive from source functions.

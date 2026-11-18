@@ -404,8 +404,9 @@ export function stopYear(stop: Pick<EventStop, 'performances'>, tl: StopTimeline
   return Number([...rows].sort((a, b) => a.key.localeCompare(b.key))[rows.length - 1].date.slice(0, 4));
 }
 
-export function stopH1(showName: string, searchCity: string, venueName: string): string {
-  return `${showName} ${searchCity} at ${venueName}`;
+/** "Monster Jam Minneapolis" (ruling 2026-11-18, Phase 3A). The venue is on the line under it. */
+export function stopH1(showName: string, searchCity: string): string {
+  return `${showName} ${searchCity}`;
 }
 
 /** Bare title; the root layout appends " | PromoNight". "and Bag Policy" is
