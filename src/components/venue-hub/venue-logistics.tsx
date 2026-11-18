@@ -93,6 +93,8 @@ export function verifiedGateTenants(hub: VenueHub): VenueHubTenantOverlay[] {
 }
 
 export interface GettingInRow {
+  /** An in-page anchor for this row (the Transit row is the target of an event stop page's link). */
+  anchorId?: string;
   label: string;
   body: ReactNode;
   /** The page that carries this row's claim. Rendered as a visible link, so a
@@ -135,6 +137,16 @@ function formatOverlayDate(iso: string | undefined): string | null {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(new Date(t));
 }
 
+/** What the venue page's Transit row prints, decided once: the row itself and
+ *  an event stop page (which lists the structured lines and links this row)
+ *  cannot disagree. Suppression, the exclusion list and provenance all apply. */
+export function transitRowModel(hub: VenueHub): { notesOk: boolean; linesOk: boolean; renders: boolean } {
+  const ok = hub.verified && !transitSuppressed(hub.slug) && !fieldExcluded(hub.slug, 'transit') && !!hub.publicTransit;
+  const notesOk = ok && !!hub.publicTransit?.notes && hasSubProvenance(hub.sources, 'publicTransit', 'notes');
+  const linesOk = ok && (hub.publicTransit?.lines.length ?? 0) > 0 && hasSubProvenance(hub.sources, 'publicTransit', 'lines');
+  return { notesOk, linesOk, renders: notesOk || linesOk };
+}
+
 export function buildGettingInRows(hub: VenueHub, tenantName: TenantNameResolver): GettingInRow[] {
   const verified = hub.verified;
   const gateTenants = verifiedGateTenants(hub);
@@ -163,10 +175,7 @@ export function buildGettingInRows(hub: VenueHub, tenantName: TenantNameResolver
   // and the stored text is left untouched (venue-transit-suppression.ts).
   // Provenance and the exclusion list, matching every sibling row and the CFB
   // block. This row was the only one left on the suppression check alone.
-  const transitOk =
-    verified && !transitSuppressed(hub.slug) && !fieldExcluded(hub.slug, 'transit') && !!hub.publicTransit;
-  const transitNotesOk = transitOk && !!hub.publicTransit?.notes && hasSubProvenance(hub.sources, 'publicTransit', 'notes');
-  const transitLinesOk = transitOk && (hub.publicTransit?.lines.length ?? 0) > 0 && hasSubProvenance(hub.sources, 'publicTransit', 'lines');
+  const { notesOk: transitNotesOk, linesOk: transitLinesOk } = transitRowModel(hub);
   if (transitNotesOk || transitLinesOk) {
     // Notes AND lines: the lines array used to be swallowed whenever notes
     // existed, leaving named routes ("Metro C Line", "Route 47") dark. The
@@ -177,6 +186,7 @@ export function buildGettingInRows(hub: VenueHub, tenantName: TenantNameResolver
       transitLinesOk ? `Lines: ${hub.publicTransit!.lines.join(', ')}.` : null,
     ].filter(Boolean) as string[];
     gettingRows.push({
+      anchorId: 'transit',
       label: 'Transit',
       body: transitParts.join(' '),
       sourceUrl: claimSourceUrl(hub, 'publicTransit'),
@@ -239,7 +249,7 @@ export function GettingInCard({ rows }: { rows: GettingInRow[] }) {
       <CardLabel>Getting in</CardLabel>
       <div className="grid grid-cols-1 gap-2.5 font-rd text-[13px] leading-[1.5] text-rd-ink md:grid-cols-2">
         {rows.map((r) => (
-          <div key={r.label}>
+          <div key={r.label} {...(r.anchorId ? { id: r.anchorId, className: 'scroll-mt-24' } : {})}>
             <strong>{r.label}.</strong> {r.body}
             <ClaimLine sourceUrl={r.sourceUrl} verifiedOn={r.verifiedOn} reason={r.reason} />
           </div>

@@ -5,31 +5,35 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import {
+  EVENTS_ACCENT,
+  EVENT_HERO,
   EVENT_LINK_SURFACES,
   EVENT_OUT_SURFACES,
   bagBlockFor,
+  countdownAt,
+  countdownLabel,
+  daysUntil,
   eventCardPath,
   eventPageHref,
-  eventSafeTransitLines,
-  eventSafeTransitNote,
   eventsPageIdentity,
   formatClock,
   formatDatesLine,
   formatRange,
   hubTitle,
+  monthVisitLine,
   isEventsPagesLive,
   performanceJsonLd,
+  showTimeline,
   showsBagRule,
   showsPhrase,
   stopDescription,
-  splitSentences,
   stopFaqs,
   stopH1,
   stopTimeline,
   stopTitle,
   stopYear,
-  tenantNameWords,
   upcomingPerformances,
+  weekdayLong,
   type EventPerformance,
   type EventStop,
 } from '../event-pages';
@@ -212,46 +216,72 @@ test('the bag block: the first that exists and nothing else, in the ruled order'
   assert.deepEqual([showsBagRule(d), showsBagRule(c), showsBagRule(null)], [false, true, false]);
 });
 
-test('the note filter: tenant words, sentence splitting and the building\'s own name (there is no parking filter: a stop page prints no hub lot)', () => {
-  const tenants = tenantNameWords(['Minnesota Vikings']);
-  assert.deepEqual(tenants.sort(), ['Minnesota Vikings', 'Vikings']);
-  // The full name and the nickname only: never a place word, never an ordinary-word nickname.
-  assert.deepEqual(tenantNameWords(['Minnesota Vikings', 'Minnesota United FC', 'Boston Red Sox', 'New York Giants', 'Los Angeles Angels', 'Chicago Fire', 'Philadelphia Union', 'Sporting Kansas City', 'Buffalo Bills']).sort(),
-    ['Boston Red Sox', 'Buffalo Bills', 'Chicago Fire', 'Los Angeles Angels', 'Minnesota United FC', 'Minnesota Vikings', 'New York Giants', 'Philadelphia Union', 'Sox', 'Sporting Kansas City', 'Vikings']);
-  // Sentences a place-named or ordinary-word team must NOT silence.
-  const many = tenantNameWords(['New York Giants', 'New York Jets', 'Los Angeles Angels', 'Chicago Fire', 'Philadelphia Union', 'Buffalo Bills', 'Washington Nationals']);
-  for (const ok of ['NJ Transit trains run from New York Penn Station to the Meadowlands.', 'Metrolink trains from Los Angeles Union Station stop at ARTIC.', 'Do not walk in fire lanes.', 'The stop is beside Union Station.']) assert.equal(eventSafeTransitNote(ok, many), ok, ok);
-  // The building's own name is a place: "Nationals Park" is not the tenant.
-  assert.equal(eventSafeTransitNote('The Green Line stops across from Nationals Park.', ['Nationals'], ['Nationals Park']), 'The Green Line stops across from Nationals Park.');
-  assert.equal(eventSafeTransitNote('Extra trains run for Nationals fans.', ['Nationals'], ['Nationals Park']), '');
-  // An abbreviation is not the end of a sentence, so a dropped clause leaves no fragment behind.
-  assert.deepEqual(splitSentences('One. Two! Three? four'), ['One.', 'Two!', 'Three? four']);
-  assert.deepEqual(splitSentences('Light rail runs to U.S. Bank Stadium Station. Buses serve St. Paul and Minneapolis.'), ['Light rail runs to U.S. Bank Stadium Station.', 'Buses serve St. Paul and Minneapolis.']);
-  assert.equal(eventSafeTransitNote('The Blue Line stops at U.S. Bank Stadium station, with extra trains on game days.', []), '');
-  assert.equal(eventSafeTransitNote('Trains run until 1 a.m. Friday and Saturday.', []), '');
-  assert.equal(eventSafeTransitNote('Buses leave from Dr. Martin Luther King Jr. Blvd. after Saints games only.', ['Saints']), '');
-  assert.equal(eventSafeTransitNote('On Vikings game days, trains near U.S. Bank Stadium fill early. The station is on 4th Street.', tenants), 'The station is on 4th Street.');
-  // Review 2026-11-18 (Part B): more game-day, price and schedule copy that must go.
-  for (const bad of ['Trains run 30 minutes after ballgames.', 'Extra trains run during homestands.', 'Light rail runs on Opening Day and for every home stand.', 'Show your event ticket to ride at no cost.', 'Service is discounted with a ticket.', 'A round trip costs 2.50 each way.', 'Trolleys run every 15 minutes on event days.', 'Shuttles begin two hours before each event and run for one hour after.', 'OCTA runs bus service to the ballpark.']) assert.equal(eventSafeTransitNote(bad, []), '', bad);
-  // A single capital is not an abbreviation: two real sentences stay two, so a dropped one does not take its neighbour.
-  assert.deepEqual(splitSentences('Take Exit B. Trains run late.'), ['Take Exit B.', 'Trains run late.']);
-  assert.equal(eventSafeTransitNote('Walk to Platform A. Vikings fans ride from there.', tenants), 'Walk to Platform A.');
-  // A college tenant's name is a place: matched in full, never split into a nickname.
-  const cfb = tenantNameWords(['South Florida', 'Miami', 'Tampa Bay Buccaneers'], ['South Florida', 'Miami']);
-  assert.deepEqual(cfb.sort(), ['Buccaneers', 'Miami', 'South Florida', 'Tampa Bay Buccaneers']);
-  assert.equal(eventSafeTransitNote('The stop is on Florida Avenue.', cfb), 'The stop is on Florida Avenue.');
-  // Transit lines: kept unless they carry a price, a game-day word or a tenant; a value that is not a list never throws.
-  assert.deepEqual(eventSafeTransitLines(['METRO Blue Line', 'Gameday Express', '', 42, 'Vikings Shuttle'], tenants), ['METRO Blue Line']);
-  assert.deepEqual(eventSafeTransitLines('METRO Blue Line', tenants), []);
+test('there is no transit sentence filter: the module exports none, and a stop page prints the structured lines only (ruling 2026-11-18, Phase 2D)', () => {
+  const mod = readFileSync(join(process.cwd(), 'src/lib/events/event-pages.ts'), 'utf8');
+  for (const gone of ['eventSafeTransitNote', 'eventSafeTransitLines', 'tenantNameWords', 'splitSentences', 'withoutOwnNames']) assert.equal(mod.includes(`function ${gone}`), false, gone);
+  const view = readFileSync(join(process.cwd(), 'src/components/events/EventStopView.tsx'), 'utf8');
+  // The view never reads the hub's notes prose, and takes its transit decision from the venue page's own model.
+  assert.equal(/publicTransit\??\.notes/.test(view), false, 'the stop page reads no transit notes');
+  assert.ok(view.includes('transitRowModel(hub)'));
 });
 
-test('transit notes: another event\'s trolley times, a fare offer and match-day service are cut; the stop itself stays', () => {
-  // The Snapdragon Stadium note as the hub stores it (review 2026-11-18, finding 1).
-  const note = 'The Green Line trolley stops at Stadium Station, beside the stadium. Pre-event Green Line trolleys depart stations starting at 4:14 PM every 15 minutes or better. Post-event trolleys depart Stadium Station starting at 8:37 PM. MTS increases Green Line frequency for matches. Family Weekend promo: on Saturdays and Sundays up to two kids (12 and under) ride free with a fare-paying adult on all MTS routes.';
-  assert.equal(eventSafeTransitNote(note, ['San Diego FC']), 'The Green Line trolley stops at Stadium Station, beside the stadium.');
-  for (const bad of ['Trains leave at 7 pm.', 'The fare is paid on board.', 'Kids ride free.', 'Extra service runs on game days.', 'Post-event buses load on 4th Street.', 'A $2.50 ticket covers the ride.']) assert.equal(eventSafeTransitNote(bad, []), '', bad);
-  assert.equal(eventSafeTransitNote('Both light rail lines stop at U.S. Bank Stadium station. Buses serve downtown.', ['Vikings']), 'Both light rail lines stop at U.S. Bank Stadium station. Buses serve downtown.');
-  assert.equal(eventSafeTransitNote(null, []), '');
+test('the countdown: days to the first show on the venue calendar; today and tomorrow as words; nothing once the day has passed', () => {
+  assert.equal(daysUntil('2027-02-20', '2026-11-18'), 94);
+  assert.equal(countdownLabel('2027-02-20', '2026-11-18'), '94 days away');
+  assert.equal(countdownLabel('2027-02-20', '2027-02-18'), '2 days away');
+  assert.equal(countdownLabel('2027-02-20', '2027-02-19'), 'Tomorrow');
+  assert.equal(countdownLabel('2027-02-20', '2027-02-20'), 'Today');
+  assert.equal(countdownLabel('2027-02-20', '2027-02-21'), null);
+  assert.equal(countdownLabel(null, '2027-02-21'), null);
+  assert.equal(countdownLabel('not-a-date', '2027-02-21'), null);
+  // A spring-forward day is still one day (calendar days, not 24-hour blocks).
+  assert.equal(daysUntil('2027-03-15', '2027-03-13'), 2);
+  // The VENUE's day decides: 11:30 PM Central on Feb 19 is already Feb 20 in UTC, and the show is still tomorrow.
+  assert.equal(countdownAt('2027-02-20', at('2027-02-20T05:30:00Z'), 'America/Chicago'), 'Tomorrow');
+  assert.equal(countdownAt('2027-02-20', at('2027-02-20T06:30:00Z'), 'America/Chicago'), 'Today');
+  assert.equal(countdownAt(null, at('2027-02-20T06:30:00Z'), 'America/Chicago'), null);
+});
+
+test('the hour-by-hour card: stored times only, in clock order, and no card for a show with neither a Pit Party nor a gate time', () => {
+  const sat = perf('2027-02-20T1700'); const sun = perf('2027-02-21T1500');
+  const pit = [{ visitId: '2027-02-20', performance: sat.key, start: '12:30', end: '15:30', sourceUrl: 'https://venue.example/pit', observedAt: '2026-11-18T00:00:00Z' }];
+  const gates = [{ visitId: '2027-02-20', performance: sat.key, opensAt: '15:30', sourceUrl: 'https://venue.example/gates', observedAt: '2026-11-18T00:00:00Z' }];
+  assert.deepEqual(showTimeline(sat, pit, [])!.map((e) => `${e.at} ${e.text}`), ['12:30 Pit Party opens.', '15:30 Pit Party closes.', '17:00 Show starts.']);
+  // A gate time at the same minute the Pit Party closes sorts after it; nothing else is added.
+  assert.deepEqual(showTimeline(sat, pit, gates)!.map((e) => e.kind), ['pit-open', 'pit-close', 'gates', 'show']);
+  assert.deepEqual(showTimeline(sat, [], gates)!.map((e) => `${e.at} ${e.text}`), ['15:30 Gates open.', '17:00 Show starts.']);
+  // Sunday has nothing stored: no card (the showtime alone is on the show card already).
+  assert.equal(showTimeline(sun, pit, gates), null);
+  // Every word on the card is one of the four fixed labels: no invented step.
+  for (const e of showTimeline(sat, pit, gates)!) assert.ok(['Pit Party opens.', 'Pit Party closes.', 'Gates open.', 'Show starts.'].includes(e.text));
+  assert.equal(weekdayLong('2027-02-20'), 'Saturday');
+});
+
+test('the hub lists a multi-visit stop under each month with only that month\'s visits', () => {
+  const angel = { visits: [{ start: '2026-12-19', end: '2026-12-20', shows: 2 }, { start: '2027-01-16', end: '2027-01-17', shows: 2 }, { start: '2027-01-30', end: '2027-01-31', shows: 2 }, { start: '2027-02-20', end: '2027-02-21', shows: 2 }] };
+  assert.deepEqual(monthVisitLine(angel, '2026-12'), { dates: 'Dec 19 to 20, 2026', shows: 2 });
+  assert.deepEqual(monthVisitLine(angel, '2027-01'), { dates: 'Jan 16 to 17 and Jan 30 to 31, 2027', shows: 4 });
+  assert.deepEqual(monthVisitLine(angel, '2027-02'), { dates: 'Feb 20 to 21, 2027', shows: 2 });
+  assert.equal(monthVisitLine(angel, '2027-03'), null);
+  // A visit that runs over a month end sits under the month it starts in.
+  assert.deepEqual(monthVisitLine({ visits: [{ start: '2027-01-30', end: '2027-02-01', shows: 3 }] }, '2027-01'), { dates: 'Jan 30 to Feb 1, 2027', shows: 3 });
+  assert.equal(monthVisitLine({ visits: [{ start: '2027-01-30', end: '2027-02-01', shows: 3 }] }, '2027-02'), null);
+});
+
+test('the hero photo: one local file per show, shown whole, with its credit; no other image host', () => {
+  const hero = EVENT_HERO['monster-jam'];
+  assert.equal(hero.src, '/events/monster-jam-hero.jpg');
+  assert.ok(statSync(join(process.cwd(), 'public', hero.src)).size > 100_000);
+  assert.equal(hero.credit, 'Photo: Marion Wellmann / Pixabay. Not a truck from this show.');
+  assert.equal((hero.width / hero.height).toFixed(2), '1.50');
+  const src = readFileSync(join(process.cwd(), 'src/components/events/EventHero.tsx'), 'utf8');
+  // No crop: no object-fit, no fill, no fixed height on the photo.
+  assert.equal(/object-cover|object-fit|\bfill\b(?!=)|objectFit/.test(src.replace(/\/\/.*$/gm, '')), false, 'the photo is never cropped to a box');
+  assert.ok(src.includes('h-auto w-full'));
+  // The generated card is not repeated in the page; it stays the og:image.
+  const view = readFileSync(join(process.cwd(), 'src/components/events/EventStopView.tsx'), 'utf8');
+  assert.equal(/<img\b/.test(view), false, 'no in-page copy of the card');
+  assert.equal(EVENTS_ACCENT, '#f5c518');
 });
 
 test('several visits never read as one continuous run of dates', () => {

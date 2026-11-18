@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { EventPageLink } from '@/components/events/EventPageLink';
+import { EVENTS_ACCENT_BG, EVENTS_ACCENT_TEXT, EventHero } from '@/components/events/EventHero';
 import { displayVenueName } from '@/lib/venue-hub';
 import type { EventStopSummary } from '@/lib/events/event-stops';
 import {
@@ -10,6 +11,7 @@ import {
   eventHubPath,
   eventPageHref,
   formatRangeWithYear,
+  monthVisitLine,
   monthLabel,
   type EventShow,
 } from '@/lib/events/event-pages';
@@ -31,16 +33,20 @@ const Note = () => <p className="m-0 mt-7 border-t border-rd-line pt-5 font-rd t
 const datesOf = (s: EventStopSummary) => (s.visitStarts.length > 1 ? `${s.visitStarts.length} visits, ${formatRangeWithYear(s.nextDate, s.nextDate)} to ${formatRangeWithYear(s.lastDate, s.lastDate)}` : formatRangeWithYear(s.nextDate, s.lastDate));
 const showsOf = (n: number) => `${n} ${n === 1 ? 'show' : 'shows'}`;
 
-function StopRow({ s, last }: { s: EventStopSummary; last: boolean }) {
+function StopRow({ s, last, ym }: { s: EventStopSummary; last: boolean; ym?: string }) {
   const link = eventPageHref({ kind: 'stop', show: s.show, venue: s.venueSlug }, 'events_hub_list');
   if (!link) return null;
   const venueName = displayVenueName(s.venueName);
+  // Under a month: that month's visits only. Elsewhere: the whole stop.
+  const month = ym ? monthVisitLine(s, ym) : null;
+  const dates = month ? month.dates : datesOf(s);
+  const shows = month ? month.shows : s.upcomingCount;
   return (
     <li className={`flex flex-col gap-1 py-3 ${last ? '' : 'border-b border-rd-line'}`} data-stop={s.venueSlug}>
       <EventPageLink href={link.href} linkSurface={link.surface} show={s.show} venueSlug={s.venueSlug} className="flex min-h-11 items-center justify-between gap-3 text-rd-ink no-underline">
         <span className="flex flex-col gap-0.5">
-          <span className="font-rd text-[15px] font-semibold">{`${s.searchCity}: ${datesOf(s)}`}</span>
-          <span className="font-rd text-[12px] text-rd-ink-faint">{`${venueName} · ${showsOf(s.upcomingCount)}`}</span>
+          <span className="font-rd text-[15px] font-semibold">{`${s.searchCity}: ${dates}`}</span>
+          <span className="font-rd text-[12px] text-rd-ink-faint">{`${venueName} · ${showsOf(shows)}`}</span>
         </span>
         <span aria-hidden="true" className="text-rd-ink-faint">›</span>
       </EventPageLink>
@@ -54,35 +60,40 @@ function StopRow({ s, last }: { s: EventStopSummary; last: boolean }) {
 export function EventHubView({ show, stops, year }: { show: EventShow; stops: EventStopSummary[]; year: number | null }) {
   // A stop is listed under EVERY month one of its visits starts in, so a
   // building with four weekends is found in each of their months.
-  const months = [...new Set(stops.flatMap((s) => s.visitStarts.map((d) => d.slice(0, 7))))].sort();
+  const months = [...new Set(stops.flatMap((s) => s.visits.map((v) => v.start.slice(0, 7))))].sort();
   const indexLink = eventPageHref({ kind: 'index' }, 'events_hub_list');
   const total = stops.reduce((n, s) => n + s.upcomingCount, 0);
   return (
     <Shell>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd([{ name: 'Events', path: EVENTS_INDEX_PATH }, { name: show.name, path: eventHubPath(show.slug) }])).replace(/</g, '\\u003c') }} />
-      <nav aria-label="Breadcrumb" className="flex flex-wrap gap-1.5 pt-3.5 font-rd text-[12px] text-rd-ink-faint">
-        {indexLink ? <EventPageLink href={indexLink.href} linkSurface={indexLink.surface} className="no-underline hover:text-rd-ink">Events</EventPageLink> : <span>Events</span>}
-        <span aria-hidden="true">/</span>
-        <span aria-current="page" className="text-rd-ink-soft">{show.name}</span>
-      </nav>
-      <header className="flex flex-col gap-2.5 pt-3">
+      <EventHero
+        show={show.slug}
+        breadcrumb={
+          <nav aria-label="Breadcrumb" className="flex flex-wrap gap-1.5 pb-2.5 pt-3.5 font-rd text-[12px] text-[#d8d1c4]">
+            {indexLink ? <EventPageLink href={indexLink.href} linkSurface={indexLink.surface} className="text-[#d8d1c4] no-underline hover:text-white">Events</EventPageLink> : <span>Events</span>}
+            <span aria-hidden="true">/</span>
+            <span aria-current="page" className="text-white">{show.name}</span>
+          </nav>
+        }
+      >
         <div className="flex items-center gap-2">
-          <span className="rounded-md bg-rd-red px-2 py-1 font-rd text-[11px] font-semibold uppercase tracking-[0.12em] text-white">Live event</span>
-          {stops.length ? <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">{`${stops.length} ${stops.length === 1 ? 'stop' : 'stops'} · ${showsOf(total)}`}</span> : null}
+          <span className={`rounded-md px-2 py-1 font-rd text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink ${EVENTS_ACCENT_BG}`}>Live event</span>
+          {/* "we cover": the count is of the stops listed here, never the tour's. */}
+          {stops.length ? <span className={`font-rd text-[11px] font-semibold uppercase tracking-[0.12em] ${EVENTS_ACCENT_TEXT}`}>{`${stops.length} ${stops.length === 1 ? 'stop' : 'stops'} we cover · ${showsOf(total)}`}</span> : null}
         </div>
-        <h1 className="rd-display m-0 text-[40px] uppercase leading-[0.95] tracking-[-0.01em] text-rd-ink">{`${show.name}${year ? ` ${year}` : ''} dates and venue guides`}</h1>
-        <p className="m-0 font-rd text-[15px] leading-[1.45] text-rd-ink-soft">
-          {`This page lists ${show.name} stops at venues PromoNight covers. It is not the full tour schedule. Each stop page has the showtimes, a ticket link for every show, and what the venue says about bags, parking and transit.`}
+        <h1 className="rd-display m-0 text-[44px] uppercase leading-[0.92] tracking-[-0.01em] text-white lg:text-[54px]">{`${show.name}${year ? ` ${year}` : ''} dates and venue guides`}</h1>
+        <p className="m-0 font-rd text-[15px] leading-[1.45] text-[#e9e3d8]">
+          {`This page lists ${show.name} stops at venues PromoNight covers. It is not the full tour schedule. Each stop page has the showtimes, ticket links, and what the venue says about bags and transit.`}
         </p>
-      </header>
+      </EventHero>
       {stops.length ? (
         months.map((ym) => {
-          const rows = stops.filter((s) => s.visitStarts.some((d) => d.slice(0, 7) === ym));
+          const rows = stops.filter((s) => s.visits.some((v) => v.start.slice(0, 7) === ym));
           return (
             <section key={ym} className="mt-6 flex flex-col gap-2.5" data-month={ym}>
               <h2 className="rd-display m-0 text-[22px] uppercase text-rd-ink">{monthLabel(ym)}</h2>
               <ul className="m-0 flex list-none flex-col rounded-[14px] border border-rd-line bg-rd-card px-3.5 py-1">
-                {rows.map((s, i) => <StopRow key={s.venueSlug} s={s} last={i === rows.length - 1} />)}
+                {rows.map((s, i) => <StopRow key={s.venueSlug} s={s} last={i === rows.length - 1} ym={ym} />)}
               </ul>
             </section>
           );
@@ -102,7 +113,7 @@ export function EventsIndexView({ shows, next }: { shows: Array<{ show: EventSho
       <header className="flex flex-col gap-2.5 pt-6">
         <h1 className="rd-display m-0 text-[40px] uppercase leading-[0.95] tracking-[-0.01em] text-rd-ink">Events at venues we cover</h1>
         <p className="m-0 font-rd text-[15px] leading-[1.45] text-rd-ink-soft">
-          Touring shows at the stadiums and arenas PromoNight already covers: showtimes, a ticket link for every show, and the venue&apos;s own bag, parking and transit details.
+          Touring shows at the stadiums and arenas PromoNight already covers: showtimes, ticket links, and the venue&apos;s own bag and transit details. Each show lists only the stops at venues we cover, not its full tour.
         </p>
       </header>
       <section className="mt-6 flex flex-col gap-2.5">
@@ -115,7 +126,7 @@ export function EventsIndexView({ shows, next }: { shows: Array<{ show: EventSho
               <span className="flex flex-col gap-0.5">
                 <span className="rd-display text-[22px] uppercase leading-none">{show.name}</span>
                 <span className="font-rd text-[13px] text-rd-ink-faint">
-                  {stops ? `${stops} ${stops === 1 ? 'stop' : 'stops'} · ${showsOf(performances)}${first && last ? ` · ${formatRangeWithYear(first, last)}` : ''}` : 'No upcoming stops listed'}
+                  {stops ? `${stops} ${stops === 1 ? 'stop' : 'stops'} we cover · ${showsOf(performances)}${first && last ? ` · ${formatRangeWithYear(first, last)}` : ''}` : 'No upcoming stops listed'}
                 </span>
               </span>
               <span aria-hidden="true" className="text-rd-ink-faint">›</span>
@@ -131,7 +142,7 @@ export function EventsIndexView({ shows, next }: { shows: Array<{ show: EventSho
           </ul>
           {shows.filter((x) => x.stops > next.filter((n) => n.show === x.show.slug).length).map(({ show, stops }) => {
             const link = eventPageHref({ kind: 'hub', show: show.slug }, 'events_hub_list');
-            return link ? <EventPageLink key={show.slug} href={link.href} linkSurface={link.surface} show={show.slug} className="inline-flex min-h-11 items-center self-start font-rd text-[14px] font-semibold text-rd-link no-underline hover:underline">{`See all ${stops} ${show.name} stops by month`}</EventPageLink> : null;
+            return link ? <EventPageLink key={show.slug} href={link.href} linkSurface={link.surface} show={show.slug} className="inline-flex min-h-11 items-center self-start font-rd text-[14px] font-semibold text-rd-link no-underline hover:underline">{`See all ${stops} ${show.name} stops we cover`}</EventPageLink> : null;
           })}
         </section>
       ) : null}

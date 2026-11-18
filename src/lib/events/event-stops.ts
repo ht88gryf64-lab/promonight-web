@@ -242,6 +242,8 @@ export interface EventStopSummary {
   upcomingCount: number;
   /** The first upcoming date of each upcoming visit, oldest first. */
   visitStarts: string[];
+  /** Each upcoming visit: its first and last upcoming date and its show count, oldest first. */
+  visits: Array<{ start: string; end: string; shows: number }>;
   updatedAt: string | null;
 }
 
@@ -250,7 +252,7 @@ function summaryOf(stop: EventStop, venueName: string, now: Date): EventStopSumm
   const groups = stopTimeline(stop, now).upcoming;
   const up = groups.flatMap((g) => g.performances);
   if (!up.length) return [];
-  return [{ show: stop.show, venueSlug: stop.venueSlug, hubId: stop.hubId, venueName, searchCity: stop.searchCity, nextDate: up[0].date, lastDate: up[up.length - 1].date, upcomingCount: up.length, visitStarts: groups.map((g) => g.performances[0].date), updatedAt: stop.updatedAt }];
+  return [{ show: stop.show, venueSlug: stop.venueSlug, hubId: stop.hubId, venueName, searchCity: stop.searchCity, nextDate: up[0].date, lastDate: up[up.length - 1].date, upcomingCount: up.length, visitStarts: groups.map((g) => g.performances[0].date), visits: groups.map((g) => ({ start: g.performances[0].date, end: g.performances[g.performances.length - 1].date, shows: g.performances.length })), updatedAt: stop.updatedAt }];
 }
 
 /** Stops with at least one upcoming performance, soonest first. Tombstoned stops never list. */

@@ -12,7 +12,7 @@ export const revalidate = 86400;
 
 const NEXT_STOPS = 12;
 const TITLE = 'Events at Stadiums and Arenas: Dates, Tickets and Venue Guides';
-const DESCRIPTION = 'Touring shows at the stadiums and arenas PromoNight covers, with showtimes, a ticket link for every show, and each venue\'s bag, parking and transit details.';
+const DESCRIPTION = 'Touring shows at the stadiums and arenas PromoNight covers, with showtimes, a ticket link for every show, and each venue\'s bag and transit details.';
 
 async function load(now: Date) {
   const shows: Array<{ show: EventShow; stops: number; performances: number; first: string | null; last: string | null }> = [];
