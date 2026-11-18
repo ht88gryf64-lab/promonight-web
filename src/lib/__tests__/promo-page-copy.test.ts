@@ -487,6 +487,12 @@ test('canonicalGroups rule 1 extension: giveaway and theme with the same words g
   assert.equal(m.winner.pageSlug, 'dia-de-los-muertos-night');
 });
 
+test('carriesPackageQualifier: the phrase anywhere in the name, stored or added, and nothing looser', async () => {
+  const { carriesPackageQualifier, packagePageName } = await import('../promo-page-copy');
+  for (const yes of ['Star Wars Ticket Package', 'star wars ticket package', 'Ticket Package: Pride Night', "Father's Day Catch on the Field Ticket Package", packagePageName('Paint Night Blanket', { ticketPackage: true, sameGameTitles: ['NBA Paint Night'] })]) assert.equal(carriesPackageQualifier(yes), true, yes);
+  for (const no of ['Scout Pack', 'Pride Ticket Pack', 'Puck Package Night', 'Family 4 Pack', 'Ticket Packages Night', '']) assert.equal(carriesPackageQualifier(no), false, no);
+});
+
 test('packagePageTitle: one rule, a then b then c, absolute, never the PromoNight suffix (Gate 3 follow-up)', async () => {
   const { packagePageTitle, PACKAGE_TITLE_HARD_MAX } = await import('../promo-page-copy');
   const wolves = { nickname: 'Timberwolves' };
