@@ -122,7 +122,8 @@ export interface EventVisit {
 /** A fact the venue prints for this event. `sourceUrl` is the venue's own page. */
 export interface EventRuleFact { visitId: string; text: string; sourceUrl: string; observedAt: string }
 export interface EventPitParty { visitId: string; performance: string; start: string; end: string; sourceUrl: string; observedAt: string }
-export interface EventGateTime { visitId: string; performance: string; time: string; sourceUrl: string; observedAt: string }
+/** `opensAt` is HH:mm, the venue's wall clock (the stored gate-time entry of the stop's eventPolicies). */
+export interface EventGateTime { visitId: string; performance: string; opensAt: string; sourceUrl: string; observedAt: string }
 
 export type EventBagPolicy =
   | { mode: 'rule'; text: string; sourceUrl: string; observedAt: string }
@@ -419,7 +420,7 @@ export function stopFaqs(o: { showName: string; searchCity: string; venueName: s
   }
   const gates = o.gateTimes.filter((g) => upKeys.has(g.performance));
   if (gates.length) {
-    const lines = gates.map((g) => { const perf = o.upcoming.find((x) => x.key === g.performance)!; return `${formatShortDay(perf.date)} (${formatClock(perf.startTime)} show): gates open at ${formatClock(g.time)}`; });
+    const lines = gates.map((g) => { const perf = o.upcoming.find((x) => x.key === g.performance)!; return `${formatShortDay(perf.date)} (${formatClock(perf.startTime)} show): gates open at ${formatClock(g.opensAt)}`; });
     out.push({ q: `What time do gates open for ${o.showName} at ${o.venueName}?`, a: `${o.venueName} lists these gate times. ${lines.join('. ')}.` });
   }
   return out;

@@ -22,7 +22,8 @@ import {
 
 const Shell = ({ children }: { children: ReactNode }) => (
   <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
-    <main className="mx-auto w-full max-w-[640px] px-4 pb-10 lg:max-w-3xl">{children}</main>
+    {/* A div, not a <main>: the root layout renders the page's one <main>. */}
+    <div className="mx-auto w-full max-w-[640px] px-4 pb-10 lg:max-w-3xl" data-events-list="">{children}</div>
   </div>
 );
 const Note = () => <p className="m-0 mt-7 border-t border-rd-line pt-5 font-rd text-[11px] leading-[1.4] text-rd-ink-faint" data-events-note="">{EVENTS_NOT_AFFILIATED}</p>;

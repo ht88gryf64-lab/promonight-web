@@ -110,8 +110,8 @@ function mapGateTimes(v: unknown): EventGateTime[] {
   return list(v).flatMap((f) => {
     const b = factBase(f);
     if (!b || !isObj(f)) return [];
-    const performance = str(f.performance); const time = str(f.time);
-    return performance && PERF_KEY_RE.test(performance) && time && HHMM_RE.test(time) ? [{ ...b, performance, time }] : [];
+    const performance = str(f.performance); const opensAt = str(f['time']);
+    return performance && PERF_KEY_RE.test(performance) && opensAt && HHMM_RE.test(opensAt) ? [{ ...b, performance, opensAt }] : [];
   });
 }
 

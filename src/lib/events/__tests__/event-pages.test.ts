@@ -234,7 +234,7 @@ test('FAQs come from stored fields only: no run time, no noise, no ages, no stro
   assert.deepEqual(faqs.map((f) => f.q), ['When is Monster Jam in Minneapolis?', 'When is the Pit Party at U.S. Bank Stadium?']);
   assert.equal(faqs[0].a, 'Saturday, February 20, 2027 at 5:00 PM and Sunday, February 21, 2027 at 3:00 PM, at U.S. Bank Stadium. Times are local to the venue.');
   assert.match(faqs[1].a, /Sat, Feb 20 \(5:00 PM show\): 12:30 PM to 3:30 PM/);
-  const all = JSON.stringify(stopFaqs({ showName: 'Monster Jam', searchCity: 'Houston', venueName: 'NRG Stadium', upcoming, bag: null, pitParty: [], gateTimes: [{ visitId: '2027-02-20', performance: '2027-02-21T1500', time: '13:30', sourceUrl: 'https://venue.example/e', observedAt: '2026-11-18T13:54:17.868Z' }] }));
+  const all = JSON.stringify(stopFaqs({ showName: 'Monster Jam', searchCity: 'Houston', venueName: 'NRG Stadium', upcoming, bag: null, pitParty: [], gateTimes: [{ visitId: '2027-02-20', performance: '2027-02-21T1500', opensAt: '13:30', sourceUrl: 'https://venue.example/e', observedAt: '2026-11-18T13:54:17.868Z' }] }));
   assert.match(all, /gates open at 1:30 PM/);
   for (const word of ['hour', 'loud', 'ear', 'stroller', 'toddler', 'under 2', 'ages', 'kids', 'children']) assert.equal(new RegExp(`\\b${word}`, 'i').test(all + JSON.stringify(faqs)), false, word);
   // A pointer is not an answer to "what is the bag policy".

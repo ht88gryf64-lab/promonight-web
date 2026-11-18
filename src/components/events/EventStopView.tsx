@@ -329,7 +329,7 @@ export function EventStopView({ stop, hub, floor, now, teams, otherStops }: Even
                     const perf = perfOf(g.performance)!;
                     return (
                       <li key={g.performance} className="font-rd text-[14px] leading-[1.45] text-rd-ink-soft">
-                        <strong className="text-rd-ink">{`${formatShortDay(perf.date)}, ${formatClock(perf.startTime)} show:`}</strong>{` gates open at ${formatClock(g.time)}`}
+                        <strong className="text-rd-ink">{`${formatShortDay(perf.date)}, ${formatClock(perf.startTime)} show:`}</strong>{` gates open at ${formatClock(g.opensAt)}`}
                       </li>
                     );
                   })}
