@@ -21,14 +21,15 @@ import {
   eventCardPath,
   eventHubPath,
   eventPageHref,
-  eventSafeLotName,
-  eventSafeParkingNote,
+  eventLot,
+  eventSafeTransitLines,
   eventSafeTransitNote,
   eventShowOf,
   eventStopPath,
   formatClock,
   formatDatesLine,
   formatRange,
+  formatRangeWithYear,
   formatShortDay,
   performanceJsonLd,
   showLabel,
@@ -68,7 +69,25 @@ export interface EventStopViewProps {
 }
 
 /** Everything the head and the body both need, computed once. */
-export function eventStopHead(stop: EventStop, hub: VenueHub, floor: EventFloor, now: Date) {
+/** What the Parking and Transit cards print for this stop: the hub's lots and
+ *  transit, cut for an event day (src/lib/events/event-pages.ts eventLot,
+ *  eventSafeTransitNote). Computed once, for the cards AND the description,
+ *  so the head never promises a card the page does not carry. */
+export function stopLogistics(hub: VenueHub, floor: EventFloor, teams: TenantTeamLink[]) {
+  const tenantWords = tenantNameWords([...teams.map((t) => t.name), ...hub.tenantOverlays.map((t) => t.displayName ?? '')]);
+  // The building's own names are places, not tenants ("Nationals Park").
+  const own = [hub.name, displayVenueName(hub.name), ...hub.formerNames];
+  const lots = floor.parking && rendersParking({ ...hub, officialParkingUrls: [], parkingLotMapUrl: null })
+    ? hub.parkingLots.flatMap((l) => { const lot = eventLot(l, tenantWords, own); return lot ? [lot] : []; })
+    : [];
+  const hubTransit = floor.transit && rendersTransit(hub) && hub.publicTransit ? hub.publicTransit : null;
+  const lines = hubTransit ? eventSafeTransitLines(hubTransit.lines, tenantWords, own) : [];
+  const notes = hubTransit && typeof hubTransit.notes === 'string' ? eventSafeTransitNote(hubTransit.notes, tenantWords, own) : '';
+  return { lots, transit: lines.length || notes ? { lines, notes } : null };
+}
+
+export function eventStopHead(stop: EventStop, hub: VenueHub, floor: EventFloor, now: Date, teams: TenantTeamLink[] = []) {
+  const { lots, transit } = stopLogistics(hub, floor, teams);
   const show = eventShowOf(stop.show)!;
   const venueName = displayVenueName(hub.name);
   const tl = stopTimeline(stop, now);
@@ -91,13 +110,13 @@ export function eventStopHead(stop: EventStop, hub: VenueHub, floor: EventFloor,
       : `${show.name} ${stop.searchCity} at ${venueName}`;
   const description = stop.tombstoned
     ? `${show.name} at ${venueName} in ${stop.searchCity} has been removed from the schedule.`
-    : stopDescription({ showName: show.name, searchCity: stop.searchCity, venueName, dates: upcoming.map((p) => p.date), visitCount: tl.upcoming.length, bagRule: showsBagRule(bag), parking: floor.parking, transit: floor.transit, pitParty: pitParty.length > 0 });
+    : stopDescription({ showName: show.name, searchCity: stop.searchCity, venueName, dates: upcoming.map((p) => p.date), visitCount: tl.upcoming.length, bagRule: showsBagRule(bag), parking: lots.length > 0, transit: !!transit, pitParty: pitParty.length > 0 });
   // A removed stop has no card (the card route answers 404 for it).
   const hasCard = !stop.tombstoned;
   const card = { url: `${EVENTS_SITE_URL}${eventCardPath(stop)}`, width: EVENT_CARD_WIDTH, height: EVENT_CARD_HEIGHT, alt: `${show.name}${year ? ` ${year}` : ''} at ${venueName}, ${stop.searchCity}` };
   // A removed stop, or one with nothing upcoming and nothing played, is not indexed.
   const indexable = !stop.tombstoned && (upcoming.length > 0 || !!tl.lastVisit);
-  return { show, venueName, tl, upcoming, bag, pitParty, gateTimes, year, canonical, title, description, card, hasCard, indexable };
+  return { show, venueName, tl, upcoming, bag, pitParty, gateTimes, year, canonical, title, description, card, hasCard, indexable, lots, transit };
 }
 
 const H2 = ({ children }: { children: ReactNode }) => (
@@ -134,7 +153,7 @@ function Tile({ ymd }: { ymd: string }) {
 }
 
 export function EventStopView({ stop, hub, floor, now, teams, otherStops }: EventStopViewProps) {
-  const head = eventStopHead(stop, hub, floor, now);
+  const head = eventStopHead(stop, hub, floor, now, teams);
   const { show, venueName, tl, upcoming, bag, pitParty, gateTimes } = head;
   const provider = eventTicketVendor();
   const hubHref = eventHubPath(stop.show);
@@ -145,20 +164,7 @@ export function EventStopView({ stop, hub, floor, now, teams, otherStops }: Even
   const parkingHref = !stop.tombstoned && upcoming.length && spotHeroCovers(hub) && hub.lat !== null && hub.lng !== null ? buildSpotHeroUrl({ latitude: hub.lat, longitude: hub.lng, subKey }) : null;
   const eventContext = { show: stop.show, venueSlug: stop.venueSlug };
 
-  // Parking: the hub's lots when it publishes them as a sourced claim. A
-  // note written for the home team's game days is cut to what holds on an
-  // event day; where nothing survives the lot name prints alone.
-  const tenantWords = tenantNameWords([...teams.map((t) => t.name), ...hub.tenantOverlays.map((t) => t.displayName ?? '')], [hub.city ?? '', hub.state ?? '', stop.searchCity]);
-  // A lot whose NAME carries a price or a tenant is left out altogether.
-  const lots = floor.parking && rendersParking({ ...hub, officialParkingUrls: [], parkingLotMapUrl: null })
-    ? hub.parkingLots.flatMap((l) => { const name = eventSafeLotName(l.name, tenantWords); return name ? [{ name, note: eventSafeParkingNote(l.notes, tenantWords) }] : []; })
-    : [];
-  // Transit: the lines the hub publishes, and its note cut to what holds for
-  // a touring show (no clock times, fares or match-day service).
-  const hubTransit = floor.transit && rendersTransit(hub) && hub.publicTransit ? hub.publicTransit : null;
-  const transitLines = hubTransit?.lines?.filter((l) => l?.trim()) ?? [];
-  const transitNote = hubTransit ? eventSafeTransitNote(hubTransit.notes, tenantWords) : '';
-  const transit = hubTransit && (transitLines.length || transitNote) ? { lines: transitLines, notes: transitNote } : null;
+  const { lots, transit } = head;
   const LOTS_SHOWN = 6;
   const reEntry = stop.reEntry.filter((r) => tl.upcoming.some((g) => g.visit.visitId === r.visitId));
   const faqs = stop.tombstoned ? [] : stopFaqs({ showName: show.name, searchCity: stop.searchCity, venueName, upcoming, bag, pitParty, gateTimes });
@@ -166,7 +172,7 @@ export function EventStopView({ stop, hub, floor, now, teams, otherStops }: Even
 
   const jsonLd: Array<Record<string, unknown>> = [
     breadcrumbJsonLd([{ name: 'Events', path: EVENTS_INDEX_PATH }, { name: show.name, path: hubHref }, { name: venueName, path: eventStopPath(stop.show, stop.venueSlug) }]),
-    ...upcoming.map((p) => performanceJsonLd({ showName: show.name, stopUrl: head.canonical, imageUrl: head.card.url, venue: { name: venueName, city: hub.city, state: hub.state, lat: hub.lat, lng: hub.lng }, performance: p })),
+    ...upcoming.map((p) => performanceJsonLd({ showName: show.name, stopUrl: head.canonical, imageUrl: head.card.url, venue: { name: venueName, city: hub.city, state: hub.state, lat: hub.lat, lng: hub.lng }, performance: p, hasTicketLink: !!ticketUrlFor(p) })),
   ];
   const indexLink = eventPageHref({ kind: 'index' }, 'events_hub_list');
   const hubLink = eventPageHref({ kind: 'hub', show: stop.show }, 'events_hub_list');
@@ -211,7 +217,7 @@ export function EventStopView({ stop, hub, floor, now, teams, otherStops }: Even
             {tl.upcoming.map((g) => (
               <div key={g.visit.visitId} className="flex flex-col gap-2" data-visit={g.visit.visitId}>
                 {tl.upcoming.length > 1 ? (
-                  <h3 className="m-0 mt-1 font-rd text-[12px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">{`${formatRange(g.performances[0].date, g.performances[g.performances.length - 1].date)}, ${g.performances[0].date.slice(0, 4)}`}</h3>
+                  <h3 className="m-0 mt-1 font-rd text-[12px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">{formatRangeWithYear(g.performances[0].date, g.performances[g.performances.length - 1].date)}</h3>
                 ) : null}
                 {g.performances.map((p) => {
                   const href = ticketUrlFor(p);
@@ -227,7 +233,7 @@ export function EventStopView({ stop, hub, floor, now, teams, otherStops }: Even
                         // while the show is upcoming, and the client leaf swaps
                         // it for "Started" at the start instant, without
                         // waiting for the page to be regenerated.
-                        <ShowtimeGate startsAt={p.startsAt} started={<span role="img" aria-label="This show has started" className="flex h-11 shrink-0 items-center justify-center rounded-xl border border-rd-line-strong bg-rd-cream px-3.5 font-rd text-[14px] font-medium text-rd-ink-faint">{STARTED_LABEL}</span>}>
+                        <ShowtimeGate startsAt={p.startsAt} started={<span className="flex h-11 shrink-0 items-center justify-center rounded-xl border border-rd-line-strong bg-rd-cream px-3.5 font-rd text-[14px] font-medium text-rd-ink-faint">{STARTED_LABEL}<span className="sr-only">: this show has started</span></span>}>
                           <TrackedAffiliateLink
                             href={href}
                             partner="ticketnetwork"
@@ -247,8 +253,8 @@ export function EventStopView({ stop, hub, floor, now, teams, otherStops }: Even
                         </ShowtimeGate>
                       ) : (
                         // No link: the stored status when it is "sold out", else a neutral label that claims nothing about the sale.
-                        <span role="img" aria-label={`${STATUS_LABEL[p.status]}: no ticket link for this show`} className="flex h-11 shrink-0 items-center justify-center rounded-xl border border-rd-line-strong bg-rd-cream px-3.5 font-rd text-[14px] font-medium text-rd-ink-faint">
-                          {STATUS_LABEL[p.status]}
+                        <span className="flex h-11 shrink-0 items-center justify-center rounded-xl border border-rd-line-strong bg-rd-cream px-3.5 font-rd text-[14px] font-medium text-rd-ink-faint">
+                          {STATUS_LABEL[p.status]}<span className="sr-only">: no ticket link for this show</span>
                         </span>
                       )}
                     </div>
@@ -378,7 +384,7 @@ export function EventStopView({ stop, hub, floor, now, teams, otherStops }: Even
                   {gateTimes.map((g) => {
                     const perf = perfOf(g.performance)!;
                     return (
-                      <li key={g.performance} className="font-rd text-[14px] leading-[1.45] text-rd-ink-soft">
+                      <li key={`${g.performance}-${g.opensAt}`} className="font-rd text-[14px] leading-[1.45] text-rd-ink-soft">
                         <strong className="text-rd-ink">{`${formatShortDay(perf.date)}, ${formatClock(perf.startTime)} show:`}</strong>{` gates open at ${formatClock(g.opensAt)}`}
                       </li>
                     );

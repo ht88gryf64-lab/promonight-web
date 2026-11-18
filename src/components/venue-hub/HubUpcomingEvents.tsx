@@ -26,7 +26,7 @@ export function HubUpcomingEvents({ stops, buildingName }: { stops: EventStopSum
               <EventPageLink href={link.href} linkSurface={link.surface} pageSurface="web_venue" show={s.show} venueSlug={s.venueSlug} className="inline-flex min-h-11 items-center text-sm font-semibold text-rd-link underline-offset-2 hover:underline md:text-base">
                 {`${EVENT_SHOWS[s.show].name}: dates and tickets`}
               </EventPageLink>
-              <span className="font-rd text-xs text-rd-ink-faint">{`${s.visitStarts.length > 1 ? `${formatRangeWithYear(s.nextDate, s.nextDate)} to ${formatRangeWithYear(s.lastDate, s.lastDate)}` : formatRangeWithYear(s.nextDate, s.lastDate)} · ${s.upcomingCount} ${s.upcomingCount === 1 ? 'show' : 'shows'}`}</span>
+              <span className="font-rd text-xs text-rd-ink-faint">{`${s.visitStarts.length > 1 ? `${s.visitStarts.length} visits, ${formatRangeWithYear(s.nextDate, s.nextDate)} to ${formatRangeWithYear(s.lastDate, s.lastDate)}` : formatRangeWithYear(s.nextDate, s.lastDate)} · ${s.upcomingCount} ${s.upcomingCount === 1 ? 'show' : 'shows'}`}</span>
             </li>
           ))}
         </ul>

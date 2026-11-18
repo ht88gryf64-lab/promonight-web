@@ -10,7 +10,9 @@ import {
   bagBlockFor,
   eventCardPath,
   eventPageHref,
+  eventLot,
   eventSafeLotName,
+  eventSafeTransitLines,
   eventSafeParkingNote,
   eventSafeTransitNote,
   eventsPageIdentity,
@@ -215,9 +217,16 @@ test('the bag block: the first that exists and nothing else, in the ruled order'
 
 test('parking notes: a sentence with a price, a tenant, a league or a game-day word is dropped; what is left may be nothing', () => {
   const tenants = tenantNameWords(['Minnesota Vikings']);
-  assert.deepEqual(tenants.sort(), ['Minnesota', 'Minnesota Vikings', 'Vikings']);
-  // The place words are left out, or "Minnesota" would silence every sentence naming the state.
-  assert.deepEqual(tenantNameWords(['Minnesota Vikings', 'Minnesota United FC', 'Boston Red Sox'], ['Minneapolis', 'Minnesota', 'Boston']).sort(), ['Boston Red Sox', 'Minnesota United FC', 'Minnesota Vikings', 'Sox', 'United', 'Vikings']);
+  assert.deepEqual(tenants.sort(), ['Minnesota Vikings', 'Vikings']);
+  // The full name and the nickname only: never a place word, never an ordinary-word nickname.
+  assert.deepEqual(tenantNameWords(['Minnesota Vikings', 'Minnesota United FC', 'Boston Red Sox', 'New York Giants', 'Los Angeles Angels', 'Chicago Fire', 'Philadelphia Union', 'Sporting Kansas City', 'Buffalo Bills']).sort(),
+    ['Boston Red Sox', 'Buffalo Bills', 'Chicago Fire', 'Los Angeles Angels', 'Minnesota United FC', 'Minnesota Vikings', 'New York Giants', 'Philadelphia Union', 'Sox', 'Sporting Kansas City', 'Vikings']);
+  // The known-bad sentences of the review (finding 5): each must SURVIVE.
+  const many = tenantNameWords(['New York Giants', 'New York Jets', 'Los Angeles Angels', 'Chicago Fire', 'Philadelphia Union', 'Buffalo Bills', 'Washington Nationals']);
+  for (const ok of ['NJ Transit trains run from New York Penn Station to the Meadowlands.', 'Metrolink trains from Los Angeles Union Station stop at ARTIC.', 'Do not park in fire lanes.', 'The garage is beside Union Station.']) assert.equal(eventSafeTransitNote(ok, many), ok, ok);
+  // The building's own name is a place: "Nationals Park" is not the tenant.
+  assert.equal(eventSafeParkingNote('Garage C is across from Nationals Park.', ['Nationals'], ['Nationals Park']), 'Garage C is across from Nationals Park.');
+  assert.equal(eventSafeParkingNote('Reserved for Nationals staff.', ['Nationals'], ['Nationals Park']), '');
   const note = 'Connected to the stadium by skyway. Rates start at $25 on game days. Vikings season ticket holders park here. Opens 4 hours before kickoff. Entrance on 4th Street.';
   assert.equal(eventSafeParkingNote(note, tenants), 'Connected to the stadium by skyway. Entrance on 4th Street.');
   // Phase 2B: a tailgate sentence is game-day copy.
@@ -227,9 +236,39 @@ test('parking notes: a sentence with a price, a tenant, a league or a game-day w
   assert.equal(eventSafeParkingNote(null, tenants), '');
   assert.equal(eventSafeParkingNote('On the east side at St. Paul Ave. Enter from 5th.', []), 'On the east side at St. Paul Ave. Enter from 5th.');
   assert.deepEqual(splitSentences('One. Two! Three? four'), ['One.', 'Two!', 'Three? four']);
+  // Review 2026-11-18, finding 2: an abbreviation is not the end of a sentence.
+  assert.deepEqual(splitSentences('Light rail runs to U.S. Bank Stadium Station. Buses serve St. Paul and Minneapolis.'), ['Light rail runs to U.S. Bank Stadium Station.', 'Buses serve St. Paul and Minneapolis.']);
+  assert.equal(eventSafeTransitNote('The Blue Line stops at U.S. Bank Stadium station, with extra trains on game days.', []), '');
+  assert.equal(eventSafeParkingNote('On Vikings game days, ramps near U.S. Bank Stadium fill early.', tenants), '');
+  assert.equal(eventSafeTransitNote('Trains run until 1 a.m. Friday and Saturday.', []), '');
+  assert.equal(eventSafeParkingNote('Enter from Dr. Martin Luther King Jr. Blvd. for Saints games only.', ['Saints']), '');
+  assert.equal(eventSafeParkingNote('Parking is $40. Cash only. Arrive early.', []), 'Arrive early.');
+  // Finding 4: more sentences that must go.
+  for (const bad of ['Free parking is available in the North Lot.', 'Complimentary parking for premium members.', 'Lots open at 9:00 AM.', 'Lots open four hours before the opening faceoff.', 'Permit only on football Saturdays.', 'Prepaid passes are required during the playoffs.', 'Preseason and postseason rates differ.', 'Parking is 30 cash.', 'Flat rate of 25.00, credit only.']) assert.equal(eventSafeParkingNote(bad, []), '', bad);
+  for (const bad of ['Complimentary shuttles run from the Park and Ride.', 'Ride at no charge with a ticket.', 'Trains run until midnight.', 'Service ends at noon on Sundays.', 'The last train leaves 45 minutes after the final whistle.', 'Extra trains run on hockey nights.']) assert.equal(eventSafeTransitNote(bad, []), '', bad);
+  for (const bad of ['Gameday Lot B', 'Season Ticket Holder Lot', 'Tailgate Lot', 'Suite Lot', 'Club Lot 4', 'Permit Lot']) assert.equal(eventSafeLotName(bad, []), '', bad);
+  assert.deepEqual(eventSafeTransitLines(['METRO Blue Line', 'Gameday Express', '', 42, 'Vikings Shuttle'], tenants), ['METRO Blue Line']);
+  assert.deepEqual(eventSafeTransitLines('METRO Blue Line', tenants), [], 'a value that is not a list never throws');
   // Review 2026-11-18, finding 9: the sentences the first filter let through.
-  const more = tenantNameWords(['Boston Red Sox', 'Minnesota United FC'], ['Boston', 'Minnesota']);
+  const more = tenantNameWords(['Boston Red Sox', 'Minnesota United FC']);
   for (const bad of ['Lots open four hours before kick off.', 'Sox fans park in Lot B.', 'United supporters enter at Gate 3.', 'Pregame tailgating is allowed here.', 'Lots open three hours before tipoff.', 'Opens two hours before puck drop on matchdays.', 'Parking is 30 per car, cash only.', 'Twenty dollars per car.']) assert.equal(eventSafeParkingNote(bad, more), '', bad);
+  // THE HIGH FINDING (review 2026-11-18): a lot tied to the home team or to a reserved class is LEFT OFF,
+  // never listed by its bare name. Each case is a real lot from the venue hubs.
+  const preds = tenantNameWords(['Nashville Predators']);
+  assert.equal(eventLot({ name: 'Nissan Stadium Parking', notes: 'Complimentary parking in Lot R across the river for Predators home games. Lot R and the shuttle open 2 hours before every Predators game.' }, preds), null);
+  assert.equal(eventLot({ name: 'Toyota Corolla Lot', notes: 'Avalanche Game: Permit only. Nuggets Game: Permit only.' }, tenantNameWords(['Colorado Avalanche', 'Denver Nuggets'])), null);
+  assert.equal(eventLot({ name: 'Toyota Camry Lot (VIP)', notes: 'Located on the southwest side of Ball Arena. Avalanche Game: Permit only.' }, tenantNameWords(['Colorado Avalanche'])), null, 'a partly conditioned lot is left off too');
+  assert.equal(eventLot({ name: 'Lot 4', notes: 'game-day ADA/disabled overflow parking, first come first serve' }, []), null);
+  assert.equal(eventLot({ name: 'South Lot', notes: 'Accessible parking; a placard and, for Colts games, a Colts parking pass are required. Denison Parking operates ~2,000 spaces across multiple lots surrounding the stadium.' }, tenantNameWords(['Indianapolis Colts'])), null);
+  for (const note of ['Suite parking', 'Club', 'Permit holders only.', 'Reserved for season ticket holders.']) assert.equal(eventLot({ name: 'Lot B', notes: note }, []), null, note);
+  // A general lot keeps its name and what holds on an event day; a price sentence alone does not remove it.
+  assert.deepEqual(eventLot({ name: 'Lot 1', notes: 'General' }, []), { name: 'Lot 1', note: 'General' });
+  assert.deepEqual(eventLot({ name: 'Orange Lot', notes: 'Enter via Gate 1 (Friars Road). Bus and RV tailgate spots available; purchase in advance.' }, []), { name: 'Orange Lot', note: 'Enter via Gate 1 (Friars Road).' });
+  assert.deepEqual(eventLot({ name: 'North Garage', notes: 'On 5th Street. Parking is $25.' }, []), { name: 'North Garage', note: 'On 5th Street.' });
+  // Stored with a note and nothing survives: left off. Stored with NO note: the name alone.
+  assert.equal(eventLot({ name: 'Big A Lot', notes: 'The only lot in which tailgating is permitted.' }, []), null);
+  assert.deepEqual(eventLot({ name: 'Lot 9', notes: null }, []), { name: 'Lot 9', note: '' });
+  assert.deepEqual(eventLot({ name: 'Lot 11', notes: '  ' }, []), { name: 'Lot 11', note: '' });
   // A lot NAME with a price or a tenant is not printed.
   assert.equal(eventSafeLotName('Lot 4', more), 'Lot 4');
   for (const bad of ['Lot 4 ($40)', 'Sox Players Lot', '', null]) assert.equal(eventSafeLotName(bad, more), '', String(bad));
@@ -276,7 +315,7 @@ test('"today" is the venue\'s day: a visit that starts tomorrow in Los Angeles i
 test('JSON-LD: one Event per performance with its offset, the building, a status and an offer on the STOP PAGE, with no price and no tracking URL', () => {
   const venue = { name: 'U.S. Bank Stadium', city: 'Minneapolis', state: 'Minnesota', lat: 44.9736, lng: -93.2575 };
   const stopUrl = 'https://www.getpromonight.com/events/monster-jam/us-bank-stadium';
-  const base = { showName: 'Monster Jam', stopUrl, imageUrl: 'https://www.getpromonight.com/api/event-card/monster-jam~us-bank-stadium?v=1', venue };
+  const base = { showName: 'Monster Jam', stopUrl, imageUrl: 'https://www.getpromonight.com/api/event-card/monster-jam~us-bank-stadium?v=1', venue, hasTicketLink: true };
   const ld = performanceJsonLd({ ...base, performance: STOP.performances[0] }) as Record<string, any>;
   assert.equal(ld['@type'], 'Event');
   assert.equal(ld.startDate, '2027-02-20T17:00:00-06:00');
@@ -287,6 +326,8 @@ test('JSON-LD: one Event per performance with its offset, the building, a status
   assert.equal(/"price|priceCurrency|lowPrice/.test(JSON.stringify(ld)), false);
   const sold = performanceJsonLd({ ...base, performance: { ...STOP.performances[0], status: 'soldout' } }) as Record<string, any>;
   assert.deepEqual(sold.offers, { '@type': 'Offer', url: stopUrl, availability: 'https://schema.org/SoldOut' });
+  // On sale but the row has no ticket button (no event id): the page cannot sell it, so no InStock claim (review 2026-11-18, finding 6).
+  assert.equal('offers' in performanceJsonLd({ ...base, hasTicketLink: false, performance: STOP.performances[0] }), false);
   // A status nobody read: no offer at all, never a guessed one.
   assert.equal('offers' in performanceJsonLd({ ...base, performance: { ...STOP.performances[0], status: 'unknown' } }), false);
   // No affiliate or tracking URL anywhere in structured data, whatever the performance carries:

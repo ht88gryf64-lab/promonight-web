@@ -34,7 +34,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { show, venue } = await params;
   const r = await resolveEventStop(show, venue);
   if (!r || r.kind === 'redirect') return {};
-  const head = eventStopHead(r.page.stop, r.page.hub, r.page.floor, nowForRequest());
+  // The same team links the body resolves (request-cached), so the description names only the cards the page prints.
+  const head = eventStopHead(r.page.stop, r.page.hub, r.page.floor, nowForRequest(), await resolveTenantTeamLinks(r.page.hub));
   const socialTitle = `${head.title} | PromoNight`;
   return {
     title: head.title,
