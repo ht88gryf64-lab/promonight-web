@@ -1,3 +1,7 @@
+import { HubUpcomingEvents } from '@/components/venue-hub/HubUpcomingEvents';
+import { getUpcomingStopsAtHub } from '@/lib/events/event-stops';
+import { isEventsPagesLive } from '@/lib/events/event-pages';
+import { displayVenueName } from '@/lib/venue-hub';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { archivoHouse } from '@/components/redesign/fonts-house';
@@ -70,13 +74,16 @@ export default async function VenueHubPage({ params }: { params: Promise<{ slug:
   if (!hub) notFound();
   // weekPromos is 1-3 per-tenant reads (getTeamPromos, the team page's own
   // read), never a collectionGroup scan. See getVenueHubWeekPromos.
-  const [ticketTeam, tenantLinks, weekPromos, nextGiveaways, vendors] = await Promise.all([
+  const [ticketTeam, tenantLinks, weekPromos, nextGiveaways, vendors, eventStops] = await Promise.all([
     resolveTicketTeam(hub),
     resolveTenantTeamLinks(hub),
     getVenueHubWeekPromos(hub),
     // The same per-tenant getTeamPromos read as the week scroller, request-cached.
     getVenueHubNextGiveaways(hub),
     getVenueHubVendors(hub.slug, hub.verified),
+    // Touring-show stops at this building (Phase 2, 2026-11-18). No read at
+    // all while EVENTS_PAGES_LIVE is off.
+    isEventsPagesLive() ? getUpcomingStopsAtHub(hub.slug, new Date()) : Promise.resolve([]),
   ]);
   // Postseason games at this building: the home games still to be played by
   // the clubs that play here. The building's clubs come from its own tenants
@@ -87,6 +94,7 @@ export default async function VenueHubPage({ params }: { params: Promise<{ slug:
     <div className={`${archivoHouse.variable} rd-root min-h-screen`} data-ad-region="content">
       <VenueHubView
         postseason={postseason ? <VenuePostseasonGames games={postseason} buildingSlug={hub.slug} /> : null}
+        events={eventStops.length ? <HubUpcomingEvents stops={eventStops} buildingName={displayVenueName(hub.name)} /> : null}
         hub={hub}
         canonicalUrl={`${BASE_URL}/venues/${slug}`}
         ticketTeam={ticketTeam}

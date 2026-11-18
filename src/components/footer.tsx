@@ -3,6 +3,8 @@ import { getAllTeams } from '@/lib/data';
 import { CFB_HUB, isCfbHubLive } from '@/lib/league-hubs';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { FooterTeamSitemap } from './footer-team-sitemap';
+import { EventPageLink } from '@/components/events/EventPageLink';
+import { eventPageHref } from '@/lib/events/event-pages';
 
 export async function Footer() {
   const [teams, coverage] = await Promise.all([getAllTeams(), getCoverageCounts()]);
@@ -71,6 +73,18 @@ export async function Footer() {
                   Stadium guides
                 </Link>
               </li>
+              {/* The sitewide Events link (surface footer_events), from the one
+                  helper: absent while EVENTS_PAGES_LIVE is off. */}
+              {(() => {
+                const events = eventPageHref({ kind: 'index' }, 'footer_events');
+                return events ? (
+                  <li>
+                    <EventPageLink href={events.href} linkSurface={events.surface} className="text-text-secondary text-sm hover:text-white transition-colors">
+                      Events
+                    </EventPageLink>
+                  </li>
+                ) : null;
+              })()}
               {/* Same registry gate as the redesign footer and the nav, so the
                   gate-off chrome carries a path to the college hub too. */}
               {isCfbHubLive() && CFB_HUB && (

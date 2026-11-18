@@ -127,6 +127,9 @@ export interface NightlyLoaders {
    *  and the promo pages whose Short changed. Optional, and a failure adds
    *  nothing. */
   promoPagesWithNewShorts?: () => Promise<string[]>;
+  /** Site batch only: every /events path (the index, the show hubs, the
+   *  stop pages), empty while the flag is off. Optional like the two above. */
+  eventPagePaths?: () => Promise<string[]>;
 }
 
 /** Every path a batch revalidates and warms, deduped, each one checked
@@ -149,6 +152,11 @@ export async function nightlyRefreshPaths(
       loaders.promoPagesDatedYesterday ? loaders.promoPagesDatedYesterday().catch(() => [] as string[]) : Promise.resolve([] as string[]),
       loaders.promoPagesWithNewShorts ? loaders.promoPagesWithNewShorts().catch(() => [] as string[]) : Promise.resolve([] as string[]),
     ]);
+    // /events, each show hub and each stop page (Phase 2, 2026-11-18): a stop
+    // page drops a ticket button by the clock and the lists drop a stop whose
+    // last show has started, so they ride the nightly batch. Empty while
+    // EVENTS_PAGES_LIVE is off; a failure adds no paths, like the two above.
+    const eventPagePaths = loaders.eventPagePaths ? await loaders.eventPagePaths().catch(() => [] as string[]) : [];
     // The fixed cross-team pages first: they are the slowest to render (each
     // reads every upcoming promo) and the most visible, so they get the most time.
     all = [
@@ -157,6 +165,7 @@ export async function nightlyRefreshPaths(
       ...hubs.map((slug) => `/venues/${slug}`),
       ...yesterdayPromoPages,
       ...newShortPages,
+      ...eventPagePaths,
     ];
   }
   const out: string[] = [];

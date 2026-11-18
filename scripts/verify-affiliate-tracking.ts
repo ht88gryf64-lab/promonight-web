@@ -37,6 +37,8 @@
 // The env value is never printed. Diagnostics name the defect (absent, empty,
 // whitespace, wrong host, missing template slot), not the content.
 
+import { buildEventTicketLink } from '../src/lib/affiliates';
+import { KNOWN_SURFACE_VALUES } from '../src/lib/analytics';
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { dirname, join, relative, resolve } from 'path';
 import { AFFILIATE_TRACKING_CONSTANTS } from '../src/lib/affiliates';
@@ -297,6 +299,30 @@ for (const pageFile of routeFiles(APP).sort()) {
       `emitter repeats per row, as ${relative(SRC, join(APP, 'promos', 'today', 'page.tsx'))} does.` +
       computedNote,
   );
+}
+
+// ── 5. Event pages (tour stops) ─────────────────────────────────────────────
+//
+// The events family has its own ticket link builder and its own surfaces. A
+// surface missing from KNOWN_SURFACE_VALUES would report every event click as
+// web_other; a builder that drifted from the blessed TicketNetwork prefix or
+// from {surface}_{show}_{venueSlug} would ship links the partner side cannot
+// attribute to a stop. Both are checked here against literals kept in THIS
+// file, like the constants above.
+{
+  const EVENT_SURFACES = ['web_event_page', 'web_event_hub'];
+  for (const sfc of EVENT_SURFACES) {
+    if (!(KNOWN_SURFACE_VALUES as readonly string[]).includes(sfc)) failures.push(`Event surface ${sfc} is missing from KNOWN_SURFACE_VALUES (src/lib/analytics.ts): its clicks would report as web_other.`);
+  }
+  const sample = buildEventTicketLink({ provider: 'ticketnetwork', eventId: 8258515, show: 'monster-jam', venueSlug: 'us-bank-stadium', surface: 'web_event_page' });
+  const expected =
+    'https://ticketnetwork.lusg.net/c/7236189/120057/2322?u=https%3A%2F%2Fwww.ticketnetwork.com%2Ftickets%2F8258515' +
+    '&partnerpropertyid=8313917&MediaPartnerPropertyId=8313917&subId1=web_event_page_monster-jam_us-bank-stadium';
+  // A preview deployment may carry the sub-ID override; only the sub ID may differ then.
+  const strip = (u: string | null) => (u ?? '').replace(/&subId1=[^&]*$/, '');
+  if (strip(sample) !== strip(expected)) failures.push(`Event ticket link drifted: expected=${JSON.stringify(expected)} actual=${JSON.stringify(sample)}`);
+  if (!process.env.NEXT_PUBLIC_TN_SUBID_OVERRIDE && sample !== expected) failures.push(`Event ticket sub ID drifted from {surface}_{show}_{venueSlug}: actual=${JSON.stringify(sample)}`);
+  if (buildEventTicketLink({ provider: 'ticketnetwork', eventId: null, show: 'monster-jam', venueSlug: 'us-bank-stadium', surface: 'web_event_page' }) !== null) failures.push('Event ticket link built without an event id: a performance with no id must get no link.');
 }
 
 if (failures.length > 0) {

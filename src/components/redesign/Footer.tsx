@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { FollowFooterCTA } from '@/components/follow/FollowFooterCTA';
 import { CFB_HUB, isCfbHubLive } from '@/lib/league-hubs';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
+import { EventPageLink } from '@/components/events/EventPageLink';
+import { eventPageHref, type EventLinkSurface } from '@/lib/events/event-pages';
 
 // Redesign v2 footer. The light team-page redesign uses a cream page with white
 // cards, but the footer is the one intentionally-dark surface: warm charcoal
@@ -20,7 +22,13 @@ interface FooterLink {
   label: string;
   href: string;
   external?: boolean;
+  /** A link into /events: rendered through EventPageLink with this surface. */
+  eventSurface?: EventLinkSurface;
 }
+
+// The sitewide Events link (surface footer_events), from the one helper: null,
+// and so absent, while EVENTS_PAGES_LIVE is off.
+const EVENTS_FOOTER_LINK = eventPageHref({ kind: 'index' }, 'footer_events');
 
 const BROWSE_LINKS: FooterLink[] = [
   { label: 'Promos today', href: '/promos/today' },
@@ -52,6 +60,7 @@ const DISCOVER_LINKS: FooterLink[] = [
   { label: 'Best promos', href: '/best-promos' },
   { label: 'Team rankings', href: '/team-rankings' },
   { label: 'Stadium guides', href: '/venues' },
+  ...(EVENTS_FOOTER_LINK ? [{ label: 'Events', href: EVENTS_FOOTER_LINK.href, eventSurface: EVENTS_FOOTER_LINK.surface }] : []),
   { label: 'World Cup 2026', href: '/world-cup' },
   ...(isCfbHubLive() && CFB_HUB ? [{ label: 'College football', href: CFB_HUB.href }] : []),
   { label: 'College football rivalries', href: '/cfb/rivalries' },
@@ -67,7 +76,11 @@ function FooterColumn({ heading, links }: { heading: string; links: FooterLink[]
       <ul className="mt-4 space-y-2.5">
         {links.map((link) => (
           <li key={link.href}>
-            {link.external ? (
+            {link.eventSurface ? (
+              <EventPageLink href={link.href} linkSurface={link.eventSurface} className="font-rd text-sm text-white/55 transition-colors hover:text-white">
+                {link.label}
+              </EventPageLink>
+            ) : link.external ? (
               <a
                 href={link.href}
                 className="font-rd text-sm text-white/55 transition-colors hover:text-white"

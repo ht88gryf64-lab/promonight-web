@@ -95,6 +95,7 @@ export function VenueHubView({
   nextGiveaways = [],
   vendors = [],
   postseason = null,
+  events = null,
 }: {
   hub: VenueHub;
   canonicalUrl: string;
@@ -112,6 +113,9 @@ export function VenueHubView({
   /** "Postseason games here", already rendered, for a building whose club
    *  still has a postseason home game to play. Null or absent otherwise. */
   postseason?: ReactNode;
+  /** "Upcoming events at {venue}": touring-show stops at this building
+   *  (src/components/venue-hub/HubUpcomingEvents.tsx). Null or absent otherwise. */
+  events?: ReactNode;
 }) {
   const short = displayVenueName(hub.name);
   // The bag-policy template (serp-targeting, rulings 2026-11-05): a verified
@@ -518,6 +522,11 @@ export function VenueHubView({
           answer block, inside its slot in page-content (ruling 9). */}
       {bagEligible ? null : factBand}
       {bagEligible ? null : nextGiveawaysBlock}
+      {/* "Upcoming events at {venue}" (Phase 2, 2026-11-18) rides with Next
+          giveaways in both placements, so it adds no direct child to
+          page-content and moves no ad anchor. Null while EVENTS_PAGES_LIVE is
+          off or the building has no upcoming stop. */}
+      {bagEligible ? null : events}
 
       {/* Content: single stack on mobile, two columns + sticky rail from lg up.
           The rail cards (planCard, ticketsCard) render inline on mobile and in
@@ -546,6 +555,7 @@ export function VenueHubView({
                 {bagCard}
                 {factBand ? <div className="mb-3 overflow-hidden rounded-xl">{factBand}</div> : null}
                 {nextGiveawaysBlock}
+                {events}
                 {postseason}
               </div>
             ) : postseason ? (

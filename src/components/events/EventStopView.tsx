@@ -1,0 +1,419 @@
+import type { ReactNode } from 'react';
+import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
+import { AFFILIATE_DISCLOSURE_TEXT } from '@/components/affiliates/AffiliateDisclosure';
+import { EventPageLink } from '@/components/events/EventPageLink';
+import { buildEventTicketLink, buildSpotHeroUrl, eventSubId, eventTicketVendor } from '@/lib/affiliates';
+import { cityState, displayVenueName, rendersTransit, spotHeroCovers, type TenantTeamLink, type VenueHub } from '@/lib/venue-hub';
+import { rendersParking } from '@/lib/venue-field-exclusions';
+import type { EventFloor, EventStopSummary } from '@/lib/events/event-stops';
+import {
+  EVENTS_INDEX_PATH,
+  EVENTS_NOT_AFFILIATED,
+  EVENTS_SITE_URL,
+  EVENT_CARD_HEIGHT,
+  EVENT_CARD_WIDTH,
+  STATUS_LABEL,
+  bagBlockFor,
+  breadcrumbJsonLd,
+  dayTile,
+  eventCardPath,
+  eventHubPath,
+  eventPageHref,
+  eventSafeParkingNote,
+  eventShowOf,
+  eventStopPath,
+  formatClock,
+  formatDatesLine,
+  formatRange,
+  formatShortDay,
+  performanceJsonLd,
+  showLabel,
+  showsBagRule,
+  stopDescription,
+  stopFaqs,
+  stopH1,
+  stopTimeline,
+  stopTitle,
+  stopYear,
+  tenantNameWords,
+  upcomingPerformances,
+  type EventPerformance,
+  type EventStop,
+} from '@/lib/events/event-pages';
+
+// The tour-stop page (/events/{show}/{venue}, Phase 2, 2026-11-18). Section
+// order, spacing, type and CTA shape follow docs/events-monster-jam-mockup.html,
+// drawn with the site's rd-* tokens like the per-promo page. Every word comes
+// from the stored stop and the venue hub's published view.
+//
+// THE ARTICLE IS THE AD WRAPPER, exactly as on a promo page: a real <article>
+// with page-content, whose direct children are the ad anchors, inside the
+// route layout's div.pn-promo-page. All ticket rows sit above the image card.
+export const EVENT_PAGE_SURFACE = 'web_event_page' as const;
+
+export interface EventStopViewProps {
+  stop: EventStop;
+  hub: VenueHub;
+  floor: EventFloor;
+  now: Date;
+  /** The building's home teams (their pages), for "Also at". */
+  teams: TenantTeamLink[];
+  /** Other upcoming stops of the show, soonest first. */
+  otherStops: EventStopSummary[];
+}
+
+/** Everything the head and the body both need, computed once. */
+export function eventStopHead(stop: EventStop, hub: VenueHub, floor: EventFloor, now: Date) {
+  const show = eventShowOf(stop.show)!;
+  const venueName = displayVenueName(hub.name);
+  const tl = stopTimeline(stop, now);
+  const upcoming = stop.tombstoned ? [] : upcomingPerformances(tl);
+  const visitIds = tl.upcoming.map((g) => g.visit.visitId);
+  const bag = stop.tombstoned ? null : bagBlockFor(stop, venueName, visitIds.length ? visitIds : stop.visits.map((v) => v.visitId));
+  const upKeys = new Set(upcoming.map((p) => p.key));
+  const pitParty = stop.pitParty.filter((p) => upKeys.has(p.performance));
+  const gateTimes = stop.gateTimes.filter((g) => upKeys.has(g.performance));
+  const year = stopYear(stop, tl);
+  const canonical = `${EVENTS_SITE_URL}${eventStopPath(stop.show, stop.venueSlug)}`;
+  const title = stopTitle(show.name, stop.searchCity, year, showsBagRule(bag));
+  const description = stopDescription({ showName: show.name, searchCity: stop.searchCity, venueName, dates: upcoming.map((p) => p.date), bagRule: showsBagRule(bag), parking: floor.parking, transit: floor.transit, pitParty: pitParty.length > 0 });
+  const card = { url: `${EVENTS_SITE_URL}${eventCardPath(stop)}`, width: EVENT_CARD_WIDTH, height: EVENT_CARD_HEIGHT, alt: `${show.name}${year ? ` ${year}` : ''} at ${venueName}, ${stop.searchCity}` };
+  // A removed stop, or one with nothing upcoming and nothing played, is not indexed.
+  const indexable = !stop.tombstoned && (upcoming.length > 0 || !!tl.lastVisit);
+  return { show, venueName, tl, upcoming, bag, pitParty, gateTimes, year, canonical, title, description, card, indexable };
+}
+
+const H2 = ({ children }: { children: ReactNode }) => (
+  <h2 className="rd-display m-0 text-[22px] uppercase text-rd-ink">{children}</h2>
+);
+const Card = ({ label, children }: { label: string; children: ReactNode }) => (
+  <div className="flex flex-col gap-1.5 rounded-[14px] border border-rd-line bg-rd-card p-3.5">
+    <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">{label}</span>
+    {children}
+  </div>
+);
+const Lead = ({ children }: { children: ReactNode }) => <span className="rd-display text-[20px] leading-[1.1] text-rd-ink">{children}</span>;
+const Body = ({ children }: { children: ReactNode }) => <p className="m-0 font-rd text-[14px] leading-[1.45] text-rd-ink-soft">{children}</p>;
+const hostOf = (url: string): string => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return 'source'; } };
+const readDate = (iso: string): string => { const d = new Date(iso); return Number.isFinite(d.getTime()) ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : ''; };
+/** "{host} · read {date} · source": a venue-printed fact names its page. */
+const Source = ({ url, observedAt }: { url: string; observedAt?: string }) => (
+  <span className="font-rd text-[11px] text-rd-ink-faint">
+    {hostOf(url)}
+    {observedAt && readDate(observedAt) ? ` · read ${readDate(observedAt)} · ` : ' · '}
+    <a href={url} target="_blank" rel="noopener nofollow" className="text-rd-link underline underline-offset-2">source</a>
+  </span>
+);
+
+function Tile({ ymd }: { ymd: string }) {
+  const d = dayTile(ymd);
+  return (
+    <div className="flex h-14 w-[52px] shrink-0 flex-col items-center justify-center rounded-[10px] bg-rd-ink text-white">
+      <span className="font-rd text-[10px] font-semibold tracking-[0.12em]">{d.weekday}</span>
+      <span className="rd-numerals text-[24px] leading-none">{d.day}</span>
+      <span className="font-rd text-[10px] font-semibold tracking-[0.12em]">{d.month}</span>
+    </div>
+  );
+}
+
+export function EventStopView({ stop, hub, floor, now, teams, otherStops }: EventStopViewProps) {
+  const head = eventStopHead(stop, hub, floor, now);
+  const { show, venueName, tl, upcoming, bag, pitParty, gateTimes } = head;
+  const provider = eventTicketVendor();
+  const hubHref = eventHubPath(stop.show);
+  const venueHref = `/venues/${hub.slug}`;
+  const place = cityState(hub);
+  const ticketUrlFor = (p: EventPerformance) => (p.status === 'onsale' ? buildEventTicketLink({ provider, eventId: p.tnEventId, show: stop.show, venueSlug: stop.venueSlug, surface: EVENT_PAGE_SURFACE }) : null);
+  const subKey = eventSubId(EVENT_PAGE_SURFACE, stop.show, stop.venueSlug);
+  const parkingHref = !stop.tombstoned && upcoming.length && spotHeroCovers(hub) && hub.lat !== null && hub.lng !== null ? buildSpotHeroUrl({ latitude: hub.lat, longitude: hub.lng, subKey }) : null;
+  const eventContext = { show: stop.show, venueSlug: stop.venueSlug };
+
+  // Parking: the hub's lots when it publishes them as a sourced claim. A
+  // note written for the home team's game days is cut to what holds on an
+  // event day; where nothing survives the lot name prints alone.
+  const tenantWords = tenantNameWords([...teams.map((t) => t.name), ...hub.tenantOverlays.map((t) => t.displayName ?? '')]);
+  const lots = floor.parking && rendersParking({ ...hub, officialParkingUrls: [], parkingLotMapUrl: null }) ? hub.parkingLots.filter((l) => l.name?.trim()).map((l) => ({ name: l.name.trim(), note: eventSafeParkingNote(l.notes, tenantWords) })) : [];
+  const transit = floor.transit && rendersTransit(hub) && hub.publicTransit ? hub.publicTransit : null;
+  const reEntry = stop.reEntry.filter((r) => tl.upcoming.some((g) => g.visit.visitId === r.visitId));
+  const faqs = stop.tombstoned ? [] : stopFaqs({ showName: show.name, searchCity: stop.searchCity, venueName, upcoming, bag, pitParty, gateTimes });
+  const perfOf = (key: string) => upcoming.find((p) => p.key === key);
+
+  const jsonLd: Array<Record<string, unknown>> = [
+    breadcrumbJsonLd([{ name: 'Events', path: EVENTS_INDEX_PATH }, { name: show.name, path: hubHref }, { name: venueName, path: eventStopPath(stop.show, stop.venueSlug) }]),
+    ...upcoming.map((p) => performanceJsonLd({ showName: show.name, stopUrl: head.canonical, imageUrl: head.card.url, venue: { name: venueName, city: hub.city, state: hub.state, lat: hub.lat, lng: hub.lng }, performance: p, ticketUrl: ticketUrlFor(p) })),
+  ];
+  const indexLink = eventPageHref({ kind: 'index' }, 'events_hub_list');
+  const hubLink = eventPageHref({ kind: 'hub', show: stop.show }, 'events_hub_list');
+
+  return (
+    <>
+      {jsonLd.map((s, i) => (
+        <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(s).replace(/</g, '\\u003c') }} />
+      ))}
+      <article className="page-content mx-auto w-full max-w-[640px] px-4 pb-10 lg:max-w-3xl" data-ad-region="content" data-event-stop={`${stop.show}~${stop.venueSlug}`} style={{ overflowAnchor: 'none' }}>
+        <nav aria-label="Breadcrumb" className="flex flex-wrap gap-1.5 pt-3.5 font-rd text-[12px] text-rd-ink-faint">
+          {indexLink ? <EventPageLink href={indexLink.href} linkSurface={indexLink.surface} className="no-underline hover:text-rd-ink">Events</EventPageLink> : <span>Events</span>}
+          <span aria-hidden="true">/</span>
+          {hubLink ? <EventPageLink href={hubLink.href} linkSurface={hubLink.surface} show={stop.show} className="no-underline hover:text-rd-ink">{show.name}</EventPageLink> : <span>{show.name}</span>}
+          <span aria-hidden="true">/</span>
+          <span aria-current="page" className="text-rd-ink-soft">{venueName}</span>
+        </nav>
+
+        <header className="flex flex-col gap-2.5 pt-3">
+          <div className="flex items-center gap-2">
+            <span className={`rounded-md px-2 py-1 font-rd text-[11px] font-semibold uppercase tracking-[0.12em] text-white ${stop.tombstoned ? 'bg-rd-ink-soft' : 'bg-rd-red'}`}>{stop.tombstoned ? 'Removed' : 'Live event'}</span>
+            {upcoming.length ? <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">{`${upcoming.length} ${upcoming.length === 1 ? 'show' : 'shows'}`}</span> : null}
+          </div>
+          <h1 className="rd-display m-0 text-[40px] uppercase leading-[0.95] tracking-[-0.01em] text-rd-ink">{stopH1(show.name, stop.searchCity, venueName)}</h1>
+          <p className="m-0 font-rd text-[15px] leading-[1.45] text-rd-ink-soft">
+            {stop.tombstoned ? (
+              <strong className="text-rd-ink">This stop has been removed from the schedule.</strong>
+            ) : upcoming.length ? (
+              <strong className="text-rd-ink">{formatDatesLine(upcoming.map((p) => p.date))}</strong>
+            ) : tl.returnsYear ? (
+              <strong className="text-rd-ink">{`Returns in ${tl.returnsYear}, dates TBA`}</strong>
+            ) : (
+              <strong className="text-rd-ink">Dates are not announced.</strong>
+            )}
+            {place ? (<><br />{place}</>) : null}
+          </p>
+        </header>
+
+        {!stop.tombstoned && upcoming.length ? (
+          <section aria-label="Showtimes and tickets" className="mt-[18px] flex flex-col gap-2">
+            <H2>Showtimes</H2>
+            {tl.upcoming.map((g) => (
+              <div key={g.visit.visitId} className="flex flex-col gap-2" data-visit={g.visit.visitId}>
+                {tl.upcoming.length > 1 ? (
+                  <h3 className="m-0 mt-1 font-rd text-[12px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">{`${formatRange(g.performances[0].date, g.performances[g.performances.length - 1].date)}, ${g.performances[0].date.slice(0, 4)}`}</h3>
+                ) : null}
+                {g.performances.map((p) => {
+                  const href = ticketUrlFor(p);
+                  return (
+                    <div key={p.key} data-performance={p.key} className="flex items-center gap-3 rounded-[14px] border border-rd-line bg-rd-card p-2.5">
+                      <Tile ymd={p.date} />
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <time dateTime={p.startsAt} className="rd-display text-[22px] leading-none text-rd-ink">{formatClock(p.startTime)}</time>
+                        <span className="font-rd text-[12px] text-rd-ink-faint">{showLabel(p)}</span>
+                      </div>
+                      {href ? (
+                        <TrackedAffiliateLink
+                          href={href}
+                          partner="ticketnetwork"
+                          teamId=""
+                          sport=""
+                          surface={EVENT_PAGE_SURFACE}
+                          placement="event_page_performance"
+                          ticketLinkLevel="event"
+                          eventContext={{ ...eventContext, performanceKey: p.key, provider: provider ?? undefined }}
+                          target="_blank"
+                          rel="noopener noreferrer sponsored"
+                          ariaLabel={`Tickets for ${show.name} at ${venueName}, ${formatShortDay(p.date)} at ${formatClock(p.startTime)}`}
+                          className="flex h-11 shrink-0 items-center justify-center rounded-xl bg-rd-red px-[18px] font-rd text-[15px] font-semibold text-white no-underline hover:brightness-95"
+                        >
+                          Tickets
+                        </TrackedAffiliateLink>
+                      ) : (
+                        <span aria-disabled="true" className="flex h-11 shrink-0 cursor-not-allowed items-center justify-center rounded-xl border border-rd-line-strong bg-rd-cream px-3.5 font-rd text-[14px] font-medium text-rd-ink-faint">
+                          {p.status === 'onsale' ? 'Not on sale' : STATUS_LABEL[p.status]}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+            <p className="m-0 mt-0.5 font-rd text-[11px] leading-[1.4] text-rd-ink-faint">{`${AFFILIATE_DISCLOSURE_TEXT} Times are local to the venue.`}</p>
+          </section>
+        ) : null}
+
+        {parkingHref ? (
+          <section className="mt-3 flex gap-2">
+            <TrackedAffiliateLink
+              href={parkingHref}
+              partner="spothero"
+              teamId=""
+              sport=""
+              surface={EVENT_PAGE_SURFACE}
+              placement="event_page_parking"
+              eventContext={eventContext}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              ariaLabel={`Reserve parking near ${venueName} on SpotHero`}
+              className="flex h-11 flex-1 items-center justify-center rounded-xl border border-rd-line-strong bg-rd-card font-rd text-[14px] font-medium text-rd-ink no-underline hover:border-rd-ink"
+            >
+              Parking
+            </TrackedAffiliateLink>
+          </section>
+        ) : null}
+
+        <figure className="m-0 mt-4 overflow-hidden rounded-2xl border border-rd-line bg-rd-ink">
+          {/* The generated text card: the wordmark, the show and year, the venue, the city and the dates. No photo, no art. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={eventCardPath(stop)} alt={head.card.alt} width={EVENT_CARD_WIDTH} height={EVENT_CARD_HEIGHT} loading="eager" decoding="async" className="block h-auto w-full" />
+        </figure>
+
+        {!stop.tombstoned && (bag || lots.length || transit || pitParty.length || gateTimes.length || reEntry.length) ? (
+          <section className="mt-6 flex flex-col gap-2.5">
+            <H2>Before you go</H2>
+            {bag ? (
+              <Card label={bag.label}>
+                {bag.kind === 'event-rule' ? (
+                  bag.rules.map((r, i) => (
+                    <div key={i} className="flex flex-col gap-1.5" data-bag="event-rule">
+                      <Body>{r.text}</Body>
+                      {/* The venue's page may cover one visit of several: say which, never imply the rest. */}
+                      {tl.upcoming.length > 1 && !tl.upcoming.every((g) => stop.bagRules.some((x) => x.visitId === g.visit.visitId && x.text === r.text)) ? (
+                        <Body>{`${venueName} prints this for the ${tl.upcoming.filter((g) => stop.bagRules.some((x) => x.visitId === g.visit.visitId && x.text === r.text)).map((g) => formatRange(g.performances[0].date, g.performances[g.performances.length - 1].date)).join(' and ')} ${'shows'}. It has not published a rule for the other dates on this page.`}</Body>
+                      ) : null}
+                      <Source url={r.sourceUrl} observedAt={r.observedAt} />
+                    </div>
+                  ))
+                ) : bag.kind === 'pointer' ? (
+                  <div className="flex flex-col gap-1.5" data-bag="pointer">
+                    <Body>{bag.text}</Body>
+                    <a href={bag.sourceUrl} target="_blank" rel="noopener nofollow" className="inline-flex min-h-11 items-center self-start font-rd text-[14px] font-medium text-rd-link underline underline-offset-2">{`${venueName} bag policy page`}</a>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1.5" data-bag={bag.kind}>
+                    <Body>{bag.text}</Body>
+                    {bag.kind === 'other-event-rule' ? <Body>{bag.caveat}</Body> : null}
+                    <Source url={bag.sourceUrl} observedAt={bag.observedAt} />
+                  </div>
+                )}
+              </Card>
+            ) : null}
+
+            {lots.length ? (
+              <Card label="Parking">
+                <ul className="m-0 flex list-none flex-col gap-2 p-0" data-parking="lots">
+                  {lots.map((l) => (
+                    <li key={l.name} className="flex flex-col gap-0.5">
+                      <span className="font-rd text-[14px] font-semibold text-rd-ink">{l.name}</span>
+                      {l.note ? <span className="font-rd text-[14px] leading-[1.45] text-rd-ink-soft">{l.note}</span> : null}
+                    </li>
+                  ))}
+                </ul>
+                <Body>Rates and lot access on an event day can differ from game days.</Body>
+              </Card>
+            ) : null}
+
+            {transit ? (
+              <Card label="Transit">
+                {transit.lines?.length ? <Lead>{transit.lines.join(', ')}</Lead> : null}
+                {transit.notes ? <Body>{transit.notes}</Body> : null}
+              </Card>
+            ) : null}
+
+            {pitParty.length ? (
+              <Card label="Pit Party">
+                <ul className="m-0 flex list-none flex-col gap-1.5 p-0" data-pit-party="">
+                  {pitParty.map((p) => {
+                    const perf = perfOf(p.performance)!;
+                    return (
+                      <li key={p.performance} className="font-rd text-[14px] leading-[1.45] text-rd-ink-soft">
+                        <strong className="text-rd-ink">{`${formatShortDay(perf.date)}, ${formatClock(perf.startTime)} show:`}</strong>{` Pit Party ${formatClock(p.start)} to ${formatClock(p.end)}`}
+                      </li>
+                    );
+                  })}
+                </ul>
+                <Body>{`Times as listed by ${venueName}. The Pit Party is a separate pass and is not sold through the ticket buttons above.`}</Body>
+                {[...new Set(pitParty.map((p) => p.sourceUrl))].map((u) => <Source key={u} url={u} observedAt={pitParty.find((p) => p.sourceUrl === u)!.observedAt} />)}
+              </Card>
+            ) : null}
+
+            {gateTimes.length ? (
+              <Card label="Gates open">
+                <ul className="m-0 flex list-none flex-col gap-1.5 p-0" data-gate-times="">
+                  {gateTimes.map((g) => {
+                    const perf = perfOf(g.performance)!;
+                    return (
+                      <li key={g.performance} className="font-rd text-[14px] leading-[1.45] text-rd-ink-soft">
+                        <strong className="text-rd-ink">{`${formatShortDay(perf.date)}, ${formatClock(perf.startTime)} show:`}</strong>{` gates open at ${formatClock(g.time)}`}
+                      </li>
+                    );
+                  })}
+                </ul>
+                {[...new Set(gateTimes.map((g) => g.sourceUrl))].map((u) => <Source key={u} url={u} observedAt={gateTimes.find((g) => g.sourceUrl === u)!.observedAt} />)}
+              </Card>
+            ) : null}
+
+            {reEntry.length ? (
+              <Card label="Re-entry">
+                {reEntry.map((r, i) => (
+                  <div key={i} className="flex flex-col gap-1.5" data-re-entry="">
+                    <Body>{r.text}</Body>
+                    <Source url={r.sourceUrl} observedAt={r.observedAt} />
+                  </div>
+                ))}
+              </Card>
+            ) : null}
+          </section>
+        ) : null}
+
+        {!stop.tombstoned && tl.lastVisit ? (
+          <section className="mt-6 flex flex-col gap-2.5" data-last-visit={tl.lastVisit.visit.visitId}>
+            <H2>Last visit</H2>
+            <div className="flex flex-col rounded-[14px] border border-rd-line bg-rd-card px-3.5 py-1">
+              {tl.lastVisit.performances.map((p, i, arr) => (
+                <div key={p.key} className={`flex items-center justify-between py-3 font-rd text-[14px] ${i < arr.length - 1 ? 'border-b border-rd-line' : ''}`}>
+                  <span className="font-semibold text-rd-ink">{`${formatShortDay(p.date)}, ${p.date.slice(0, 4)}`}</span>
+                  <time dateTime={p.startsAt} className="text-rd-ink-faint">{formatClock(p.startTime)}</time>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        <section className="mt-6 flex flex-col gap-2.5">
+          <H2>{`Also at ${venueName}`}</H2>
+          <EventPageLink href={venueHref} linkSurface="event_to_venue" show={stop.show} venueSlug={stop.venueSlug} className="flex items-center justify-between rounded-[14px] border border-rd-line bg-rd-card p-3.5 text-rd-ink no-underline">
+            <span className="flex flex-col gap-0.5"><span className="font-rd text-[14px] font-semibold">{`${venueName} guide`}</span><span className="font-rd text-[12px] text-rd-ink-faint">Venue page on PromoNight</span></span>
+            <span aria-hidden="true" className="text-rd-ink-faint">›</span>
+          </EventPageLink>
+          {teams.map((t) => (
+            <EventPageLink key={t.teamId} href={t.href} linkSurface="event_to_team" show={stop.show} venueSlug={stop.venueSlug} className="flex items-center justify-between rounded-[14px] border border-rd-line bg-rd-card p-3.5 text-rd-ink no-underline">
+              <span className="flex flex-col gap-0.5"><span className="font-rd text-[14px] font-semibold">{t.isCfb ? `${t.name} game days` : `${t.name} promos`}</span><span className="font-rd text-[12px] text-rd-ink-faint">{t.isCfb ? 'Schedule and game day guide' : 'Giveaways and theme nights'}</span></span>
+              <span aria-hidden="true" className="text-rd-ink-faint">›</span>
+            </EventPageLink>
+          ))}
+        </section>
+
+        {otherStops.length ? (
+          <section className="mt-6 flex flex-col gap-2.5">
+            <H2>{`More ${show.name} stops`}</H2>
+            <div className="flex flex-col rounded-[14px] border border-rd-line bg-rd-card px-3.5 py-1">
+              {otherStops.slice(0, 5).map((s, i, arr) => {
+                const link = eventPageHref({ kind: 'stop', show: s.show, venue: s.venueSlug }, 'events_hub_list');
+                if (!link) return null;
+                return (
+                  <EventPageLink key={s.venueSlug} href={link.href} linkSurface={link.surface} show={s.show} venueSlug={s.venueSlug} className={`flex min-h-11 items-center justify-between gap-3 py-3 text-rd-ink no-underline ${i < arr.length - 1 ? 'border-b border-rd-line' : ''}`}>
+                    <span className="font-rd text-[14px] font-semibold">{s.searchCity}</span>
+                    <span className="text-right font-rd text-[12px] text-rd-ink-faint">{`${displayVenueName(s.venueName)} · ${s.upcomingCount} ${s.upcomingCount === 1 ? 'show' : 'shows'}`}</span>
+                  </EventPageLink>
+                );
+              })}
+            </div>
+            {hubLink ? <EventPageLink href={hubLink.href} linkSurface={hubLink.surface} show={stop.show} className="inline-flex min-h-11 items-center self-start font-rd text-[14px] font-semibold text-rd-link no-underline hover:underline">See every stop by month</EventPageLink> : null}
+          </section>
+        ) : null}
+
+        {faqs.length ? (
+          <section className="mt-6 flex flex-col gap-2.5">
+            <H2>Questions</H2>
+            <div className="flex flex-col rounded-[14px] border border-rd-line bg-rd-card px-3.5 py-1">
+              {faqs.map((f, i) => (
+                <div key={f.q} className={`flex flex-col gap-1 py-3 ${i < faqs.length - 1 ? 'border-b border-rd-line' : ''}`}>
+                  <h3 className="m-0 font-rd text-[14px] font-semibold text-rd-ink">{f.q}</h3>
+                  <p className="m-0 font-rd text-[14px] leading-[1.45] text-rd-ink-soft">{f.a}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        <p className="m-0 mt-7 border-t border-rd-line pt-5 font-rd text-[11px] leading-[1.4] text-rd-ink-faint" data-events-note="">{EVENTS_NOT_AFFILIATED}</p>
+      </article>
+    </>
+  );
+}

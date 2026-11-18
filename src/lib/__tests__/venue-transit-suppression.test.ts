@@ -23,7 +23,7 @@ const WOULD_STRAND = [
   'citizens-bank-park', 'darrell-k-royal-texas-memorial-stadium', 'davis-wade-stadium',
   'donald-w-reynolds-razorback-stadium', 'empower-field', 'exploria-stadium', 'hard-rock-stadium',
   'jones-stadium', 'kenan-stadium', 'martin-stadium-northwestern-university',
-  'memorial-stadium-lincoln', 'moda-center', 'mt-bank-stadium', 'paycor-stadium', 'sofi-stadium',
+  'memorial-stadium-lincoln', 'mt-bank-stadium', 'paycor-stadium', 'sofi-stadium',
   'space-city-financial-stadium', 'target-center',
 ];
 // Third pass: huntington-bank-field silenced instead of relabelled (its
@@ -43,7 +43,19 @@ const VENUES_PASS = ['nationals-park', 'mercedes-benz-stadium'];
 const RENAME_RECHECK = ['coca-cola-coliseum', 'bank-of-america-stadium', 'sanford-stadium'];
 const EXPECTED = [...ELEVEN, ...WOULD_STRAND, ...THIRD_PASS, ...VENUES_PASS, ...RENAME_RECHECK];
 
-test('the suppression list is exactly the forty-three, each with its reason and its scope', () => {
+// moda-center left the list on 2026-11-18 (events Phase 2): the stale Green
+// Line text it silenced was replaced in venueHubs that day by text sourced to
+// TriMet's own Rose Quarter pages (pipeline correction F4), so the entry was
+// silencing a corrected claim.
+test('moda-center is no longer suppressed: its stored transit text was re-sourced to the agency on 2026-11-18', () => {
+  assert.equal(TRANSIT_SUPPRESSED.some((t) => t.hub === 'moda-center'), false);
+  assert.equal(transitSuppressed('moda-center'), false);
+  // Its neighbours in the list are untouched.
+  assert.equal(transitSuppressed('memorial-stadium-lincoln'), true);
+  assert.equal(transitSuppressed('mt-bank-stadium'), true);
+});
+
+test('the suppression list is exactly the forty-two, each with its reason and its scope', () => {
   assert.deepEqual(TRANSIT_SUPPRESSED.map((t) => t.hub), EXPECTED);
   for (const t of TRANSIT_SUPPRESSED) {
     assert.ok(t.reason.length > 80, `${t.hub}: the reason must name the service and its evidence`);
@@ -61,7 +73,7 @@ test('the suppression list is exactly the forty-three, each with its reason and 
 test('scope is recorded per entry, and the two corpora get different sets', () => {
   const hubScoped = TRANSIT_SUPPRESSED.filter((t) => t.applies.includes('hub')).map((t) => t.hub);
   const venuesScoped = TRANSIT_SUPPRESSED.filter((t) => t.applies.includes('venues')).map((t) => t.hub);
-  assert.equal(hubScoped.length, 41, 'hub-scoped: the original 38 plus the three rename-recheck failures');
+  assert.equal(hubScoped.length, 40, 'hub-scoped: the original 38 plus the three rename-recheck failures, less moda-center (re-sourced 2026-11-18)');
   assert.deepEqual(
     venuesScoped,
     ['loandepot-park', 'providence-park', 'exploria-stadium', 'nationals-park', 'mercedes-benz-stadium', 'bank-of-america-stadium'],

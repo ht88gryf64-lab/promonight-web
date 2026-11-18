@@ -1,3 +1,6 @@
+import { EventPageLink } from '@/components/events/EventPageLink';
+import { getUpcomingStopsAtHub } from '@/lib/events/event-stops';
+import { EVENT_SHOWS, TEAM_ALSO_AT_SKIP, eventPageHref, formatRangeWithYear, isEventsPagesLive } from '@/lib/events/event-pages';
 import type { Team, Venue } from '@/lib/types';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
@@ -33,6 +36,13 @@ export async function AffiliateRail({ team, venue, className }: AffiliateRailPro
   // the read /venues/[slug] makes. Separate from the link above, whose cached
   // map carries only the slug, name and index floor.
   const building = hub ? await getVenueHub(hub.slug) : null;
+  // "Also at {venue}" (Phase 2, 2026-11-18): ONE link to the next touring-show
+  // stop at this building, when one is upcoming. No read while
+  // EVENTS_PAGES_LIVE is off; the href and its surface (team_also_at) come
+  // from the one helper. A team whose page would cross the 950,000-byte cap
+  // with the link is skipped (TEAM_ALSO_AT_SKIP).
+  const alsoAtStop = hub && isEventsPagesLive() && !TEAM_ALSO_AT_SKIP.has(team.id) ? (await getUpcomingStopsAtHub(hub.slug, new Date()))[0] ?? null : null;
+  const alsoAt = alsoAtStop ? eventPageHref({ kind: 'stop', show: alsoAtStop.show, venue: alsoAtStop.venueSlug }, 'team_also_at') : null;
 
   return (
     <section className={className}>
@@ -66,6 +76,11 @@ export async function AffiliateRail({ team, venue, className }: AffiliateRailPro
             buildingSlug={hub.slug}
             buildingDisplayName={hub.displayName}
           />
+        ) : null}
+        {alsoAt && alsoAtStop && hub ? (
+          <EventPageLink href={alsoAt.href} linkSurface={alsoAt.surface} show={alsoAtStop.show} venueSlug={alsoAtStop.venueSlug} data-also-at="" className="inline-flex min-h-11 items-center font-rd text-[14px] font-medium text-rd-link no-underline hover:underline">
+            {`Also at ${hub.displayName}: ${EVENT_SHOWS[alsoAtStop.show].name}, ${formatRangeWithYear(alsoAtStop.nextDate, alsoAtStop.lastDate)}`}
+          </EventPageLink>
         ) : null}
       </div>
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { eventsPageIdentity } from '@/lib/events/event-pages';
 import { useEffect, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { inferSurfaceFromPath, track } from '@/lib/analytics';
@@ -92,6 +93,9 @@ export function PageViewTracker() {
         page_location: pageLocation,
         page_referrer: pageReferrer,
         page_path: pagePath,
+        // /events pages: page_type, show, venue slug and GA4's content_group
+        // (Phase 2, 2026-11-18). Nothing on any other path.
+        ...(eventsPageIdentity(pathname) ?? {}),
         // Resolved here rather than in the effect body so it shares the fate of
         // the event it labels: if the deferral is cancelled, nothing was read and
         // nothing was written. The value does not depend on the timing, because

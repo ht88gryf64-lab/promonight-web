@@ -35,6 +35,24 @@ export type AffiliatePartner =
 // cases remain wired and exercised by the stacked CTA.
 export const TICKET_VENDOR: 'ticketnetwork' | 'ticketmaster' = 'ticketnetwork';
 
+// EVENTS (tour stops, Phase 2, 2026-11-18). A performance stores one event id
+// per provider (eventStops/.../performances providerEvents); this picks which
+// one the "Tickets" button uses. It follows TICKET_VENDOR when events store an
+// id for that vendor, unless EVENT_TICKET_VENDOR_OVERRIDE names another: the
+// spec keeps events switchable on their own, since a family show may earn
+// differently from a league game. Null means no provider can serve the
+// button, and the row then shows its status with no link.
+export const EVENT_TICKET_PROVIDERS = ['ticketnetwork'] as const;
+export type EventTicketProvider = (typeof EVENT_TICKET_PROVIDERS)[number];
+export const EVENT_TICKET_VENDOR_OVERRIDE: EventTicketProvider | null = null;
+export function eventTicketVendor(
+  siteVendor: string = TICKET_VENDOR,
+  override: EventTicketProvider | null = EVENT_TICKET_VENDOR_OVERRIDE,
+): EventTicketProvider | null {
+  if (override) return override;
+  return (EVENT_TICKET_PROVIDERS as readonly string[]).includes(siteVendor) ? (siteVendor as EventTicketProvider) : null;
+}
+
 export type AffiliateLinkOptions = {
   surface: AnalyticsSurface;
   promoId?: string | null;
@@ -497,6 +515,50 @@ export function buildTicketNetworkLink(opts: TicketNetworkLinkOpts): string | nu
     `&MediaPartnerPropertyId=${TICKETNETWORK.partnerPropertyId}` +
     `&subId1=${subId1}`,
     opts.pageSlug,
+  );
+}
+
+// ── Event tickets (tour stops) ─────────────────────────────────────────────
+// A stop has no team, so it has its own builder and its own guard. The link
+// wraps the performance's own event page, addressed by id
+// (https://www.ticketnetwork.com/tickets/{eventId}); there is no performer-page
+// fallback: a performance without an id, or one that is not on sale, gets no
+// link (the row shows its status instead). subId1 is
+// {surface}_{show}_{venueSlug}, so the partner side reports sales per stop,
+// apart from team sales (docs/cta-registry.md).
+export type EventTicketSurface = 'web_event_page' | 'web_event_hub';
+const EVENT_SLUG_RE = /^[a-z0-9][a-z0-9-]{0,79}$/;
+
+/** {surface}_{show}_{venueSlug}, sanitised and capped like every TicketNetwork sub ID. */
+export function eventSubId(surface: EventTicketSurface, show: string, venueSlug: string): string {
+  return tnSubId(surface, `${show}_${venueSlug}`);
+}
+
+export type EventTicketLinkOpts = {
+  provider: EventTicketProvider | null;
+  /** providerEvents.{provider}.eventId of the performance. */
+  eventId: number | null | undefined;
+  show: string;
+  venueSlug: string;
+  surface: EventTicketSurface;
+};
+
+/** The tracked ticket link for ONE performance, or null when any part is not
+ *  what it must be (unknown provider or surface, an id that is not a positive
+ *  integer, a show or venue that is not a slug). */
+export function buildEventTicketLink(opts: EventTicketLinkOpts): string | null {
+  if (opts.provider !== 'ticketnetwork') return null;
+  if (opts.surface !== 'web_event_page' && opts.surface !== 'web_event_hub') return null;
+  if (typeof opts.eventId !== 'number' || !Number.isSafeInteger(opts.eventId) || opts.eventId <= 0) return null;
+  if (!EVENT_SLUG_RE.test(opts.show) || !EVENT_SLUG_RE.test(opts.venueSlug)) return null;
+  const landing = `https://www.ticketnetwork.com/tickets/${opts.eventId}`;
+  if (!isTicketNetworkEventUrl(landing)) return null;
+  const subId1 = TN_SUBID_OVERRIDE ?? eventSubId(opts.surface, opts.show, opts.venueSlug);
+  return (
+    `${TICKETNETWORK.prefix}?u=${encodeURIComponent(landing)}` +
+    `&partnerpropertyid=${TICKETNETWORK.partnerPropertyId}` +
+    `&MediaPartnerPropertyId=${TICKETNETWORK.partnerPropertyId}` +
+    `&subId1=${subId1}`
   );
 }
 
