@@ -29,6 +29,12 @@ export function renderVenueViewRaw(hub: VenueHub): string {
   );
 }
 
+/** The second named addition (events restyle, 2026-11-18): the Transit row of
+ *  the Getting in card carries id="transit", the target of an event stop
+ *  page's "Transit on the {Venue} guide" link. Removed the same way, and
+ *  pinned by the same test. */
+export const TRANSIT_ANCHOR_OPEN = '<div id="transit" class="scroll-mt-24">';
+
 export function renderVenueView(hub: VenueHub): string {
-  return renderVenueViewRaw(hub).split(PARKING_ANCHOR).join('');
+  return renderVenueViewRaw(hub).split(PARKING_ANCHOR).join('').split(TRANSIT_ANCHOR_OPEN).join('<div>');
 }

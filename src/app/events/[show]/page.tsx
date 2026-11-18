@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const r = await load(params);
   if (!r) return {};
   const title = hubTitle(r.show.name, r.year);
-  const description = `${r.show.name}${r.year ? ` ${r.year}` : ''} stops at venues PromoNight covers, by month: dates, a ticket link for every show, and each venue's bag, parking and transit details.`;
+  const description = `${r.show.name}${r.year ? ` ${r.year}` : ''} stops at venues PromoNight covers, by month: dates, a ticket link for every show, and each venue's bag and transit details.`;
   const canonical = `${EVENTS_SITE_URL}${eventHubPath(r.show.slug)}`;
   return {
     title,

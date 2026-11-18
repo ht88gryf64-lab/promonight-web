@@ -89,7 +89,7 @@ Not targeted: "monster jam" 154,000 and "monster jam tickets" 12,000.
 
 Title and heading rules:
 - Stop page title: "Monster Jam {City} {Year}: Dates, Tickets and Bag Policy | PromoNight". The year is the year of the last upcoming performance and is in the title, never in the URL. When the page prints no bag rule (pointer only) the title is "Monster Jam {City} {Year}: Dates and Tickets | PromoNight".
-- Stop page H1: "Monster Jam {City} at {Venue}". City first, since the city term carries about ten times the venue term.
+- Stop page H1: "Monster Jam {City}" (ruling 2026-11-18, Phase 3A; it was "Monster Jam {City} at {Venue}" until then). The venue is on the line under the H1. Title tags, descriptions and JSON-LD still name the venue as before.
 - {City} is the city fans search, which is not always the venue's postal city (Anaheim, Arlington, Foxborough, East Rutherford, Elmont). Store it as an explicit field per stop; do not derive it from the address.
 - Hub title: "Monster Jam {Year}: Dates, Tickets and Venue Guides | PromoNight" (changed 2026-11-18: the hub lists stops at venues PromoNight covers, so it does not claim to be the schedule or every stop).
 - No hardcoded counts in copy; derive from source functions.
@@ -116,6 +116,17 @@ One Event per performance (own startDate and offer), not one per page. The offer
 - Do not scrape truck art or promotional images. They belong to Feld Entertainment and trucks like Grave Digger are trademarked characters.
 - GENERATED CARD ONLY (ruling 2026-11-17): a text card per stop from the per-promo card step (PromoNight wordmark, "Monster Jam {Year}", venue, search city, date range), served at /api/event-card/{show}~{venue}. It is the page image, the og:image and the JSON-LD image. No truck art, no logos, no fetched image of any kind. No program terms on file cover TicketNetwork performer or event images, so those are never fetched or stored.
 - Truck names in text are fine. Logos and art are not. Feld press media is editorial-licensed; do not use without written permission.
+
+### Hero photo (ruling 2026-11-18, Phase 2D)
+
+A RULED EXCEPTION to the never-stock rule, for decorative show heroes only. It does not extend to a stop, a venue, a truck or any page outside /events.
+
+- File: `public/events/monster-jam-hero.jpg` (2576 by 1717), served through next/image at responsive sizes as the priority image, on the show hub and on every stop page. It is the only fetched image on an /events page.
+- Source: https://pixabay.com/photos/stunt-monster-truck-vehicles-6711478/
+- License: Pixabay Content License. Downloaded by Matt on 2026-11-18.
+- Credit line, printed under the hero wherever the photo shows: "Photo: Marion Wellmann / Pixabay. Not a truck from this show."
+- NO CROP (ruling 2026-11-18): the full truck, grille included, the crushed cars and the sky above it stay in frame at every width. The page gives the photo its natural 3:2 box (no object-fit, no fixed height), so nothing is cut at any width; the box stops at 640px (440px on a desktop, so the first Tickets button stays on the first screen of a 1280x800 laptop) and the dark band fills the sides.
+- The generated text card stays the og:image and the JSON-LD image. It is no longer repeated inside the page.
 
 ## Navigation and internal linking
 - NOTHING FROM THE TOUR OPERATOR (ruling 2026-11-17): nothing is ingested, hand-entered or quoted from monsterjam.com or feldentertainment.com, and no page links to them. Every /events page carries the line "PromoNight is not affiliated with Monster Jam or Feld Entertainment."
@@ -181,6 +192,21 @@ Boundaries:
 - Mockup sections NOT built, because nothing stored backs them: the three quick tiles (run time, halftime, ear protection), "Going with kids", the stroller question and the "How long is the show?" answer.
 - Team-page link byte cost: measured against the 950,000-byte cap; see the Phase 2 report. `TEAM_ALSO_AT_SKIP` lists any team page that would cross it.
 - moda-center: its object was deleted from `TRANSIT_SUPPRESSED`. That changes the live Moda Center venue page at merge, independent of the flag.
+
+## Restyle (2026-11-18, branch feature/events-restyle, preview only)
+
+Design target: `docs/events-monster-jam-mockup-v2.html`. It supersedes the first mockup for look and section order. The site header and footer are unchanged (the mockup's dark header and footer are illustration only). The events accent is #f5c518; buttons stay PromoNight red.
+
+- Hero: a dark band holding the breadcrumb, the photo, the "Live event" badge, the countdown, the H1 and the dates, then the credit line and a hazard stripe. The hero and "Pick your show" are one child of the article, so no ad can land between them.
+- Countdown: days to the first upcoming show on the venue's calendar ("94 days away"; "Tomorrow"; "Today"). The server prints it and a client leaf recomputes it in the venue's zone on load and each minute; the page is also regenerated hourly and by the nightly refresh. None when nothing is upcoming.
+- "Pick your show": one card per show (date tile, time, day part, Tickets). Where the venue's Pit Party time is stored for a show it prints as a strip on that show's card.
+- Hour by hour: a card only for a show with at least one stored Pit Party or gate time. Its entries are stored times only (Pit Party opens, Pit Party closes, Gates open, Show starts), each venue time attributed with its source link. No invented step.
+- Before you go: one card, a row each for bags (the existing precedence, unchanged), transit and parking, plus a re-entry row when the venue printed one.
+  - Transit: the hub's structured lines as a plain list and a link to the venue guide's Transit row (`/venues/{slug}#transit`). No notes prose. The transit sentence filter and its tests are deleted. A hub with no structured lines shows the link alone. The row exists exactly when the venue page prints its own Transit row (`transitRowModel`).
+  - Parking: as built in Phase 2C (one line, the venue guide link, Reserve parking). The separate "Parking" button under the showtimes is gone; the row's button is the page's one parking CTA.
+- "Also at {Venue}": tiles (the venue guide and each home team). "More Monster Jam stops": dark tiles with dates; link text "See all stops we cover".
+- Hub: the same photo heads it. A multi-visit stop appears under each month with only that month's visit dates and show count. No promise of parking details. Counts read "N stops we cover".
+- Flag-independent change: the venue page's Transit row carries `id="transit"` (the link's target), like the `#parking` anchor of Phase 2C.
 
 ## Phase 0 findings (2026-11-17)
 - TicketNetwork: the Impact catalog returns 233 Monster Jam items at 71 venues with stable event ids, but no showtimes (LaunchDate is midnight UTC). Showtimes, availability and the same event id come from the venue-scoped TicketNetwork page. 47 of 71 venues have two shows on one day, so performances are keyed by date and time and the date-keyed matcher is not reused.

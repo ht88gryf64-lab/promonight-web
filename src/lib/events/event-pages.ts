@@ -294,88 +294,95 @@ export function bagBlockFor(stop: Pick<EventStop, 'bagPolicy' | 'bagRules'>, ven
 /** Whether the page prints a bag RULE (a pointer is not one). */
 export const showsBagRule = (b: BagBlock | null): boolean => !!b && b.kind !== 'pointer';
 
-// ── transit notes: what survives on an event day ────────────────────────────
-// (There is no parking filter: a stop page prints no hub lot. Ruling 2026-11-18.)
+// ── transit ────────────────────────────────────────────────────────────────
+// A stop page prints the hub's STRUCTURED transit lines as a plain list and
+// links the venue guide's transit row. It prints no hub notes prose, so there
+// is no sentence filter (ruling 2026-11-18, Phase 2D): a note written around a
+// home game stays on the venue page, where its context is.
 
-const LEAGUE_WORDS = ['NFL', 'NBA', 'NHL', 'MLB', 'MLS', 'WNBA', 'NCAA'];
-const GAME_WORDS_RE = /\b(?:games?|gamedays?|first pitch|kick[- ]?offs?|(?:pre|post)?-?seasons?|pre-?games?|post-?games?|tip-?offs?|puck drop|face-?offs?|final whistle|playoffs?|openers?|match(?:es)?|match ?days?|supporters?|tailgat\w*|ballgames?|ballparks?|homestands?|home stands?|opening day|football|baseball|basketball|hockey|soccer)\b/i;
-/** Transit only (review 2026-11-18): a clock time, a fare claim, or a
- *  before-and-after service note belongs to the event it was written for. */
-const CLOCK_WORDS_RE = /\b\d{1,2}:\d{2}\s?(?:a\.?m\.?|p\.?m\.?)?|\b\d{1,2}\s?(?:a\.?m\.?|p\.?m\.?)\b|\b(?:midnight|noon)\b/i;
-const TRANSIT_WORDS_RE = /\b(?:pre-event|post-event|fares?|free(?!-)|no cost|discount\w*|costs?|every \d+ minutes|\d+ (?:minutes?|hours?) (?:before|after)|(?:one|two|three|four) hours? (?:before|after)|event days?|complimentary|no charge|promo(?:tion)?s?|kids?|children)\b/i;
-const CURRENCY_RE = /[$£€]\s?\d|\d\s?(?:dollars?|bucks)\b|\bUSD\b|\bdollars?\b|\b\d+\s+per\s+(?:car|vehicle|space|day)\b|\b\d+(?:\.\d{2})?\s+cash\b|\bcash only\b|\b(?:flat )?rates?\b|\bfree\b(?!-)|\bcomplimentary\b|\bno charge\b|\bprepaid\b/i;
+// ── the hero: photo, accent, countdown ──────────────────────────────────────
 
-/** Sentences of a hub note. Splits on a full stop, question mark or
- *  exclamation mark followed by a space and a capital, so "St. Paul" and
- *  "4.5 by 6.5" stay whole in the common cases. */
-export function splitSentences(text: string): string[] {
-  const parts = String(text || '').replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s+(?=[A-Z0-9"(])/).map((x) => x.trim()).filter(Boolean);
-  // A piece that ends in an abbreviation is not the end of a sentence: "U.S."
-  // "Bank Stadium", "St." "Paul", "1 a.m." "Friday" are rejoined. Without
-  // this a dropped clause could leave "The Blue Line stops at U.S." behind.
-  const out: string[] = [];
-  for (const piece of parts) {
-    if (out.length && ABBREVIATION_END_RE.test(out[out.length - 1])) out[out.length - 1] += ` ${piece}`;
-    else out.push(piece);
-  }
-  return out;
-}
-const ABBREVIATION_END_RE = /(?:^|[\s(])(?:U\.S|St|Ste|Ave|Blvd|Dr|Jr|Sr|Rd|Mt|Ft|Hwy|Pkwy|No|approx|a\.m|p\.m)\.$/;
+/** The decorative photo that heads a show's hub and stop pages. A RULED
+ *  EXCEPTION to the never-stock rule, for decorative show heroes only
+ *  (docs/events-monster-jam-spec.md, "Hero photo"). Shown whole: the markup
+ *  gives it its natural 3:2 box, so no width can crop the truck. */
+export const EVENT_HERO: Record<EventShowSlug, { src: string; width: number; height: number; alt: string; credit: string }> = {
+  'monster-jam': {
+    src: '/events/monster-jam-hero.jpg',
+    width: 2576,
+    height: 1717,
+    alt: 'A monster truck on top of two crushed cars in a dirt field at sunset',
+    credit: 'Photo: Marion Wellmann / Pixabay. Not a truck from this show.',
+  },
+};
+/** The events accent (the mockup's yellow). Buttons stay PromoNight red. */
+export const EVENTS_ACCENT = '#f5c518';
 
-function tenantNameRe(tenantNames: string[]): RegExp | null {
-  const names = [...LEAGUE_WORDS, ...tenantNames].map((n) => n.trim()).filter((n) => n.length >= 3);
-  return names.length ? new RegExp(`\\b(?:${names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'i') : null;
+/** Whole days from `todayYmd` to `firstYmd`, both calendar days in the venue's zone. */
+export function daysUntil(firstYmd: string, todayYmd: string): number | null {
+  if (!EVENT_YMD_RE.test(firstYmd) || !EVENT_YMD_RE.test(todayYmd)) return null;
+  const utc = (ymd: string) => Date.UTC(Number(ymd.slice(0, 4)), Number(ymd.slice(5, 7)) - 1, Number(ymd.slice(8, 10)));
+  return Math.round((utc(firstYmd) - utc(todayYmd)) / 86_400_000);
 }
-/** The building's own name is not a tenant: "Nationals Park" and "Union
- *  Station Garage" are places. The names passed here are removed from a
- *  sentence before it is tested for a tenant word. */
-function withoutOwnNames(text: string, ownNames: string[]): string {
-  let out = text;
-  for (const n of ownNames.map((x) => String(x || '').trim()).filter((x) => x.length >= 4).sort((a, b) => b.length - a.length)) out = out.split(new RegExp(n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')).join(' ');
-  return out;
+/** "94 days away"; today and tomorrow as words; null when the day has passed. */
+export function countdownLabel(firstYmd: string | null | undefined, todayYmd: string): string | null {
+  const n = firstYmd ? daysUntil(firstYmd, todayYmd) : null;
+  if (n === null || n < 0) return null;
+  return n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : `${n} days away`;
 }
+/** The date of the first show that has not started at `now` (shows in start order), or null. */
+export function firstUpcomingDate(shows: ReadonlyArray<{ date: string; startsAt: string }>, now: Date): string | null {
+  const t = now.getTime();
+  return shows.find((s) => { const at = Date.parse(s.startsAt); return Number.isFinite(at) && at > t; })?.date ?? null;
+}
+/** The countdown for an instant, in the venue's zone. */
+export function countdownAt(firstYmd: string | null | undefined, now: Date, timeZone: string | null | undefined): string | null {
+  return countdownLabel(firstYmd, ymdInZone(now, timeZone));
+}
+
+// ── the hub's month lines ───────────────────────────────────────────────────
+
+/** A stop's line under ONE month of the hub: only the visits that start in
+ *  that month, each as its own range, with their own show count. A building
+ *  with four weekends reads "Jan 16 to 17 and Jan 30 to 31, 2027" under
+ *  January and nothing of December or February. */
+export function monthVisitLine(s: { visits: Array<{ start: string; end: string; shows: number }> }, ym: string): { dates: string; shows: number } | null {
+  const mine = s.visits.filter((v) => v.start.slice(0, 7) === ym);
+  if (!mine.length) return null;
+  const last = mine[mine.length - 1];
+  const head = mine.slice(0, -1).map((v) => formatRange(v.start, v.end));
+  return { dates: [...head, formatRangeWithYear(last.start, last.end)].join(' and '), shows: mine.reduce((n, v) => n + v.shows, 0) };
+}
+
+// ── the hour-by-hour card ───────────────────────────────────────────────────
+
+export type ShowTimelineKind = 'pit-open' | 'pit-close' | 'gates' | 'show';
+export interface ShowTimelineEntry { at: string; kind: ShowTimelineKind; text: string }
 /**
- * The hub's transit note, cut for an event page: the parking rule plus the
- * transit words. A hub note written around a home game can carry that game's
- * trolley times, a fare offer or a match-day frequency (Snapdragon Stadium,
- * review 2026-11-18); none of that holds for a touring show.
+ * One show's day from STORED times only: the venue's Pit Party start and end,
+ * the venue's gate time, and the stored showtime. Null unless the show has at
+ * least one stored Pit Party or gate time (a card holding the showtime alone
+ * would say nothing the show card does not). No step is invented: nothing
+ * about arriving, parking, intermission or the end of the show.
  */
-export function eventSafeTransitNote(note: string | null | undefined, tenantNames: string[], ownNames: string[] = []): string {
-  const nameRe = tenantNameRe(tenantNames);
-  return splitSentences(note ?? '')
-    .filter((x) => { const t = withoutOwnNames(x, ownNames); return !CURRENCY_RE.test(t) && !GAME_WORDS_RE.test(t) && !CLOCK_WORDS_RE.test(t) && !TRANSIT_WORDS_RE.test(t) && !(nameRe && nameRe.test(t)); })
-    .join(' ');
+export function showTimeline(performance: Pick<EventPerformance, 'key' | 'startTime'>, pitParty: EventPitParty[], gateTimes: EventGateTime[]): ShowTimelineEntry[] | null {
+  // A stored time that is not HH:mm cannot be placed or printed: it is left out, never guessed.
+  const HHMM = /^\d{2}:\d{2}$/;
+  const seen = new Set<string>();
+  const once = (k: string) => (seen.has(k) ? false : (seen.add(k), true));
+  const pit = pitParty.filter((p) => p.performance === performance.key && HHMM.test(p.start) && HHMM.test(p.end) && once(`p${p.start}-${p.end}`));
+  const gates = gateTimes.filter((g) => g.performance === performance.key && HHMM.test(g.opensAt) && once(`g${g.opensAt}`));
+  if (!pit.length && !gates.length) return null;
+  const order: Record<ShowTimelineKind, number> = { 'pit-open': 0, 'pit-close': 1, gates: 2, show: 3 };
+  const rows: ShowTimelineEntry[] = [
+    ...pit.flatMap((p): ShowTimelineEntry[] => [{ at: p.start, kind: 'pit-open', text: 'Pit Party opens.' }, { at: p.end, kind: 'pit-close', text: 'Pit Party closes.' }]),
+    ...gates.map((g): ShowTimelineEntry => ({ at: g.opensAt, kind: 'gates', text: 'Gates open.' })),
+    { at: performance.startTime, kind: 'show', text: 'Show starts.' },
+  ];
+  return rows.sort((a, b) => a.at.localeCompare(b.at) || order[a.kind] - order[b.kind]);
 }
-/** A transit LINE name is kept unless it carries a price, a game-day word or a tenant. */
-export function eventSafeTransitLines(lines: unknown, tenantNames: string[], ownNames: string[] = []): string[] {
-  const nameRe = tenantNameRe(tenantNames);
-  return (Array.isArray(lines) ? lines : []).filter((l): l is string => typeof l === 'string' && !!l.trim()).map((l) => l.trim())
-    .filter((l) => { const t = withoutOwnNames(l, ownNames); return !CURRENCY_RE.test(t) && !GAME_WORDS_RE.test(t) && !(nameRe && nameRe.test(t)); });
-}
-/** `fullNameOnly` lists names that contribute no nickname at all: a college
- *  tenant's name is its school or place ("South Florida"), not "City Nickname". */
-export function tenantNameWords(names: string[], _placeWords: string[] = []): string[] {
-  // The full name, and the nickname (its last word) when the nickname is not
-  // an ordinary word. "Minnesota Vikings" gives "Vikings"; "Chicago Fire",
-  // "Philadelphia Union" and "Minnesota United FC" give only their full names,
-  // or "Do not park in fire lanes." and "Union Station" would be silenced.
-  // Place words ("New York", "Los Angeles", "San Francisco") are never added:
-  // a team named for another city would otherwise silence every sentence
-  // naming that city (review 2026-11-18).
-  const out = new Set<string>();
-  for (const n of names) {
-    const clean = String(n || '').trim();
-    if (!clean) continue;
-    out.add(clean);
-    // A one-word name is a school or a place ("Miami", "South Florida" arrives as two words but is a place too:
-    // the caller passes college names in full only), never a nickname.
-    const words = clean.split(/\s+/);
-    const last = words.length > 1 ? words[words.length - 1] : '';
-    if (!_placeWords.includes(clean) && last.length >= 3 && !ORDINARY_NICKNAMES.has(last.toLowerCase())) out.add(last);
-  }
-  return [...out];
-}
-const ORDINARY_NICKNAMES = new Set(['fc', 'sc', 'cf', 'city', 'united', 'club', 'real', 'sporting', 'union', 'fire', 'wild', 'heat', 'magic', 'jazz', 'stars', 'kings', 'bills', 'thunder', 'sun', 'sky', 'storm', 'wings', 'blues', 'liberty', 'dream', 'fever', 'mercury', 'lightning', 'rapids', 'revolution', 'galaxy', 'dynamo', 'spirit', 'current', 'pride', 'wave', 'reign', 'courage', 'gotham', 'giants', 'nationals', 'rangers', 'saints', 'chiefs', 'jets', 'bears', 'lions', 'reds', 'twins', 'angels', 'kraken', 'state', 'bay']);
+/** "Saturday" for a date. */
+export const weekdayLong = (ymd: string): string => WEEKDAYS_LONG[ymdParts(ymd).dow];
 
 // ── head ────────────────────────────────────────────────────────────────────
 
@@ -397,8 +404,9 @@ export function stopYear(stop: Pick<EventStop, 'performances'>, tl: StopTimeline
   return Number([...rows].sort((a, b) => a.key.localeCompare(b.key))[rows.length - 1].date.slice(0, 4));
 }
 
-export function stopH1(showName: string, searchCity: string, venueName: string): string {
-  return `${showName} ${searchCity} at ${venueName}`;
+/** "Monster Jam Minneapolis" (ruling 2026-11-18, Phase 3A). The venue is on the line under it. */
+export function stopH1(showName: string, searchCity: string): string {
+  return `${showName} ${searchCity}`;
 }
 
 /** Bare title; the root layout appends " | PromoNight". "and Bag Policy" is
