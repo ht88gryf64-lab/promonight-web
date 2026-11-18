@@ -4344,3 +4344,11 @@ Adversarial review of `feature/events-pages` (finding 2). The stop page is ISR w
 ## 106. /mlb/atlanta-braves is over the 950,000-byte team page cap in production (found 2026-11-18, not caused by the events branch)
 
 Measured while sizing the events team link: production /mlb/atlanta-braves served 955,720 bytes on 2026-11-18, over the cap the live battery enforces; /mlb/minnesota-twins was 931,434. The events branch adds 383 bytes to every page (the footer Events link) once EVENTS_PAGES_LIVE is on, and 1,062 bytes to a team page whose building has an upcoming stop (none of those is within 50,000 bytes of the cap). The Braves page needs its own trim before the next live battery run.
+
+## 107. Events pages: small layout items from the second ux-review (deferred, logged 2026-11-18)
+
+ux-review of `feature/events-pages`, second round (N3, N6, N8). On the hub a stop with several visits is listed under each month with the same words, without saying which dates fall in that month, and a same-year row prints the year twice. The parking list's fold keeps the label "Show all N lots" when open and has no chevron. The venue page's "Upcoming events" card uses the 16px radius and border of "Next giveaways here", not the 12px radius and shadow of the cards below it.
+
+## 108. Event stop pages drop a lot when in doubt (accepted, logged 2026-11-18)
+
+Second adversarial review of `feature/events-pages` (finding 1, high, fixed). A hub lot whose note names a permit, a pass, a suite or club class, members, overflow, complimentary or per-game use is left off an event stop page, as is a lot stored with a note of which nothing survives the event-day filter. On 2026-11-18 that removed 29 of 100 lots across the 19 stops (Raymond James Stadium 14, Ball Arena 4, loanDepot Park 3, Angel Stadium 3). Some of those are general lots whose only stored sentence was game-day copy (AT&T Stadium "Lot 6", off Cowboys Way). The page then lists fewer lots than the venue offers; it never lists one that is not open to a ticket buyer. The real fix is known-issues 101: an event-day parking read per stop.

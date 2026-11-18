@@ -516,7 +516,7 @@ export interface EventFaq { q: string; a: string }
 
 /** Questions the page can answer from what is stored. Nothing about run time,
  *  noise, ages or strollers: none of that is stored. */
-export function stopFaqs(o: { showName: string; searchCity: string; venueName: string; upcoming: EventPerformance[]; bag: BagBlock | null; pitParty: EventPitParty[]; gateTimes: EventGateTime[] }): EventFaq[] {
+export function stopFaqs(o: { showName: string; searchCity: string; venueName: string; upcoming: EventPerformance[]; bag: BagBlock | null; bagScope?: string; pitParty: EventPitParty[]; gateTimes: EventGateTime[] }): EventFaq[] {
   const out: EventFaq[] = [];
   const perfLine = (p: EventPerformance) => `${formatLongDay(p.date)} at ${formatClock(p.startTime)}`;
   if (o.upcoming.length) {
@@ -527,7 +527,7 @@ export function stopFaqs(o: { showName: string; searchCity: string; venueName: s
     const joined = list.length === 2 ? `${list[0]} and ${list[1]}` : list.length > 2 ? `${list.slice(0, -1).join('; ')}; and ${list[list.length - 1]}` : list[0];
     if (list.length) out.push({ q: `When is ${o.showName} in ${o.searchCity}?`, a: `${joined}, at ${o.venueName}. Times are local to the venue.` });
   }
-  if (o.bag && o.bag.kind === 'event-rule') out.push({ q: `What is the bag policy for ${o.showName} at ${o.venueName}?`, a: o.bag.rules.map((r) => r.text).join(' ') });
+  if (o.bag && o.bag.kind === 'event-rule') out.push({ q: `What is the bag policy for ${o.showName} at ${o.venueName}?`, a: [o.bag.rules.map((r) => r.text).join(' '), o.bagScope].filter(Boolean).join(' ') });
   else if (o.bag && o.bag.kind === 'operator-rule') out.push({ q: `What is the bag policy at ${o.venueName}?`, a: o.bag.text });
   else if (o.bag && o.bag.kind === 'other-event-rule') out.push({ q: `What is the bag policy at ${o.venueName}?`, a: `${o.bag.text} ${o.bag.caveat}` });
   const upKeys = new Set(o.upcoming.map((p) => p.key));

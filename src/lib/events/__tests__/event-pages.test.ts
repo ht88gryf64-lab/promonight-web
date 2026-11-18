@@ -352,6 +352,9 @@ test('FAQs come from stored fields only: no run time, no noise, no ages, no stro
   const all = JSON.stringify(stopFaqs({ showName: 'Monster Jam', searchCity: 'Houston', venueName: 'NRG Stadium', upcoming, bag: null, pitParty: [], gateTimes: [{ visitId: '2027-02-20', performance: '2027-02-21T1500', opensAt: '13:30', sourceUrl: 'https://venue.example/e', observedAt: '2026-11-18T13:54:17.868Z' }] }));
   assert.match(all, /gates open at 1:30 PM/);
   for (const word of ['hour', 'loud', 'ear', 'stroller', 'toddler', 'under 2', 'ages', 'kids', 'children']) assert.equal(new RegExp(`\\b${word}`, 'i').test(all + JSON.stringify(faqs)), false, word);
+  // An event rule the venue printed for one visit of two: the FAQ answer carries the same scope sentence as the card (ux-review N1).
+  const scoped = stopFaqs({ showName: 'Monster Jam', searchCity: 'Houston', venueName: 'NRG Stadium', upcoming, bag: bagBlockFor({ bagPolicy: null, bagRules: [{ visitId: '2027-02-20', text: 'Bags over 11 by 17 inches are not allowed.', sourceUrl: 'https://venue.example/e', observedAt: '2026-11-18T13:54:17.868Z' }] }, 'NRG Stadium', ['2027-02-20']), bagScope: 'NRG Stadium prints this for the Feb 6 to 7 shows. It has not published a rule for the other dates on this page.', pitParty: [], gateTimes: [] });
+  assert.equal(scoped.find((f) => /bag policy/i.test(f.q))?.a, 'Bags over 11 by 17 inches are not allowed. NRG Stadium prints this for the Feb 6 to 7 shows. It has not published a rule for the other dates on this page.');
   // A pointer is not an answer to "what is the bag policy".
   assert.equal(faqs.some((f) => /bag policy/i.test(f.q)), false);
   // Nothing upcoming, nothing stored: no questions at all.

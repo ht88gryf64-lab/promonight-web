@@ -52,7 +52,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ stop: st
             <span style={{ color: '#ffffff' }}>PROMO</span>
             <span style={{ color: ACCENT }}>NIGHT</span>
           </div>
-          <div style={{ display: 'flex', fontSize: 30, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', color: SOFT }}>Live event</div>
+          <div style={{ display: 'flex', fontSize: 38, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', color: SOFT }}>Live event</div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div style={{ display: 'block', fontSize: headline.length > 20 ? 92 : 112, fontWeight: 700, lineHeight: 0.95, letterSpacing: -3, textTransform: 'uppercase', lineClamp: 2 }}>{headline}</div>

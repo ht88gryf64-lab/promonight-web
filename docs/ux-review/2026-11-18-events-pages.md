@@ -206,3 +206,241 @@ Fix the venue module's box before merge (defect 1, with 2 and 3): it is the one 
 | 21 | Header wordmark contrast and menu button size | Pre-existing, site-wide; outside this branch. |
 
 Also from this review: one real affiliate click was made on the U.S. Bank Stadium Tickets button during the fan walk (subId1 web_event_page_monster-jam_us-bank-stadium). It will appear on the partner side as a click with no sale.
+
+
+## 10. Second review (2026-11-18, production build, after fixes)
+
+Run: 2026-11-18, 13:05 to 13:40 America/New_York. Branch `feature/events-pages` at 8b33dc4, served as a production build (`next start`) at http://localhost:3100 with EVENTS_PAGES_LIVE and PROMO_PAGES_LIVE on. Production https://www.getpromonight.com, `promonight-deploy` = `dpl_65rWaCL2H7Kbyv5cGfkzHxYefeHB` (the same deployment as the first review). The local build's HTML carries no `promonight-deploy` meta.
+
+Viewports 390x844, 768x1024, 1280x800. Screenshots are in `2026-11-18-events-pages/round2/<slug>/<viewport>-<env>.png` (full page), `<viewport>-<env>-fold.png` (first screen), `<viewport>-diff.png` (venue and team pages) and, for the five stop pages, `390-branch-before-you-go.png` (the Bag, Parking, Transit, Pit Party and Gates cards).
+
+How the run was held:
+
+- Every browser context aborted requests to ticketnetwork.lusg.net, ticketnetwork.com, spothero.com (all subdomains), expedia.com, ticketmaster.com, fanatics.com, *.evyy.net and *.93n6tx.net, and to posthog, google-analytics and googletagmanager hosts, from before the first navigation. Page loads made 0 requests to a partner host and 4 analytics requests each, all aborted.
+- One Tickets button and the Parking button were tapped once each at 390 on the U.S. Bank Stadium stop. Each opened a new tab whose only request (a navigation to ticketnetwork.lusg.net, then to tracking.spothero.com) was aborted; the tab ended on the browser's error page. No partner page was loaded and no affiliate click was recorded. No Ticketmaster, Expedia or Fanatics link was tapped.
+- Ad scripts ran as served. On 8 of 33 renders (all on the local build, none on production) the `load` event did not fire within 25s because of a third-party ad sync pixel; the pages had rendered and were measured after a further wait. Not counted as a page defect.
+- The three /events page types answer 404 on production (checked again: 404, 404, 404), so they have no baseline.
+
+### 10.1 Baseline differences: venue page /venues/us-bank-stadium
+
+Served HTML of `<main>`: not identical. 1 line only in production, 13 only on the branch. Regions:
+
+1. New on branch: a wrapper `div.mb-3` holding `<section data-venue-events>`, with the H2 "Upcoming events at U.S. Bank Stadium", the link "Monster Jam: dates and tickets" to `/events/monster-jam/us-bank-stadium`, and the text "Feb 20 to 21, 2027 · 2 shows". Once in the DOM, between the dark fact band and "Teams that play here".
+2. New on branch, outside `<main>`: footer link "Events" to `/events`.
+3. Environment, not a defect: the Ticketmaster link is unwrapped on the local build and Impact-wrapped on production.
+
+Served HTML size: production 187,249 bytes, branch 185,504 bytes.
+
+| Viewport | Production height | Branch height | Differing pixels | First differing row | Diff image |
+|---|---|---|---|---|---|
+| 390 | 7101 | 7273 | 339,927 (12.0%) | 586 (top of the module) | `2026-11-18-events-pages/round2/venue-us-bank-stadium/390-diff.png` |
+| 768 | 5147 | 5307 | 503,661 (12.4%) | 558 | `2026-11-18-events-pages/round2/venue-us-bank-stadium/768-diff.png` |
+| 1280 | 4429 | 4588 | 703,386 (12.0%) | 558 | `2026-11-18-events-pages/round2/venue-us-bank-stadium/1280-diff.png` |
+
+Nothing differs above the module. Everything below it is the same content moved down, plus ad fill.
+
+| Measurement | Production | Branch |
+|---|---|---|
+| Module height at 390 / 768 / 1280 | none | 132 / 114 / 114 (first review: 167 / 138 / 138) |
+| "Teams that play here" H2 y at 390 | 603 | 747 (+144) |
+| "Plan your visit" H2 y at 390 | 749 | 893 (+144; below the 844 fold, waived as known-issues 100) |
+| "Teams that play here" H2 y at 768 and 1280 | 575 | 701 (+126) |
+| "Plan your visit" H2 y at 1280 (right rail) | 222 | 222 |
+| Cumulative layout shift 390 / 768 / 1280 | 0 / 0.033 / 0.032 | 0 / 0.004 / 0.032 (the same "Getting in" and "Tickets & gear" cards move on both; none from the module) |
+| First ad anchor y at 390 | 57 | 57 |
+| `<a>` to /promos/ in DOM / visible at 390 | 8 / 6 | 8 / 6 |
+| axe serious or critical (first-party) | color-contrast 1, label-content-name-mismatch 2, scrollable-region-focusable 1 | same |
+| Horizontal overflow at 390 (clientWidth / scrollWidth) | 390 / 390 | 390 / 390 |
+
+The module's box against its neighbours (the dark fact band above, the "Teams that play here" card below):
+
+| Viewport | Module left / right edge | Card above left / right | Card below left / right | Gap above | Gap below |
+|---|---|---|---|---|---|
+| 390 | 12 / 378 | 12 / 378 | 12 / 378 | 12px | 12px |
+| 768 | 32 / 736 | 32 / 736 | 32 / 736 | 12px | 12px |
+| 1280 | 92 / 784 | 92 / 784 | 92 / 784 | 12px | 12px |
+
+The link is rgb(198, 42, 30) (#c62a1e) on white, 5.6:1, 14px semibold at 390 and 16px at 768 and 1280, no underline at rest (underline on hover). Tap target 200x44 at 390, 228x44 at 768 and 1280.
+
+### 10.2 Baseline differences: team page /nfl/minnesota-vikings
+
+Served HTML of `<article>`: not identical. Regions:
+
+1. New on branch: `a[data-also-at]`, "Also at U.S. Bank Stadium: Monster Jam, Feb 20 to 21, 2027", to `/events/monster-jam/us-bank-stadium`. Twice in the served HTML (mobile and desktop rail), one visible per viewport.
+2. New on branch, outside the article: footer link "Events".
+3. Environment: both Ticketmaster links unwrapped on the local build.
+
+Served HTML size: production 289,904 bytes, branch 278,496 bytes (cap 950,000).
+
+| Viewport | Production height | Branch height | Differing pixels | Diff image |
+|---|---|---|---|---|
+| 390 | 15856 | 15944 | 504,297 (8.1%) | `2026-11-18-events-pages/round2/team-minnesota-vikings/390-diff.png` |
+| 768 | 12784 | 12872 | 628,516 (6.4%) | `2026-11-18-events-pages/round2/team-minnesota-vikings/768-diff.png` |
+| 1280 | 10287 | 10241 | 629,165 (4.8%) | `2026-11-18-events-pages/round2/team-minnesota-vikings/1280-diff.png` |
+
+At 390 and 1280 about 5,000 pixels differ in the hero (rows 125 to 669 at 390): gradient rendering only, the content is the same on both. The first content difference is the new link.
+
+| Measurement | Production | Branch |
+|---|---|---|
+| "Game day at U.S. Bank Stadium" H3 y at 390 / 768 / 1280 | 1999 / 2124 / 990 | 2053 / 2178 / 1044 (+54 each) |
+| Cumulative layout shift, all viewports | 0 | 0 |
+| First ad anchor y at 390 | 706 | 706 |
+| `<a>` to /promos/ in DOM / visible at 390 | 26 / 24 | 26 / 24 |
+| axe serious or critical (first-party) | color-contrast 2, label-content-name-mismatch 4 at 390 and 7 at 768 and 1280 | same |
+| Horizontal overflow at 390 | 390 / 390 | 390 / 390 |
+
+New link: 342x44 at 390 (two lines), 720x44 at 768, 336x44 at 1280; #c62a1e on cream, 5.06:1. Unchanged from the first review.
+
+### 10.3 Game date check
+
+Today is 2026-11-18 in every venue zone involved.
+
+| Page | Dates read (showtime rows, `<time datetime>` and Event startDate) | Verdict |
+|---|---|---|
+| /events/monster-jam/us-bank-stadium | 2027-02-20 17:00 -06:00, 2027-02-21 15:00 -06:00 | Future |
+| /events/monster-jam/angel-stadium | 8 rows, 2026-12-19 16:30 -08:00 to 2027-02-21 14:30 -08:00 | Future |
+| /events/monster-jam/nrg-stadium | 2027-02-06, 02-07, 02-13 | Future |
+| /events/monster-jam/raymond-james-stadium | 2027-02-13 17:00 -05:00, 2027-02-14 14:00 -05:00 | Future |
+| /events/monster-jam/snapdragon-stadium | 2027-01-09, 01-10, 01-23, 01-24 | Future |
+| All 19 stop pages (served HTML) | 60 rows, 60 Tickets links, earliest 2026-12-19 | 0 rows on or before today |
+| /nfl/minnesota-vikings | 5 Events, 2026-11-29 to 2026-12-26 | Future |
+
+No page is a played game. Row dates, `datetime` values and JSON-LD startDates agree on the five stop pages. No played-show state exists in the data to exercise.
+
+### 10.4 First review defects re-checked
+
+| # | First review defect | Now | What was measured |
+|---|---|---|---|
+| 1 | Venue module box misaligned | fixed | Edges equal to both neighbours and 12px gaps above and below at 390, 768 and 1280 (table in 10.1). Residual card style difference is N8. |
+| 2 | Venue module pushes "Plan your visit" below the fold at 390 | not fixed (waived) | 749 to 893. The module is 35px shorter than before (132 against 167). |
+| 3 | Venue module link had no link affordance | fixed | #c62a1e, 5.6:1, underline on hover, 200x44. |
+| 4 | Raymond James 23-lot wall | fixed in part | Six lots, then "Show all 23 lots": 328x44, opens on tap (card 449px closed, 1209px open, was about 1160px always), closes on a second tap, no overflow when open. The notes are unchanged (N6). |
+| 5 | Angel Stadium transit lead was six lines of display type | fixed | The line list is 14px bold body text, 4 lines (81px). Short lists (U.S. Bank, NRG, Snapdragon) keep the 20px lead. |
+| 6 | Multi-visit stops read as one date range | fixed on the stop header, description, FAQ, hub and index rows, team link and image card; not fixed on the venue module | Header "8 shows between Dec 19, 2026 and Feb 21, 2027", "3 shows between Feb 6 and Feb 13, 2027", "4 shows between Jan 9 and Jan 24, 2027". Rows "Anaheim: 4 visits, Dec 19, 2026 to Feb 21, 2027". Team link "Also at Angel Stadium: Monster Jam, from Dec 19, 2026". Card "8 SHOWS · DEC 19, 2026 TO FEB 21, 2027". Venue module: see N2. |
+| 7 | Hub listed a multi-visit stop under its first month only | fixed | Anaheim is under December 2026, January 2027 and February 2027. 21 rows for 19 stops. See N3 for what each copy says. |
+| 9 | Image card text too small at 390 | changed | Card shown at 356x187 (scale 0.297). Font size and measured glyph height per line at 390: wordmark 12.5px / 9.2px; "LIVE EVENT" 8.9px / 6.2px; headline 33.2px / 24.3px (one line on all five); venue line 13.6px / 10.4px; dates line 11.3px / 9.5px. First review: about 9, 6, n/a, 10 and 8px. Four lines are at or near the mockup's sizes; the label is not (N9). |
+| 11 | Breadcrumb links grey and small | not fixed (waived) | 37x18 and 70x18, 4.52:1. |
+| 12 | "source" links 33x12 | not fixed (deferred, 102) | 33x12; one on U.S. Bank, Raymond James and Snapdragon, three on NRG. |
+| 13 | Before you go cards lack lead lines, in-card button, source lines on hub facts; NRG has no Parking card | not fixed (waived and deferred) | Unchanged. |
+| 14 | Anaheim FAQ answer was one eight-date sentence | fixed | "Monster Jam has 8 shows between Dec 19, 2026 and Feb 21, 2027 at Angel Stadium. Every showtime is listed at the top of this page. Times are local to the venue." Stops with four shows or fewer still list each (San Diego: four dates, three semicolons). |
+| 16 | Hub and index rows tall, repeated phrase | fixed in part | The phrase is gone. Rows are 116 to 138px with two links each; the hub is 4753px at 390 (was 4530, three more rows). |
+| 17 | Index "Next stops" had no link on | fixed | "See all 19 Monster Jam stops by month", 250x44, opens the hub (H1 "Monster Jam 2027 dates and venue guides"); back restores scroll, 0px. |
+| 19 | Layout shift 0.024 to 0.027 at 768 | not fixed (deferred, 103); cause confirmed | See 10.6. It is the H1 re-wrapping when the display font loads, not ads. |
+| 20 | Back from a team page footer link does not restore scroll | not fixed (pre-existing) | Also seen from the rail links, on both environments (N10). |
+
+Defects 8, 10, 15, 18 and 21 were waived or are outside the branch and are unchanged.
+
+### 10.5 New defects
+
+There is no high severity defect: nothing found would mislead a ticket buyer about a show, a date, a time or where a Tickets button goes, and no page is broken.
+
+- **N1. NRG Stadium stop, the Questions answer drops the scope of the bag rule. Medium. All viewports.** `/events/monster-jam/nrg-stadium`. The Bag card now says, after the rule, "NRG Stadium prints this for the Feb 6 to 7 shows. It has not published a rule for the other dates on this page." That sentence is clear: it names the covered shows and says the rest have none. Lower on the same page (H3 at y 3092 at 390), "What is the bag policy for Monster Jam at NRG Stadium?" answers with the rule alone: "Bag policies vary per event. Backpacks and large bags that exceed 11 by 17 inches are not allowed. Necessary diaper bags and medical bags are inspected before entry." No dates, no caveat. A fan holding Feb 13 tickets who reads the Questions section gets the rule as if it covered that show. The page title ("Dates, Tickets and Bag Policy") and meta description ("plus the bag policy") carry no scope either. `2026-11-18-events-pages/round2/event-stop-nrg-stadium/390-branch.png`.
+- **N2. Venue module on a multi-visit building still prints a from-to range. Medium. All viewports.** Not on the U.S. Bank Stadium sample (one visit, "Feb 20 to 21, 2027 · 2 shows"). Read from the served HTML of three other venue pages: `/venues/angel-stadium` "Dec 19, 2026 to Feb 21, 2027 · 8 shows"; `/venues/nrg-stadium` "Feb 6, 2027 to Feb 13, 2027 · 3 shows"; `/venues/snapdragon-stadium` "Jan 9, 2027 to Jan 24, 2027 · 4 shows". The show count follows, but there is no visit count and the wording differs from the hub row for the same stop ("4 visits, Dec 19, 2026 to Feb 21, 2027"). Section 9 lists the venue module among the places defect 6 was fixed.
+- **N3. Hub, a multi-visit stop's row is the same under every month. Low. All viewports.** `/events/monster-jam`. Under January 2027 and under February 2027 the Anaheim row reads "Anaheim: 4 visits, Dec 19, 2026 to Feb 21, 2027 · Angel Stadium · 8 shows", word for word as under December. The row under February does not say which February dates (Feb 20 to 21). The year is also printed twice in same-year rows ("San Diego: 2 visits, Jan 9, 2027 to Jan 24, 2027", "Houston: 2 visits, Feb 6, 2027 to Feb 13, 2027"), which wraps those row links to two lines (65px against 44px) at 390; the image card does the same ("3 SHOWS · FEB 6, 2027 TO FEB 13, 2027"). `2026-11-18-events-pages/round2/event-hub-monster-jam/390-branch.png`.
+- **N4. Snapdragon Stadium Parking card, two notes that are not parking information for this show. Medium. 390 and up.** `/events/monster-jam/snapdragon-stadium`. "Purple Lot: Rideshare pick-up is located here." lists a lot under Parking whose only note says it is where rideshare picks up; a fan cannot tell whether to park there. "Green Lot: Enter via Gate 1 (Friars Road). Temporary tents are not permitted in this lot." keeps a tailgating rule from the home-game note. The other three lots (gate names only) and the Transit card ("MTS Trolley Green Line. The MTS Green Line drops riders right at the stadium entrance.") read correctly; the cut transit note is short and clear. `2026-11-18-events-pages/round2/event-stop-snapdragon-stadium/390-branch-before-you-go.png`.
+- **N5. Angel Stadium Parking and Transit cards, home-team remnants and a lot with only a name. Low. 390 and up.** `/events/monster-jam/angel-stadium`. "Lexus Lot: Located just west of the Home Plate Gate; reserved for Lexus vehicles, maximum capacity 100 on a first-come, first-served basis." is a team sponsor programme, with nothing saying it runs for this show. "Big A Lot" is a name with no note. Transit: "The Orange County Transportation Authority runs bus service to the ballpark (714-636-RIDE)." reads as written for a baseball game. The other sentences hold for any event. `2026-11-18-events-pages/round2/event-stop-angel-stadium/390-branch-before-you-go.png`.
+- **N6. Raymond James Parking fold, what shows first and how the fold behaves. Low. 390 and up.** `/events/monster-jam/raymond-james-stadium`. The six lots shown are Lot A "Accessible parking", Lot B "Suite parking", Lot C "Accessible parking", Lot D "Suite parking", Lot 1 "General", Lot 2 "General": the first general lot is fifth. "Suite parking" (4 lots) and "Club" (4 lots) are premium-seat designations of the home team; "Lot 9", "Lot 11", "HCC", "HCC VIP" and "GEICO Lot" have no note; "Lot 14 VIP (GEICO)" is labelled "General" (notes are known-issues 101). The fold itself: the summary is red text with no chevron or marker (the browser's disclosure triangle is removed), its label stays "Show all 23 lots" after it is open, and the 17 further lots continue below the label. It reveals 17, not 23. Not in the five pages asked for, the same cut on `/events/monster-jam/loandepot-park` leaves "Home Plate Garage", "First Base Garage" and "Third Base Garage" as names only. `2026-11-18-events-pages/round2/event-stop-raymond-james-stadium/390-branch-parking-closed.png`, `390-branch-parking-open.png`.
+- **N7. NRG Stadium, the Pit Party and Gates cards say nothing about the third show. Low. All viewports.** `/events/monster-jam/nrg-stadium`. Both cards and both FAQ answers list Feb 6 and Feb 7 only. Each line is dated, so nothing is wrong, but unlike the Bag card there is no line saying the venue has not listed times for Feb 13. Transit: "Exit at Stadium Park / Astrodome Station off Fannin and enter Gate 2." names an entry gate that may be a game-day arrangement; the rest of the note holds for any event. `2026-11-18-events-pages/round2/event-stop-nrg-stadium/390-branch-before-you-go.png`.
+- **N8. Venue module card is drawn differently from the cards around it. Low. All viewports.** `/venues/us-bank-stadium`. Radius 16px with a 1px border and no shadow, against 12px, no border and a shadow on the cards above and below. Its heading starts 5px further in at 768 and 1280 (x 53 against 48; x 113 against 108) and 1px at 390 (29 against 28). At 1280 the card is 114px tall for one line of content. `2026-11-18-events-pages/round2/venue-us-bank-stadium/1280-branch-fold.png`.
+- **N9. Image card, "LIVE EVENT" is still under 10px at 390. Low. 390.** All five stop pages. Font size 8.9px, capital height 6.2px (the mockup sets 10px). The other four lines are legible.
+- **N10. Pre-existing, not introduced by this branch: back to the team page from a rail link lands 270px lower. Low for this change. 390.** `/nfl/minnesota-vikings`. Tapping the new "Also at" link and going back put the page at scrollY 1855 against 1585 at the tap, in 3 of 3 runs. The existing "Full gameday guide" link in the same rail does the same on the branch (1784 against 1514, 2 of 2) and on production (1814 against 1544 in 1 of 2 runs, exact in the other). The first review measured 0px for this link on the dev server. Same family as defect 20 (known-issues 104), which names footer links only.
+
+Rows with no ticket link: none exist. All 60 showtime rows on all 19 stop pages carry a Tickets link, and "No link yet", "Sold out" and "Started" do not appear in any served stop page, so those labels could not be seen rendered.
+
+### 10.6 Layout shift at 768 (defect 19): cause confirmed
+
+The first review guessed ad script timing. That is wrong; the trace in known-issues 103 is right. Seven loads per page and viewport on the production build:
+
+| Page at 768 | Normal (3 runs) | Fonts delayed 1.5s | Font files blocked | All third parties blocked | Third parties blocked, fonts delayed |
+|---|---|---|---|---|---|
+| /events/monster-jam/us-bank-stadium | 0.0241 at 54 to 86ms | 0.0241 at 1543ms | 0 | 0.0241 at 70ms | 0.0241 at 1546ms |
+| /events | 0.0267 at 49 to 54ms | 0.0267 at 1542ms | 0 | 0.0267 at 52ms | 0.0267 at 1542ms |
+| /events/monster-jam | 0.0002 | 0.0002 | 0 | 0.0002 | 0.0002 |
+
+The shift follows the font, not the ads. The H1 is 76px tall (two lines) in the fallback face and 114px (three lines) once the display face loads on the U.S. Bank Stadium stop, and 38px then 76px on the index; everything below moves down 38px in one step. With the font files blocked the H1 never re-wraps and the shift is 0. With every third-party request blocked the shift is unchanged. The hub H1 is two lines in both faces and does not shift. At 390 all three pages measure 0 in every mode (the H1 line count is the same in both faces). The other four stop pages measure 0.0003 to 0.0004 at 768.
+
+### 10.7 Measurements
+
+Events pages, branch only.
+
+| Measurement at 390 unless noted | Stop: U.S. Bank | Stop: Angel | Stop: NRG | Stop: Raymond James | Stop: Snapdragon | Hub | Index |
+|---|---|---|---|---|---|---|---|
+| HTTP status | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| Document height 390 / 768 / 1280 | 5118 / 4005 / 4011 | 5490 / 4575 / 4578 | 5617 / 4620 / 4622 | 5335 / 4247 / 4290 | 5756 / 4806 / 4569 | 4753 / 3838 / 3797 | 3381 / 2698 / 2636 |
+| clientWidth / scrollWidth, all viewports | equal | equal | equal | equal | equal | equal | equal |
+| Elements past the right edge | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Cumulative layout shift 390 / 768 / 1280 | 0 / 0.0241 / 0.0002 | 0 / 0.0004 / 0.0002 | 0 / 0.0003 / 0.0002 | 0 / 0.0003 / 0.0002 | 0 / 0.0003 / 0.0002 | 0 / 0.0002 / 0.0001 | 0 / 0.0267 / 0.0001 |
+| H1 bottom, dates line bottom, first Tickets button (y) | 288, 341, 405 to 449 | 250, 303, 397 to 441 | 250, 303, 397 to 441 | 288, 341, 405 to 449 | 288, 341, 435 to 479 | n/a | n/a |
+| Fixed ad bar top (first screen ends) | 794 | 794 | 794 | 794 | 794 | none | none |
+| Showtime rows / Tickets links | 2 / 2 | 8 / 8 | 3 / 3 | 2 / 2 | 4 / 4 | n/a | n/a |
+| Last ticket row bottom, image card top | 552, 680 | 1150, 1278 | 660, 788 | 552, 680 | 784, 912 | n/a | n/a |
+| Tickets button, Parking button | 86x44, 358x44 | same | same | same | same | n/a | n/a |
+| Heading order | h1, h2, h3 only for FAQ | h1, h2, h3 visit dates, h2, h3 FAQ | same as Angel | as U.S. Bank | as Angel | h1, h2 x4 | h1, h2 x2 |
+| Content tap targets under 44px | breadcrumb x2 (37x18, 70x18), source x1 (33x12) | breadcrumb x2 | breadcrumb x2, source x3 | breadcrumb x2, source x1 | breadcrumb x2, source x1 | breadcrumb x1 | none |
+| Text under 4.5:1 in page content, all viewports | none | none | none | none | none | none | none |
+| axe serious or critical | color-contrast 1 (header wordmark, 4.33:1) | same | same | same | same | same | same |
+| Images in the content | 1 (generated card, 1200x630 shown 356x187) | 1 | 1 | 1 | 1 | 0 | 0 |
+| Price strings | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Links to monsterjam.com or feldentertainment.com | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| "not affiliated" line | once | once | once | once | once | once | once |
+| External link hosts | ticketnetwork.lusg.net, tracking.spothero.com, usbankstadium.com | same two, mlb.com | same two, nrgpark.com | same two, raymondjamesstadium.com | same two, snapdragonstadium.com | none | none |
+
+Contrast of the text styles, the same on every events page: ink on cream 15.13:1; ink on white 16.75:1; body on white 8.98:1; soft ink on cream 8.1:1; grey #786e60 on white 5.0:1 and on cream 4.52:1; link red #c62a1e on white 5.6:1 and on cream 5.06:1; white on the red badge and button 4.8:1; footer "Events" 5.9:1.
+
+Fan walk at 390 (branch). Destination H1 matched the label in every tap, and back restored the scroll position to the pixel in each:
+
+| Tap | Destination H1 | Back, scroll delta |
+|---|---|---|
+| Hub, Minneapolis row under February | Monster Jam Minneapolis at U.S. Bank Stadium | 0px (2262 to 2262) |
+| Hub, Anaheim row under January | Monster Jam Anaheim at Angel Stadium | 0px |
+| Hub, Detroit row under February (3 runs) | Monster Jam Detroit at Ford Field | 0px each |
+| Hub, "Bridgestone Arena venue guide" | Bridgestone Arena Bag Policy | 0px |
+| Index, "See all 19 Monster Jam stops by month" | Monster Jam 2027 dates and venue guides | 0px |
+| Index, San Diego row | Monster Jam San Diego at Snapdragon Stadium | 0px |
+| Stop, venue guide card | U.S. Bank Stadium Bag Policy | 0px |
+| Stop, Vikings promos card | Minnesota Vikings | 0px |
+| Stop, More stops row (4 runs) | Monster Jam Salt Lake City at Delta Center, Monster Jam San Diego at Snapdragon Stadium | 0px each |
+| Stop, "See every stop by month" (3 runs) | Monster Jam 2027 dates and venue guides | 0px each |
+| Venue page, module link | Monster Jam Minneapolis at U.S. Bank Stadium | 0px |
+| Team page, "Also at" link (3 runs) | Monster Jam Minneapolis at U.S. Bank Stadium | 270px each (N10, pre-existing) |
+
+Primary CTA: the first Tickets button is `target="_blank"`, `rel="noopener noreferrer sponsored"`, href `ticketnetwork.lusg.net/c/...` wrapping `www.ticketnetwork.com/tickets/8258515` with `subId1=web_event_page_monster-jam_us-bank-stadium`; every row on the five pages carries its own event id. Parking: `tracking.spothero.com/aff_c?...aff_sub=web_event_page_monster-jam_us-bank-stadium`, a search at the stadium coordinates, same target and rel. Both navigations were aborted; neither destination was loaded. The Event JSON-LD Offer url is the stop page itself and carries no price.
+
+### 10.8 Checked and fine
+
+- No horizontal overflow at 390, 768 or 1280 on any of the nine pages (clientWidth equals scrollWidth; no element past the right edge on the events pages), including with the Raymond James fold open.
+- First screen at 390x844 on all five stop pages shows the H1, the dates line and the first Tickets button above the fixed ad bar.
+- Every Tickets row is for a future show (60 of 60 across all 19 stops). All ticket rows are above the image card on all 19.
+- No price figure on any events page or in its JSON-LD. The word "Prices" appears once, in the disclosure.
+- No image other than the generated card on a stop page; none on the hub or index. No background image, no SVG art.
+- No link to monsterjam.com or feldentertainment.com. "PromoNight is not affiliated with Monster Jam or Feld Entertainment." is on all three events page types, once each, and on all 19 stops.
+- Nothing in the copy is aimed at children. The only family-related words are the venue's quoted bag rule on NRG Stadium ("Necessary diaper bags and medical bags are inspected before entry").
+- No sales copy in any Parking or Transit card on the five stop pages; no fare, clock time, tailgate or match-day sentence survives except the ones listed in N4, N5 and N7.
+- U.S. Bank Stadium Parking and Transit cards read correctly for an event day.
+- One H1 per page; H2 for sections; H3 only inside a section.
+- Text contrast at or above 4.5:1 for every style in the events content, the venue module and the team link, at all three viewports.
+- Layout shift 0 at 390 on all seven events pages; none from the venue module or the team link.
+- The NRG Stadium partial bag rule sentence in the Bag card is clear.
+- The venue module and the team link are the only served-HTML differences from production besides the footer link and the unwrapped Ticketmaster link. First ad anchor and /promos/ link counts are unchanged on both pages.
+
+### 10.9 Recommendation
+
+Carry the bag rule's scope into the NRG Stadium Questions answer (N1) and give the venue module the same multi-visit wording as the hub rows (N2) before merge; both are places where a fix recorded in section 9 did not reach every surface. The parking and transit remnants (N4 to N7) are hub data and can follow under known-issues 101.
+
+
+## 11. Dispositions of the second review (2026-11-18)
+
+No high severity defect was reported. The fixes below are on the branch after the reviewed build (commits ae75a08 and the one that carries this section); they were checked in served HTML of a fresh production build, not re-run through this agent.
+
+| # | Defect | Disposition |
+|---|---|---|
+| N1 | NRG bag FAQ answer had no scope sentence | FIXED. The FAQ answer carries the same sentence as the card ("NRG Stadium prints this for the Feb 6 to 7 shows. It has not published a rule for the other dates on this page."). The title keeps "and Bag Policy": the page does print a bag rule. |
+| N2 | Venue module printed a from-to range for a multi-visit stop | FIXED in ae75a08: "4 visits, Dec 19, 2026 to Feb 21, 2027 · 8 shows". Section 9 was wrong to list this surface as fixed in the first round. |
+| N3 | Hub repeats a multi-visit row under each month, year printed twice | DEFERRED (known-issues 107). |
+| N4 | Snapdragon lot notes cut to a fragment | WAIVED for "Rideshare pick-up is located here." (true on an event day). Lot note quality is known-issues 101. |
+| N5 | Angel Stadium: Lexus Lot, Big A Lot name alone | FIXED in ae75a08: a reserved lot, and a lot whose whole note is game-day copy, are left off the page. "bus service to the ballpark" is the hub's transit text (known-issues 101). |
+| N6 | Raymond James fold: suite and club lots listed; fold label does not change | FIXED in part in ae75a08: suite, club, VIP and per-game lots are left off (9 lots remain, so the list no longer folds). The fold's label and chevron are DEFERRED (known-issues 107). |
+| N7 | NRG Pit Party and Gates cards silent on Feb 13; transit note says "enter Gate 2" | WAIVED: the venue prints no Pit Party or gate time for Feb 13, and the cards list only what it prints. |
+| N8 | Venue module card style differs from its neighbours | DEFERRED (known-issues 107). It matches "Next giveaways here", the module it rides with. |
+| N9 | "LIVE EVENT" on the image card is small at 390 | FIXED: the label is larger. |
+| N10 | Back to the team page from a rail link lands 270px lower | Pre-existing on production (known-issues 104). |

@@ -97,6 +97,13 @@ export function eventStopHead(stop: EventStop, hub: VenueHub, floor: EventFloor,
   // nothing upcoming no event rule is shown (a past visit's rule is not
   // current), and the block falls to the operator's standing policy.
   const bag = stop.tombstoned ? null : bagBlockFor(stop, venueName, visitIds);
+  // The venue's event rule may cover one visit of several. The card and the
+  // FAQ answer both say which shows it covers, in the same words.
+  const bagScopeNote = (ruleText: string): string | null => {
+    const covered = tl.upcoming.filter((g) => stop.bagRules.some((x) => x.visitId === g.visit.visitId && x.text === ruleText));
+    if (tl.upcoming.length < 2 || covered.length === tl.upcoming.length || !covered.length) return null;
+    return `${venueName} prints this for the ${covered.map((g) => formatRange(g.performances[0].date, g.performances[g.performances.length - 1].date)).join(' and ')} shows. It has not published a rule for the other dates on this page.`;
+  };
   const upKeys = new Set(upcoming.map((p) => p.key));
   const pitParty = stop.pitParty.filter((p) => upKeys.has(p.performance));
   const gateTimes = stop.gateTimes.filter((g) => upKeys.has(g.performance));
@@ -116,7 +123,7 @@ export function eventStopHead(stop: EventStop, hub: VenueHub, floor: EventFloor,
   const card = { url: `${EVENTS_SITE_URL}${eventCardPath(stop)}`, width: EVENT_CARD_WIDTH, height: EVENT_CARD_HEIGHT, alt: `${show.name}${year ? ` ${year}` : ''} at ${venueName}, ${stop.searchCity}` };
   // A removed stop, or one with nothing upcoming and nothing played, is not indexed.
   const indexable = !stop.tombstoned && (upcoming.length > 0 || !!tl.lastVisit);
-  return { show, venueName, tl, upcoming, bag, pitParty, gateTimes, year, canonical, title, description, card, hasCard, indexable, lots, transit };
+  return { show, venueName, tl, upcoming, bag, pitParty, gateTimes, year, canonical, title, description, card, hasCard, indexable, lots, transit, bagScopeNote };
 }
 
 const H2 = ({ children }: { children: ReactNode }) => (
@@ -167,7 +174,7 @@ export function EventStopView({ stop, hub, floor, now, teams, otherStops }: Even
   const { lots, transit } = head;
   const LOTS_SHOWN = 6;
   const reEntry = stop.reEntry.filter((r) => tl.upcoming.some((g) => g.visit.visitId === r.visitId));
-  const faqs = stop.tombstoned ? [] : stopFaqs({ showName: show.name, searchCity: stop.searchCity, venueName, upcoming, bag, pitParty, gateTimes });
+  const faqs = stop.tombstoned ? [] : stopFaqs({ showName: show.name, searchCity: stop.searchCity, venueName, upcoming, bag, bagScope: bag && bag.kind === 'event-rule' ? bag.rules.map((r) => head.bagScopeNote(r.text)).filter((x): x is string => !!x).join(' ') : '', pitParty, gateTimes });
   const perfOf = (key: string) => upcoming.find((p) => p.key === key);
 
   const jsonLd: Array<Record<string, unknown>> = [
@@ -304,9 +311,7 @@ export function EventStopView({ stop, hub, floor, now, teams, otherStops }: Even
                     <div key={i} className="flex flex-col gap-1.5" data-bag="event-rule">
                       <Body>{r.text}</Body>
                       {/* The venue's page may cover one visit of several: say which, never imply the rest. */}
-                      {tl.upcoming.length > 1 && !tl.upcoming.every((g) => stop.bagRules.some((x) => x.visitId === g.visit.visitId && x.text === r.text)) ? (
-                        <Body>{`${venueName} prints this for the ${tl.upcoming.filter((g) => stop.bagRules.some((x) => x.visitId === g.visit.visitId && x.text === r.text)).map((g) => formatRange(g.performances[0].date, g.performances[g.performances.length - 1].date)).join(' and ')} ${'shows'}. It has not published a rule for the other dates on this page.`}</Body>
-                      ) : null}
+                      {head.bagScopeNote(r.text) ? <Body>{head.bagScopeNote(r.text)}</Body> : null}
                       <Source url={r.sourceUrl} observedAt={r.observedAt} />
                     </div>
                   ))
