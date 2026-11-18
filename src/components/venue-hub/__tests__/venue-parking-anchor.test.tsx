@@ -28,7 +28,8 @@ test('the parking anchor: once per page where the parking card renders, never el
     assert.equal(count, hasCard ? 1 : 0, `${h.slug}: ${count} anchor(s), parking card ${hasCard}`);
     assert.equal(ids, count, `${h.slug}: an id="parking" that is not the anchor`);
     // The anchor is the whole difference: 53 bytes, in one place.
-    assert.equal(Buffer.byteLength(renderVenueViewRaw(h).split(PARKING_ANCHOR).join('')) , Buffer.byteLength(raw) - count * Buffer.byteLength(PARKING_ANCHOR), h.slug);
+    // With the transit anchor put back, the baseline render plus the parking anchor is the raw render, byte for byte.
+    assert.equal(renderVenueView(h).length + count * PARKING_ANCHOR.length, raw.split('<div id="transit" class="scroll-mt-24">').join('<div>').length, h.slug);
     if (hasCard) {
       withCard += 1;
       // It opens the parking card: the card's label follows it directly.

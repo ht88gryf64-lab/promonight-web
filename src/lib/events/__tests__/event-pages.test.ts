@@ -12,6 +12,7 @@ import {
   bagBlockFor,
   countdownAt,
   countdownLabel,
+  firstUpcomingDate,
   daysUntil,
   eventCardPath,
   eventPageHref,
@@ -240,6 +241,12 @@ test('the countdown: days to the first show on the venue calendar; today and tom
   assert.equal(countdownAt('2027-02-20', at('2027-02-20T05:30:00Z'), 'America/Chicago'), 'Tomorrow');
   assert.equal(countdownAt('2027-02-20', at('2027-02-20T06:30:00Z'), 'America/Chicago'), 'Today');
   assert.equal(countdownAt(null, at('2027-02-20T06:30:00Z'), 'America/Chicago'), null);
+  // WHICH show is first follows the clock: an hour after Saturday's start the count runs to Sunday.
+  const two = [{ date: '2027-02-20', startsAt: '2027-02-20T17:00:00-06:00' }, { date: '2027-02-21', startsAt: '2027-02-21T15:00:00-06:00' }];
+  assert.equal(firstUpcomingDate(two, at('2027-02-20T22:00:00Z')), '2027-02-20');
+  assert.equal(firstUpcomingDate(two, at('2027-02-21T00:00:00Z')), '2027-02-21');
+  assert.equal(countdownAt(firstUpcomingDate(two, at('2027-02-21T00:00:00Z')), at('2027-02-21T00:00:00Z'), 'America/Chicago'), 'Tomorrow');
+  assert.equal(firstUpcomingDate(two, at('2027-02-22T00:00:00Z')), null);
 });
 
 test('the hour-by-hour card: stored times only, in clock order, and no card for a show with neither a Pit Party nor a gate time', () => {
@@ -254,6 +261,9 @@ test('the hour-by-hour card: stored times only, in clock order, and no card for 
   assert.equal(showTimeline(sun, pit, gates), null);
   // Every word on the card is one of the four fixed labels: no invented step.
   for (const e of showTimeline(sat, pit, gates)!) assert.ok(['Pit Party opens.', 'Pit Party closes.', 'Gates open.', 'Show starts.'].includes(e.text));
+  // A duplicate row prints once; a time that is not HH:mm is left out, never guessed.
+  assert.deepEqual(showTimeline(sat, [...pit, ...pit], [{ ...gates[0], opensAt: '9:00' }])!.map((e) => e.kind), ['pit-open', 'pit-close', 'show']);
+  assert.equal(showTimeline(sat, [], [{ ...gates[0], opensAt: '9:00' }]), null);
   assert.equal(weekdayLong('2027-02-20'), 'Saturday');
 });
 

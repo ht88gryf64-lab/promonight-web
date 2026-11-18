@@ -10,7 +10,7 @@ import { EVENTS_ACCENT, EVENT_HERO, type EventShowSlug } from '@/lib/events/even
 // NO CROP (ruling 2026-11-18). The photo renders in its own natural 3:2 box
 // (width and height attributes, h-auto, no object-fit), so the whole frame is
 // shown at every width: the truck with its grille, the crushed cars and the
-// sky above. On a wide screen the box stops at 600px and the dark band fills
+// sky above. On a wide screen the box stops at 640px and the dark band fills
 // the sides; nothing is ever cut to make it fit.
 //
 // A decorative show photo is a ruled exception to the never-stock rule and
@@ -25,14 +25,14 @@ export function EventHero({ show, breadcrumb, children }: { show: EventShowSlug;
     <>
       <div className="-mx-4 bg-rd-ink text-white" data-event-hero={show}>
         <div className="px-4">{breadcrumb}</div>
-        <div className="relative mx-auto w-full max-w-[600px]">
+        <div className="relative mx-auto w-full max-w-[640px]">
           <Image
             src={hero.src}
             alt={hero.alt}
             width={hero.width}
             height={hero.height}
             priority
-            sizes="(max-width: 600px) 100vw, 600px"
+            sizes="(max-width: 640px) 100vw, 640px"
             className="block h-auto w-full"
             data-event-hero-photo=""
           />

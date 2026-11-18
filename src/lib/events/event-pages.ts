@@ -330,6 +330,11 @@ export function countdownLabel(firstYmd: string | null | undefined, todayYmd: st
   if (n === null || n < 0) return null;
   return n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : `${n} days away`;
 }
+/** The date of the first show that has not started at `now` (shows in start order), or null. */
+export function firstUpcomingDate(shows: ReadonlyArray<{ date: string; startsAt: string }>, now: Date): string | null {
+  const t = now.getTime();
+  return shows.find((s) => { const at = Date.parse(s.startsAt); return Number.isFinite(at) && at > t; })?.date ?? null;
+}
 /** The countdown for an instant, in the venue's zone. */
 export function countdownAt(firstYmd: string | null | undefined, now: Date, timeZone: string | null | undefined): string | null {
   return countdownLabel(firstYmd, ymdInZone(now, timeZone));
@@ -361,8 +366,12 @@ export interface ShowTimelineEntry { at: string; kind: ShowTimelineKind; text: s
  * about arriving, parking, intermission or the end of the show.
  */
 export function showTimeline(performance: Pick<EventPerformance, 'key' | 'startTime'>, pitParty: EventPitParty[], gateTimes: EventGateTime[]): ShowTimelineEntry[] | null {
-  const pit = pitParty.filter((p) => p.performance === performance.key);
-  const gates = gateTimes.filter((g) => g.performance === performance.key);
+  // A stored time that is not HH:mm cannot be placed or printed: it is left out, never guessed.
+  const HHMM = /^\d{2}:\d{2}$/;
+  const seen = new Set<string>();
+  const once = (k: string) => (seen.has(k) ? false : (seen.add(k), true));
+  const pit = pitParty.filter((p) => p.performance === performance.key && HHMM.test(p.start) && HHMM.test(p.end) && once(`p${p.start}-${p.end}`));
+  const gates = gateTimes.filter((g) => g.performance === performance.key && HHMM.test(g.opensAt) && once(`g${g.opensAt}`));
   if (!pit.length && !gates.length) return null;
   const order: Record<ShowTimelineKind, number> = { 'pit-open': 0, 'pit-close': 1, gates: 2, show: 3 };
   const rows: ShowTimelineEntry[] = [

@@ -125,7 +125,7 @@ A RULED EXCEPTION to the never-stock rule, for decorative show heroes only. It d
 - Source: https://pixabay.com/photos/stunt-monster-truck-vehicles-6711478/
 - License: Pixabay Content License. Downloaded by Matt on 2026-11-18.
 - Credit line, printed under the hero wherever the photo shows: "Photo: Marion Wellmann / Pixabay. Not a truck from this show."
-- NO CROP (ruling 2026-11-18): the full truck, grille included, the crushed cars and the sky above it stay in frame at every width. The page gives the photo its natural 3:2 box (no object-fit, no fixed height), so nothing is cut at any width; on a wide screen the box stops at 600px and the dark band fills the sides.
+- NO CROP (ruling 2026-11-18): the full truck, grille included, the crushed cars and the sky above it stay in frame at every width. The page gives the photo its natural 3:2 box (no object-fit, no fixed height), so nothing is cut at any width; on a wide screen the box stops at 640px and the dark band fills the sides.
 - The generated text card stays the og:image and the JSON-LD image. It is no longer repeated inside the page.
 
 ## Navigation and internal linking

@@ -215,6 +215,9 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
     ...[...new Set(pitParty.map((x) => x.sourceUrl))].map((u) => ({ what: 'Pit Party times', url: u, observedAt: pitParty.find((x) => x.sourceUrl === u)!.observedAt })),
     ...[...new Set(gateTimes.map((x) => x.sourceUrl))].map((u) => ({ what: 'Gate times', url: u, observedAt: gateTimes.find((x) => x.sourceUrl === u)!.observedAt })),
   ];
+  // "Your Saturday" only when the card's one show is the page's only upcoming show on that weekday;
+  // otherwise each block names its own date and showtime (two Saturday shows, or a Saturday in another visit).
+  const soleDay = days.length === 1 && upcoming.filter((p) => weekdayLong(p.date) === weekdayLong(days[0].p.date)).length === 1;
   const showParking = upcoming.length > 0 && (!!parkingHref || !!venueParkingHref || parkingFacts.length > 0);
   const rows = stop.tombstoned ? [] : ([bag ? 'bags' : null, transit ? 'transit' : null, showParking ? 'parking' : null, reEntry.length ? 'reentry' : null].filter(Boolean) as string[]);
   const isLast = (k: string) => rows[rows.length - 1] === k;
@@ -242,9 +245,9 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
           >
             <div className="flex min-h-[23px] items-center gap-2">
               <span className={`rounded-md px-2 py-1 font-rd text-[11px] font-semibold uppercase tracking-[0.12em] ${stop.tombstoned ? 'bg-[#50483f] text-white' : `${EVENTS_ACCENT_BG} text-rd-ink`}`}>{stop.tombstoned ? 'Removed' : 'Live event'}</span>
-              {head.firstDate ? <EventCountdown firstDate={head.firstDate} timeZone={stop.timezone ?? null} initial={head.countdown} className={`font-rd text-[11px] font-semibold uppercase tracking-[0.12em] ${EVENTS_ACCENT_TEXT}`} /> : null}
+              {head.firstDate ? <EventCountdown shows={upcoming.map((p) => ({ date: p.date, startsAt: p.startsAt }))} timeZone={stop.timezone ?? null} initial={head.countdown} className={`font-rd text-[11px] font-semibold uppercase tracking-[0.12em] ${EVENTS_ACCENT_TEXT}`} /> : null}
             </div>
-            <h1 className="rd-display m-0 text-[44px] uppercase leading-[0.92] tracking-[-0.01em] text-white lg:text-[54px]">{stopH1(show.name, stop.searchCity, venueName)}</h1>
+            <h1 className="rd-display m-0 text-[36px] uppercase leading-[0.94] tracking-[-0.01em] text-white lg:text-[48px]">{stopH1(show.name, stop.searchCity, venueName)}</h1>
             <p className="m-0 font-rd text-[16px] leading-[1.4] text-[#e9e3d8]">
               <strong className="text-white">{place ? `${venueName}, ${place}` : venueName}</strong>
               <br />
@@ -308,8 +311,8 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
                           )}
                         </div>
                         {/* The venue's stored Pit Party time for THIS show, when it printed one. */}
-                        {pit.map((x) => (
-                          <div key={`${x.start}-${x.end}`} className="flex items-center gap-2 rounded-[10px] bg-[#fbf3cf] px-2.5 py-2 text-rd-ink" data-pit-strip={p.key}>
+                        {pit.filter((x, i, arr) => arr.findIndex((y) => y.start === x.start && y.end === x.end) === i).map((x, i) => (
+                          <div key={i} className="flex items-center gap-2 rounded-[10px] bg-[#fbf3cf] px-2.5 py-2 text-rd-ink" data-pit-strip={p.key}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
                             <span className="font-rd text-[13px] leading-[1.35]"><strong>{`Pit Party ${formatClock(x.start)} to ${formatClock(x.end)}`}</strong>{`, per ${venueName}. Separate pass.`}</span>
                           </div>
@@ -326,11 +329,11 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
 
         {days.length ? (
           <section className="mt-6 flex flex-col gap-2.5" data-event-timeline="">
-            <H2>{days.length === 1 ? `Your ${weekdayLong(days[0].p.date)}, hour by hour` : 'Hour by hour'}</H2>
+            <H2>{soleDay ? `Your ${weekdayLong(days[0].p.date)}, hour by hour` : 'Hour by hour'}</H2>
             <div className="flex flex-col gap-4 rounded-2xl bg-rd-ink p-4 text-white">
               {days.map(({ p, rows: entries }) => (
                 <div key={p.key} className="flex flex-col" data-timeline-show={p.key}>
-                  {days.length > 1 ? <span className={`mb-2.5 font-rd text-[11px] font-semibold uppercase tracking-[0.12em] ${EVENTS_ACCENT_TEXT}`}>{`${formatShortDay(p.date)}, ${formatClock(p.startTime)} show`}</span> : null}
+                  {!soleDay ? <span className={`mb-2.5 font-rd text-[11px] font-semibold uppercase tracking-[0.12em] ${EVENTS_ACCENT_TEXT}`}>{`${formatShortDay(p.date)}, ${formatClock(p.startTime)} show`}</span> : null}
                   {entries.map((e, i) => (
                     <div key={`${e.kind}-${e.at}-${i}`} className="flex gap-3" data-timeline-entry={e.kind}>
                       <div className="flex w-3.5 flex-col items-center">
@@ -474,12 +477,12 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
           <H2>{`Also at ${venueName}`}</H2>
           <div className="grid grid-cols-2 gap-2" data-also-at="">
             <EventPageLink href={venueHref} linkSurface="event_to_venue" show={stop.show} venueSlug={stop.venueSlug} className="flex min-h-[72px] flex-col gap-1 rounded-[14px] border border-rd-line bg-rd-card p-3.5 text-rd-ink no-underline hover:border-rd-ink">
-              <span className="rd-display text-[20px] uppercase leading-none">Venue guide</span>
+              <span className="rd-display text-[20px] uppercase leading-none [overflow-wrap:anywhere]">Venue guide</span>
               <span className="font-rd text-[12px] leading-[1.35] text-rd-ink-faint">{`${venueName} on PromoNight`}</span>
             </EventPageLink>
             {teams.map((t) => (
               <EventPageLink key={t.teamId} href={t.href} linkSurface="event_to_team" show={stop.show} venueSlug={stop.venueSlug} className="flex min-h-[72px] flex-col gap-1 rounded-[14px] border border-rd-line bg-rd-card p-3.5 text-rd-ink no-underline hover:border-rd-ink">
-                <span className="rd-display text-[20px] uppercase leading-none">{t.isCfb ? `${t.name} game days` : `${t.name} promos`}</span>
+                <span className="rd-display text-[20px] uppercase leading-none [overflow-wrap:anywhere]">{t.isCfb ? `${t.name} game days` : `${t.name} promos`}</span>
                 <span className="font-rd text-[12px] leading-[1.35] text-rd-ink-faint">{t.isCfb ? 'Schedule and game day guide' : 'Giveaways and theme nights'}</span>
               </EventPageLink>
             ))}
@@ -494,9 +497,9 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
                 const link = eventPageHref({ kind: 'stop', show: s.show, venue: s.venueSlug }, 'events_hub_list');
                 if (!link) return null;
                 return (
-                  <EventPageLink key={s.venueSlug} href={link.href} linkSurface={link.surface} show={s.show} venueSlug={s.venueSlug} className="flex min-h-[88px] flex-col gap-1 rounded-[14px] bg-rd-ink p-3 text-white no-underline hover:brightness-110">
+                  <EventPageLink key={s.venueSlug} href={link.href} linkSurface={link.surface} show={s.show} venueSlug={s.venueSlug} className="flex min-h-[88px] min-w-0 flex-col gap-1 overflow-hidden rounded-[14px] bg-rd-ink p-3 text-white no-underline hover:brightness-110">
                     <span className={`font-rd text-[10px] font-semibold uppercase tracking-[0.12em] ${EVENTS_ACCENT_TEXT}`}>{stopTileDates(s)}</span>
-                    <span className="rd-display text-[22px] uppercase leading-none">{s.searchCity}</span>
+                    <span className="rd-display text-[19px] uppercase leading-[1.05] [overflow-wrap:anywhere]">{s.searchCity}</span>
                     <span className="font-rd text-[12px] leading-[1.35] text-[#d8d1c4]">{`${displayVenueName(s.venueName)} · ${s.upcomingCount} ${s.upcomingCount === 1 ? 'show' : 'shows'}`}</span>
                   </EventPageLink>
                 );
