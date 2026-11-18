@@ -247,7 +247,11 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
               <span className={`rounded-md px-2 py-1 font-rd text-[11px] font-semibold uppercase tracking-[0.12em] ${stop.tombstoned ? 'bg-[#50483f] text-white' : `${EVENTS_ACCENT_BG} text-rd-ink`}`}>{stop.tombstoned ? 'Removed' : 'Live event'}</span>
               {head.firstDate ? <EventCountdown shows={upcoming.map((p) => ({ date: p.date, startsAt: p.startsAt }))} timeZone={stop.timezone ?? null} initial={head.countdown} className={`font-rd text-[11px] font-semibold uppercase tracking-[0.12em] ${EVENTS_ACCENT_TEXT}`} /> : null}
             </div>
-            <h1 className="rd-display m-0 text-[54px] uppercase leading-[0.9] tracking-[-0.01em] text-white [overflow-wrap:anywhere]">{stopH1(show.name, stop.searchCity)}</h1>
+            {/* The mockup's 54px, scaled to the screen below 470px wide: the site's display
+                face is wider than the mockup's condensed one, and at a flat 54px
+                "MINNEAPOLIS" does not fit a 390px phone and breaks mid-word. At 11.5vw
+                every stored city sits on its own line under "MONSTER JAM" from 320 up. */}
+            <h1 className="rd-display m-0 text-[min(54px,11.5vw)] uppercase leading-[0.9] tracking-[-0.01em] text-white [overflow-wrap:break-word]">{stopH1(show.name, stop.searchCity)}</h1>
             <p className="m-0 font-rd text-[16px] leading-[1.4] text-[#e9e3d8]">
               <strong className="text-white">{place ? `${venueName}, ${place}` : venueName}</strong>
               <br />
