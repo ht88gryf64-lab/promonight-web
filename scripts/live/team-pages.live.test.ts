@@ -546,7 +546,8 @@ test(`no package page title passes 70 characters beyond the two ruled exceptions
   const rows = await pool(promos, async (p) => {
     const html = await promoPage(p);
     const title = unescape(/<title>([^<]*)<\/title>/.exec(html)?.[1] ?? '');
-    return { p, title, pkg: / Ticket Package \| /.test(title) };
+    // The phrase anywhere in the name, any case (the page rule's own test), not only directly before the pipe.
+    return { p, title, pkg: /\bticket package\b/i.test(title.replace(/ \| PromoNight$/, '')) };
   });
   const pkgs = rows.filter((r) => r.pkg);
   const long = pkgs.filter((r) => r.title.length > 70 && !PACKAGE_TITLES_PAST_70.has(r.p)).map((r) => `${r.title.length} ${r.p}: ${r.title}`);

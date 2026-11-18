@@ -334,6 +334,10 @@ isles('i4', { title: 'Hockey is for Everyone Night', pageSlug: 'hockey-is-for-ev
 // link it (WEB6 G2); the package page links the night.
 isles('i5', { title: '90s Night', pageSlug: '90s-night', type: 'theme', date: '2026-12-18' });
 isles('i6', { title: '90s Night T-Shirt', pageSlug: '90s-night-t-shirt', type: 'theme', date: '2026-12-18', ticketPackageRequired: true, ticketPackageName: '90s Night T-Shirt Ticket Package' });
+// A stored name that already carries "Ticket Package", on a row with no
+// package flag and no related page (the Braves' 2027 shape, ruling 2026-11-18).
+isles('sw1', { title: 'Star Wars Ticket Package', pageSlug: 'star-wars-ticket-package', type: 'theme', date: '2027-03-09' });
+isles('sw2', { title: 'Hockey Fights Cancer Lavender Warmup Jersey Ticket Package', pageSlug: 'hfc-ticket-package', type: 'theme', date: '2027-03-11' });
 // Rule 2 past the budget: a long package name whose dated and undated forms
 // both pass 60 (form c, Gate 3 follow-up).
 isles('i7', { title: 'Hockey Fights Cancer Night', pageSlug: 'hockey-fights-cancer-night', type: 'theme', date: '2026-11-21' });
@@ -1020,6 +1024,15 @@ test('rule 2: a special-ticket package page beside its theme night carries "Tick
   assert.deepEqual(long.meta.title, { absolute: 'Hockey Fights Cancer Lavender Warmup Jersey Ticket Package | Islanders' });
   assert.equal((long.meta.openGraph as any).title, 'Hockey Fights Cancer Lavender Warmup Jersey Ticket Package | Islanders', 'no suffix on the social title either');
   assert.match(long.h, /<h1 class="rd-display[^"]*">Hockey Fights Cancer Lavender Warmup Jersey<\/h1>/);
+  // A stored name that already carries the phrase takes the same rule
+  // (ruling 2026-11-18): absolute, the nickname, the date, no suffix.
+  const stored = await render('nhl', 'new-york-islanders', 'star-wars-ticket-package');
+  assert.deepEqual(stored.meta.title, { absolute: 'Star Wars Ticket Package | Islanders Mar 9' });
+  assert.equal((stored.meta.openGraph as any).title, 'Star Wars Ticket Package | Islanders Mar 9', 'no suffix on the social title');
+  assert.match(stored.h, /<h1 class="rd-display[^"]*">Star Wars Ticket Package<\/h1>/);
+  assert.doesNotMatch(stored.h, /Ticket Package Ticket Package/, 'the phrase is never doubled');
+  const storedLong = await render('nhl', 'new-york-islanders', 'hfc-ticket-package');
+  assert.deepEqual(storedLong.meta.title, { absolute: 'Hockey Fights Cancer Lavender Warmup Jersey Ticket Package | Islanders' });
   // A package page with no related page on its game keeps its stored title.
   const lone = await render('nhl', 'minnesota-wild', 'puck-package-night');
   assert.match(String(lone.meta.title), /^Puck Package Night \|/);

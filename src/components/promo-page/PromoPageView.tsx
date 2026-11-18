@@ -41,6 +41,7 @@ import {
   formatLongDate,
   formatMonDay,
   formatMonDayYear,
+  carriesPackageQualifier,
   packagePageName,
   packagePageTitle,
   pageImage,
@@ -137,12 +138,13 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
     ticketPackage: isTicketPackageLeague(team.league) && primary.ticketPackageRequired === true,
     sameGameTitles: ctx.alsoAtGame.map((p) => p.title),
   });
-  // A qualified package name runs its own rule (a, b, c), always an
+  // A name that carries "Ticket Package" (added above, or already in the
+  // stored name: ruling 2026-11-18) runs its own rule (a, b, c), always an
   // absolute title with the team and never the " | PromoNight" suffix
   // (Gate 3 follow-up, ruling 2026-11-10).
   const titleDates = removed ? page.removedDates : dates;
   const { title, absolute: titleAbsolute } =
-    name !== cleanText(primary.title)
+    carriesPackageQualifier(name)
       ? packagePageTitle(name, teamName, titleDates, { nickname: team.name })
       : { title: promoPageTitle(name, teamName, titleDates, page.season, team.name), absolute: false };
   const description = promoPageDescription({
