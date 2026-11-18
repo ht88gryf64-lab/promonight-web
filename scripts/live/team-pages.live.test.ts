@@ -629,6 +629,10 @@ test(`the /events family: absent while the flag is off; with it on, every page i
     if (!article) { problems.push(`${path}: no stop article`); continue; }
     if (!/<div class="[^"]*\bpn-promo-page\b[^"]*">(?:<script[^>]*>[\s\S]*?<\/script>)*<article class="page-content/.test(html)) problems.push(`${path}: div.pn-promo-page is not the direct parent of article.page-content`);
     if (/[$£€]\s?\d/.test(article.replace(/<script[\s\S]*?<\/script>/g, ''))) problems.push(`${path}: a price in the article`);
+    // No affiliate or tracking URL in structured data (ruling 2026-11-18): the offer's url is the stop page.
+    for (const m of html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
+      if (/lusg\.net|ticketnetwork\.com|spothero|subId1|aff_sub/i.test(m[1])) problems.push(`${path}: a partner or tracking URL in JSON-LD`);
+    }
     const [, show, venue] = /^\/events\/([a-z0-9-]+)\/([a-z0-9-]+)$/.exec(path)!;
     // One chunk per showtime row: from its data-performance marker to the next.
     for (const chunk of article.split('data-performance="').slice(1)) {

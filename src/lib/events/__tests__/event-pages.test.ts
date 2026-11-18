@@ -294,7 +294,7 @@ test('JSON-LD: one Event per performance with its offset, the building, a status
   for (const status of ['onsale', 'soldout', 'unknown'] as const) {
     const wire = JSON.stringify(performanceJsonLd({ ...base, performance: { ...STOP.performances[0], status } }));
     assert.equal(/lusg\.net|ticketnetwork|spothero|subId|aff_|impact|evyy\.net|utm_/i.test(wire), false, status);
-    const urls = [...wire.matchAll(/https?:\/\/[^"\\]+/g)].map((m) => m[0]).filter((u) => !u.startsWith('https://schema.org/'));
+    const urls = [...wire.matchAll(/https?:\/\/[^"\\]+/g)].map((m) => m[0]).filter((u) => !u.startsWith('https://schema.org'));
     assert.ok(urls.length >= 2 && urls.every((u) => u.startsWith('https://www.getpromonight.com/')), urls.join(' '));
   }
   // The builder has no parameter a tracked link could arrive through (a compile-time fact, pinned here by arity of its input).
