@@ -108,7 +108,7 @@ other surface is byte-identical.
 |---|---|---|
 | subId1 (Ticketmaster: the wrap's `sharedid`) | `{surface}_{team}`, server-rendered | unchanged: `web_promo_page_{team}`, or `web_promo_date_{team}` on the per-date links |
 | subId2 | `share`, client-side, shared-link sessions only | unchanged; never in served HTML |
-| subId3 | the page slug, server-rendered | the primary "Get tickets", the per-date "Tickets" links, every JSON-LD `offers.url`, and the Ticketmaster wrap (appended to the wrap, never folded into `sharedid`) |
+| subId3 | the page slug, server-rendered | the primary "Get tickets", the per-date "Tickets" links, and the Ticketmaster wrap. Never in structured data: since 2026-11-18 every JSON-LD `offers.url` is the page's own URL and no affiliate or tracking URL appears in any structured data sitewide (appended to the wrap, never folded into `sharedid`) |
 
 - **Ticketmaster.** Only the Impact wrap gets subId3. Without
   `NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP` the link is a bare ticketmaster.com
@@ -141,7 +141,7 @@ performer page; `ticket_link_level` on `affiliate_click` says which.
 
 | subId1 | surface | where |
 |---|---|---|
-| web_promo_page_{team} | web_promo_page | Promo page primary "Get tickets", and its JSON-LD `offers.url` |
+| web_promo_page_{team} | web_promo_page | Promo page primary "Get tickets". Not in JSON-LD (its `offers.url` is the promo page URL since 2026-11-18) |
 | web_promo_date_{team} | web_promo_date (sub ID only; the click reports web_promo_page) | Promo page per-date "Tickets" links on a series |
 | web_team_page_{team} | web_team_page | Team page tickets block and sidebar rail (AffiliateRail); team-page schedule game detail for home games (GameExpand, game-day-detail; event link when matched) |
 | web_away_game_{team}_at_{opponent} | (away-game token, `awayGameSubKey`) | Team-page schedule game detail for away games (event link when matched) |

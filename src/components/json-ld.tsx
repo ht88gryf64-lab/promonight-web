@@ -36,6 +36,9 @@ function buildPlace(venue: Venue | null) {
   };
 }
 
+/** How many upcoming promos a team page names as Events in its structured data. */
+export const TEAM_EVENT_JSONLD_MAX = 20;
+
 export function JsonLd({
   team,
   upcomingPromos,
@@ -51,7 +54,15 @@ export function JsonLd({
   // exactly one definition of "upcoming" in the codebase.
   const teamUrl = `https://www.getpromonight.com/${team.sportSlug}/${team.id}`;
 
-  const events = upcomingPromos.map((promo) => ({
+  // THE CAP (2026-11-18). One Event per upcoming promo was unbounded: the
+  // Braves' 73 promos for 2027 landed on 2026-11-17 and their 73 Event blocks
+  // (91,479 bytes) took /mlb/atlanta-braves to 955,720 bytes, over the
+  // 950,000-byte cap the live battery enforces. The structured data now names
+  // the NEXT TEAM_EVENT_JSONLD_MAX upcoming promos, soonest first; the page
+  // itself still lists every one, and each promo page carries its own Event.
+  // A row with no usable date is not an Event (it would sort first and emit an empty startDate).
+  const nextPromos = upcomingPromos.filter((p) => /^\d{4}-\d{2}-\d{2}/.test(String(p.date ?? ''))).sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(0, TEAM_EVENT_JSONLD_MAX);
+  const events = nextPromos.map((promo) => ({
     '@context': 'https://schema.org',
     '@type': 'Event',
     name: promo.title,

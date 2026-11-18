@@ -504,10 +504,13 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   assert.equal(ld[1].location.name, 'Grand Casino Arena');
   assert.equal(ld[1].location.address.streetAddress, '199 W Kellogg Blvd, St Paul, MN 55102');
   assert.equal(ld[1].location.address.addressLocality, 'St Paul');
-  // offers.url follows the primary "Get tickets": TicketNetwork since the
-  // event-link rulings of 2026-11-02 (performer page here: no game doc carries
-  // a tnEventUrl in this fixture).
-  assert.equal(ld[1].offers.url, 'https://ticketnetwork.lusg.net/c/7236189/120057/2322?u=https%3A%2F%2Fwww.ticketnetwork.com%2Fe%2Fperformers%2Fminnesota-wild-tickets&partnerpropertyid=8313917&MediaPartnerPropertyId=8313917&subId1=web_promo_page_minnesota-wild&subId3=blaze-orange-hat');
+  // offers.url is the promo page itself (ruling 2026-11-18): no affiliate or
+  // tracking URL appears anywhere in structured data. The tracked link is on
+  // the page's button, which the assertions below still find in the HTML.
+  assert.equal(ld[1].offers.url, ld[0].url);
+  assert.match(ld[1].offers.url, /^https:\/\/www\.getpromonight\.com\/nhl\/minnesota-wild\/promos\//);
+  assert.equal(/lusg\.net|ticketnetwork|ticketmaster|subId|evyy\.net|spothero|expedia/i.test(JSON.stringify(ld)), false, 'a partner or tracking URL in structured data');
+  assert.match(h, /href="https:\/\/ticketnetwork\.lusg\.net\/c\/7236189\/120057\/2322\?u=https%3A%2F%2Fwww\.ticketnetwork\.com%2Fe%2Fperformers%2Fminnesota-wild-tickets[^"]*subId1=web_promo_page_minnesota-wild/);
   assert.match(h, />Also on Ticketmaster<\/a>/);
   assert.equal(ld[1].eventStatus, 'https://schema.org/EventScheduled');
   // The Event image stays the stored photo, unchanged by the share card.
@@ -781,7 +784,7 @@ test('share (2026-11-03): the share card on og:image and twitter:image on every 
     // subId3 (ruling 2026-11-04): every Impact link in the served HTML carries
     // subId1 unchanged and subId3 = the page slug, side by side.
     const impact = [...h.replace(/&amp;/g, '&').matchAll(/https:\/\/[a-z0-9.-]+\/c\/\d+\/\d+\/\d+\?[^"\s\\]+/g)].map((m) => m[0]);
-    if (kind === 'live') assert.ok(impact.length >= 2, `${slug}: the Get tickets anchor and its JSON-LD offer at least`);
+    if (kind === 'live') assert.ok(impact.length >= 1, `${slug}: the Get tickets anchor at least (no Impact link sits in JSON-LD since 2026-11-18)`);
     for (const u of impact) {
       assert.match(new URL(u).searchParams.get('subId1') ?? '', /^web_promo_(page|date)_[a-z0-9-]+$/, `${slug}: subId1 ${u}`);
       assert.equal(new URL(u).searchParams.get('subId3'), slug, `${slug}: subId3 ${u}`);
