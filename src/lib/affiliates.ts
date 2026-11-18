@@ -553,6 +553,10 @@ export function buildEventTicketLink(opts: EventTicketLinkOpts): string | null {
   if (!EVENT_SLUG_RE.test(opts.show) || !EVENT_SLUG_RE.test(opts.venueSlug)) return null;
   const landing = `https://www.ticketnetwork.com/tickets/${opts.eventId}`;
   if (!isTicketNetworkEventUrl(landing)) return null;
+  // A sub ID is capped at 64 characters by truncation, and two long venue
+  // slugs could then share one. An event link whose key would be cut is not
+  // built at all (the row shows its status instead).
+  if (`${opts.surface}_${opts.show}_${opts.venueSlug}`.length > TN_SUBID_MAX) return null;
   const subId1 = TN_SUBID_OVERRIDE ?? eventSubId(opts.surface, opts.show, opts.venueSlug);
   return (
     `${TICKETNETWORK.prefix}?u=${encodeURIComponent(landing)}` +

@@ -10,7 +10,9 @@ import {
   bagBlockFor,
   eventCardPath,
   eventPageHref,
+  eventSafeLotName,
   eventSafeParkingNote,
+  eventSafeTransitNote,
   eventsPageIdentity,
   formatClock,
   formatDatesLine,
@@ -19,6 +21,8 @@ import {
   isEventsPagesLive,
   performanceJsonLd,
   showsBagRule,
+  showsPhrase,
+  stopDescription,
   splitSentences,
   stopFaqs,
   stopH1,
@@ -33,6 +37,7 @@ import {
 import { buildEventTicketLink, eventSubId, eventTicketVendor, TN_SUBID_RE } from '../../affiliates';
 import { inferSurfaceFromPath, KNOWN_SURFACE_VALUES } from '../../analytics';
 import { isRevalidatePath } from '../../revalidate-paths';
+import { ymdInZone } from '../../promo-date-tile';
 
 const perf = (key: string, offset = '-06:00', over: Partial<EventPerformance> = {}): EventPerformance => {
   const date = key.slice(0, 10); const startTime = `${key.slice(11, 13)}:${key.slice(13, 15)}`;
@@ -88,6 +93,12 @@ test('every surface uses the helper: no file builds an /events href by hand, and
     for (const m of text.matchAll(/eventPageHref\(\s*\{[^}]*\}\s*,\s*'([a-z_]+)'/g)) named.set(m[1], [...(named.get(m[1]) ?? []), rel]);
   }
   assert.deepEqual(offenders, [], 'a hand-built /events href: use eventPageHref (src/lib/events/event-pages.ts)');
+  // The flag-blind path builders are for the family's own pages (canonicals,
+  // JSON-LD, the sitemap). A surface outside the family that used one would
+  // link in without the helper, and so without the flag or a surface.
+  const family = /^(?:lib\/events\/|components\/events\/|app\/events\/|app\/api\/event-card\/)/;
+  const strays = files.map((f) => relative(SRC, f)).filter((rel) => !family.test(rel) && /\b(?:eventHubPath|eventStopPath|EVENTS_INDEX_PATH)\b/.test(readFileSync(join(SRC, rel), 'utf8')));
+  assert.deepEqual(strays, [], 'a path builder used outside the events family: link through eventPageHref');
   for (const s of EVENT_LINK_SURFACES) assert.ok((named.get(s) ?? []).length > 0, `no eventPageHref call names the surface ${s}`);
   assert.deepEqual([...named.keys()].filter((k) => !(EVENT_LINK_SURFACES as readonly string[]).includes(k)), []);
   // Where each renders.
@@ -120,6 +131,8 @@ test('the ticket link: one performance, its own event page, subId1 = {surface}_{
   assert.match(eventSubId('web_event_hub', 'monster-jam', 'raymond-james-stadium'), TN_SUBID_RE);
   // The guard, known-bad: no id, a string id, zero, a fraction, a provider events do not store, a team surface, a show or venue that is not a slug.
   const base = { provider: 'ticketnetwork' as const, eventId: 8258515, show: 'monster-jam', venueSlug: 'us-bank-stadium', surface: 'web_event_page' as const };
+  // A key that would be cut at 64 characters is not built (two long slugs could share one).
+  assert.equal(buildEventTicketLink({ ...{ provider: 'ticketnetwork' as const, eventId: 1, show: 'monster-jam', surface: 'web_event_page' as const }, venueSlug: 'darrell-k-royal-texas-memorial-stadium' }), null);
   for (const over of [{ eventId: null }, { eventId: '8258515' as never }, { eventId: 0 }, { eventId: 1.5 }, { eventId: -4 }, { provider: null }, { provider: 'ticketmaster' as never }, { surface: 'web_team_page' as never }, { show: 'Monster Jam' }, { venueSlug: 'us-bank-stadium/../x' }, { venueSlug: '' }]) {
     assert.equal(buildEventTicketLink({ ...base, ...over }), null, JSON.stringify(over));
   }
@@ -202,13 +215,59 @@ test('the bag block: the first that exists and nothing else, in the ruled order'
 
 test('parking notes: a sentence with a price, a tenant, a league or a game-day word is dropped; what is left may be nothing', () => {
   const tenants = tenantNameWords(['Minnesota Vikings']);
-  assert.deepEqual(tenants.sort(), ['Minnesota Vikings', 'Vikings']);
+  assert.deepEqual(tenants.sort(), ['Minnesota', 'Minnesota Vikings', 'Vikings']);
+  // The place words are left out, or "Minnesota" would silence every sentence naming the state.
+  assert.deepEqual(tenantNameWords(['Minnesota Vikings', 'Minnesota United FC', 'Boston Red Sox'], ['Minneapolis', 'Minnesota', 'Boston']).sort(), ['Boston Red Sox', 'Minnesota United FC', 'Minnesota Vikings', 'Sox', 'United', 'Vikings']);
   const note = 'Connected to the stadium by skyway. Rates start at $25 on game days. Vikings season ticket holders park here. Opens 4 hours before kickoff. Entrance on 4th Street.';
   assert.equal(eventSafeParkingNote(note, tenants), 'Connected to the stadium by skyway. Entrance on 4th Street.');
   for (const bad of ['Costs $40.', 'Parking is 30 dollars cash.', 'Reserved for NFL games.', 'Open on game day only.', 'Lots open before first pitch.', 'Passes are sold for the season.', 'Vikings permit lot.', 'Opens at kick-off.']) assert.equal(eventSafeParkingNote(bad, tenants), '', bad);
   assert.equal(eventSafeParkingNote(null, tenants), '');
   assert.equal(eventSafeParkingNote('On the east side at St. Paul Ave. Enter from 5th.', []), 'On the east side at St. Paul Ave. Enter from 5th.');
   assert.deepEqual(splitSentences('One. Two! Three? four'), ['One.', 'Two!', 'Three? four']);
+  // Review 2026-11-18, finding 9: the sentences the first filter let through.
+  const more = tenantNameWords(['Boston Red Sox', 'Minnesota United FC'], ['Boston', 'Minnesota']);
+  for (const bad of ['Lots open four hours before kick off.', 'Sox fans park in Lot B.', 'United supporters enter at Gate 3.', 'Pregame tailgating is allowed here.', 'Lots open three hours before tipoff.', 'Opens two hours before puck drop on matchdays.', 'Parking is 30 per car, cash only.', 'Twenty dollars per car.']) assert.equal(eventSafeParkingNote(bad, more), '', bad);
+  // A lot NAME with a price or a tenant is not printed.
+  assert.equal(eventSafeLotName('Lot 4', more), 'Lot 4');
+  for (const bad of ['Lot 4 ($40)', 'Sox Players Lot', '', null]) assert.equal(eventSafeLotName(bad, more), '', String(bad));
+});
+
+test('transit notes: another event\'s trolley times, a fare offer and match-day service are cut; the stop itself stays', () => {
+  // The Snapdragon Stadium note as the hub stores it (review 2026-11-18, finding 1).
+  const note = 'The Green Line trolley stops at Stadium Station, beside the stadium. Pre-event Green Line trolleys depart stations starting at 4:14 PM every 15 minutes or better. Post-event trolleys depart Stadium Station starting at 8:37 PM. MTS increases Green Line frequency for matches. Family Weekend promo: on Saturdays and Sundays up to two kids (12 and under) ride free with a fare-paying adult on all MTS routes.';
+  assert.equal(eventSafeTransitNote(note, ['San Diego FC']), 'The Green Line trolley stops at Stadium Station, beside the stadium.');
+  for (const bad of ['Trains leave at 7 pm.', 'The fare is paid on board.', 'Kids ride free.', 'Extra service runs on game days.', 'Post-event buses load on 4th Street.', 'A $2.50 ticket covers the ride.']) assert.equal(eventSafeTransitNote(bad, []), '', bad);
+  assert.equal(eventSafeTransitNote('Both light rail lines stop at U.S. Bank Stadium station. Buses serve downtown.', ['Vikings']), 'Both light rail lines stop at U.S. Bank Stadium station. Buses serve downtown.');
+  assert.equal(eventSafeTransitNote(null, []), '');
+});
+
+test('several visits never read as one continuous run of dates', () => {
+  const angel = ['2026-12-19', '2026-12-20', '2027-01-16', '2027-01-17', '2027-01-30', '2027-01-31', '2027-02-20', '2027-02-21'];
+  assert.equal(showsPhrase(angel, 4), '8 shows between Dec 19, 2026 and Feb 21, 2027');
+  assert.equal(showsPhrase(['2027-02-06', '2027-02-07', '2027-02-13'], 2), '3 shows between Feb 6 and Feb 13, 2027');
+  // One visit keeps its days.
+  assert.equal(showsPhrase(['2027-02-20', '2027-02-21'], 1), 'Sat, Feb 20 and Sun, Feb 21, 2027');
+  assert.equal(showsPhrase([], 0), '');
+  const d = stopDescription({ showName: 'Monster Jam', searchCity: 'Anaheim', venueName: 'Angel Stadium', dates: angel, visitCount: 4, bagRule: false, parking: true, transit: true, pitParty: false });
+  assert.equal(d, 'Monster Jam has 8 shows between Dec 19, 2026 and Feb 21, 2027 at Angel Stadium in Anaheim. Showtimes and tickets, plus parking and transit.');
+  // Nothing upcoming: the description promises nothing.
+  assert.equal(stopDescription({ showName: 'Monster Jam', searchCity: 'Minneapolis', venueName: 'U.S. Bank Stadium', dates: [], bagRule: true, parking: true, transit: true, pitParty: false }), 'Monster Jam at U.S. Bank Stadium in Minneapolis. No upcoming dates are listed right now.');
+  // A long run's FAQ answer is a summary, not eight dates in a sentence.
+  const up = angel.map((dt, i) => perf(`${dt}T${i % 2 ? '1430' : '1630'}`, '-08:00', { visitId: angel[i - (i % 2)] }));
+  const faq = stopFaqs({ showName: 'Monster Jam', searchCity: 'Anaheim', venueName: 'Angel Stadium', upcoming: up, bag: null, pitParty: [], gateTimes: [] });
+  assert.deepEqual(faq.map((f) => f.a), ['Monster Jam has 8 shows between Dec 19, 2026 and Feb 21, 2027 at Angel Stadium. Every showtime is listed at the top of this page. Times are local to the venue.']);
+});
+
+test('"today" is the venue\'s day: a visit that starts tomorrow in Los Angeles is still a later visit the evening before', () => {
+  // 6 PM Pacific on Dec 30 is already Dec 31 in UTC (review 2026-11-18, finding 12).
+  const now = at('2026-12-31T02:00:00Z');
+  assert.equal(ymdInZone(now, 'America/Los_Angeles'), '2026-12-30');
+  // The known-bad cut: the UTC date is already the visit's first day, so a UTC "today" would not call it later.
+  assert.equal(now.toISOString().slice(0, 10), '2026-12-31');
+  const stop = { visits: [{ visitId: '2026-12-31', startDate: '2026-12-31', endDate: '2027-01-01' }], performances: [] };
+  assert.equal(stopTimeline({ ...stop, timezone: 'America/Los_Angeles' }, now).returnsYear, 2026);
+  // Four hours later it is Dec 31 in Los Angeles too: the visit has begun and is no longer "later".
+  assert.equal(stopTimeline({ ...stop, timezone: 'America/Los_Angeles' }, at('2026-12-31T09:00:00Z')).returnsYear, null);
 });
 
 test('JSON-LD: one Event per performance with its offset, the building, a status and an offer without a price', () => {

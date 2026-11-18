@@ -23,10 +23,10 @@ export function HubUpcomingEvents({ stops, buildingName }: { stops: EventStopSum
         <ul className="m-0 mt-2 list-none divide-y divide-rd-line p-0">
           {rows.map(({ s, link }) => (
             <li key={`${s.show}~${s.venueSlug}`} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-2">
-              <EventPageLink href={link.href} linkSurface={link.surface} show={s.show} venueSlug={s.venueSlug} className="inline-flex min-h-11 items-center text-sm font-semibold text-rd-ink transition-colors hover:text-rd-red md:text-base">
+              <EventPageLink href={link.href} linkSurface={link.surface} show={s.show} venueSlug={s.venueSlug} className="inline-flex min-h-11 items-center text-sm font-semibold text-rd-link underline-offset-2 hover:underline md:text-base">
                 {`${EVENT_SHOWS[s.show].name}: dates and tickets`}
               </EventPageLink>
-              <span className="font-rd text-xs text-rd-ink-faint">{`${formatRangeWithYear(s.nextDate, s.lastDate)} · ${s.upcomingCount} ${s.upcomingCount === 1 ? 'show' : 'shows'}`}</span>
+              <span className="font-rd text-xs text-rd-ink-faint">{`${s.visitStarts.length > 1 ? `${formatRangeWithYear(s.nextDate, s.nextDate)} to ${formatRangeWithYear(s.lastDate, s.lastDate)}` : formatRangeWithYear(s.nextDate, s.lastDate)} · ${s.upcomingCount} ${s.upcomingCount === 1 ? 'show' : 'shows'}`}</span>
             </li>
           ))}
         </ul>

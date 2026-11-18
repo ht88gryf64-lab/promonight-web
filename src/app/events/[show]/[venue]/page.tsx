@@ -40,8 +40,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     title: head.title,
     description: head.description,
     alternates: { canonical: head.canonical },
-    openGraph: { type: 'website', siteName: 'PromoNight', url: head.canonical, title: socialTitle, description: head.description, images: [{ url: head.card.url, width: head.card.width, height: head.card.height, alt: head.card.alt }] },
-    twitter: { card: 'summary_large_image', site: '@promo_night_app', creator: '@promo_night_app', title: socialTitle, description: head.description, images: [{ url: head.card.url, alt: head.card.alt }] },
+    // A removed stop has no card, so it names no image (the card route answers 404 for it).
+    openGraph: { type: 'website', siteName: 'PromoNight', url: head.canonical, title: socialTitle, description: head.description, ...(head.hasCard ? { images: [{ url: head.card.url, width: head.card.width, height: head.card.height, alt: head.card.alt }] } : {}) },
+    twitter: { card: head.hasCard ? 'summary_large_image' : 'summary', site: '@promo_night_app', creator: '@promo_night_app', title: socialTitle, description: head.description, ...(head.hasCard ? { images: [{ url: head.card.url, alt: head.card.alt }] } : {}) },
     robots: head.indexable ? undefined : { index: false, follow: true },
   };
 }

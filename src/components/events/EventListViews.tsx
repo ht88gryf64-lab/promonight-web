@@ -27,7 +27,8 @@ const Shell = ({ children }: { children: ReactNode }) => (
   </div>
 );
 const Note = () => <p className="m-0 mt-7 border-t border-rd-line pt-5 font-rd text-[11px] leading-[1.4] text-rd-ink-faint" data-events-note="">{EVENTS_NOT_AFFILIATED}</p>;
-const datesOf = (s: EventStopSummary) => formatRangeWithYear(s.nextDate, s.lastDate);
+// One visit: its range. Several: never one continuous range (it would read as a run of weeks).
+const datesOf = (s: EventStopSummary) => (s.visitStarts.length > 1 ? `${s.visitStarts.length} visits, ${formatRangeWithYear(s.nextDate, s.nextDate)} to ${formatRangeWithYear(s.lastDate, s.lastDate)}` : formatRangeWithYear(s.nextDate, s.lastDate));
 const showsOf = (n: number) => `${n} ${n === 1 ? 'show' : 'shows'}`;
 
 function StopRow({ s, last }: { s: EventStopSummary; last: boolean }) {
@@ -39,7 +40,7 @@ function StopRow({ s, last }: { s: EventStopSummary; last: boolean }) {
       <EventPageLink href={link.href} linkSurface={link.surface} show={s.show} venueSlug={s.venueSlug} className="flex min-h-11 items-center justify-between gap-3 text-rd-ink no-underline">
         <span className="flex flex-col gap-0.5">
           <span className="font-rd text-[15px] font-semibold">{`${s.searchCity}: ${datesOf(s)}`}</span>
-          <span className="font-rd text-[12px] text-rd-ink-faint">{`${venueName} · ${showsOf(s.upcomingCount)} · dates, tickets and venue guide`}</span>
+          <span className="font-rd text-[12px] text-rd-ink-faint">{`${venueName} · ${showsOf(s.upcomingCount)}`}</span>
         </span>
         <span aria-hidden="true" className="text-rd-ink-faint">›</span>
       </EventPageLink>
@@ -51,7 +52,9 @@ function StopRow({ s, last }: { s: EventStopSummary; last: boolean }) {
 }
 
 export function EventHubView({ show, stops, year }: { show: EventShow; stops: EventStopSummary[]; year: number | null }) {
-  const months = [...new Set(stops.map((s) => s.nextDate.slice(0, 7)))].sort();
+  // A stop is listed under EVERY month one of its visits starts in, so a
+  // building with four weekends is found in each of their months.
+  const months = [...new Set(stops.flatMap((s) => s.visitStarts.map((d) => d.slice(0, 7))))].sort();
   const indexLink = eventPageHref({ kind: 'index' }, 'events_hub_list');
   const total = stops.reduce((n, s) => n + s.upcomingCount, 0);
   return (
@@ -74,7 +77,7 @@ export function EventHubView({ show, stops, year }: { show: EventShow; stops: Ev
       </header>
       {stops.length ? (
         months.map((ym) => {
-          const rows = stops.filter((s) => s.nextDate.slice(0, 7) === ym);
+          const rows = stops.filter((s) => s.visitStarts.some((d) => d.slice(0, 7) === ym));
           return (
             <section key={ym} className="mt-6 flex flex-col gap-2.5" data-month={ym}>
               <h2 className="rd-display m-0 text-[22px] uppercase text-rd-ink">{monthLabel(ym)}</h2>
@@ -126,6 +129,10 @@ export function EventsIndexView({ shows, next }: { shows: Array<{ show: EventSho
           <ul className="m-0 flex list-none flex-col rounded-[14px] border border-rd-line bg-rd-card px-3.5 py-1">
             {next.map((s, i) => <StopRow key={`${s.show}~${s.venueSlug}`} s={s} last={i === next.length - 1} />)}
           </ul>
+          {shows.filter((x) => x.stops > next.filter((n) => n.show === x.show.slug).length).map(({ show, stops }) => {
+            const link = eventPageHref({ kind: 'hub', show: show.slug }, 'events_hub_list');
+            return link ? <EventPageLink key={show.slug} href={link.href} linkSurface={link.surface} show={show.slug} className="inline-flex min-h-11 items-center self-start font-rd text-[14px] font-semibold text-rd-link no-underline hover:underline">{`See all ${stops} ${show.name} stops by month`}</EventPageLink> : null;
+          })}
         </section>
       ) : null}
       <Note />

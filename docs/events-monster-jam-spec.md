@@ -171,6 +171,10 @@ Boundaries:
 - Routes: `/events` (shows and next stops), `/events/[show]` (hub by month), `/events/[show]/[venue]` (stop; unknown slug 404; `previousSlugs` 308). Stop pages only carry `div.pn-promo-page` as the direct parent of `article.page-content`.
 - Data: `src/lib/events/event-stops.ts` reads eventStops with its visits and performances and joins the hub's published view; the mapper gates every field. `src/lib/events/event-pages.ts` is the pure half.
 - Tickets: `buildEventTicketLink` (src/lib/affiliates.ts), provider from `eventTicketVendor()` beside `TICKET_VENDOR` with `EVENT_TICKET_VENDOR_OVERRIDE`. subId1 = `{surface}_{show}_{venueSlug}`. A performance that is not on sale shows a disabled status; never a price. A performance past its start time loses its button by the clock and moves to "Last visit".
+- By the clock: the stop page is ISR (one hour). The browser drops a Tickets button at the show's start instant (ShowtimeGate); the server HTML follows at the next regeneration (known-issues 105).
+- Transit: the hub's lines, and its note cut like a parking note plus clock times, fares and match-day service (a hub note can carry another event's trolley times).
+- Several visits never read as one continuous range: "8 shows between Dec 19, 2026 and Feb 21, 2027". The hub lists a stop under every month one of its visits starts in.
+- A stop with nothing upcoming keeps its page (title "{Show} {City} at {Venue}", no event bag rule, "Last visit"); a removed stop renders "removed" with noindex, no card and no ticket link.
 - Secondary buttons: Parking only (SpotHero). No Hotels. No Remind me: the reminder flow is keyed to a team and a promo.
 - Raptive: CLEARED 2026-11-17 (see Raptive above). Copy is written for adults buying tickets; nothing is aimed at children.
 - Mockup sections NOT built, because nothing stored backs them: the three quick tiles (run time, halftime, ear protection), "Going with kids", the stroller question and the "How long is the show?" answer.

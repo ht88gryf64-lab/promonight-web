@@ -15,6 +15,8 @@
 // sites (ruling 2026-11-17). No price, no image of any kind but the
 // generated text card. Copy is written for adults buying tickets.
 
+import { ymdInZone } from '../promo-date-tile';
+
 export function isEventsPagesLive(env: NodeJS.ProcessEnv = process.env): boolean {
   return String(env.EVENTS_PAGES_LIVE ?? '').trim().toLowerCase() === 'true';
 }
@@ -210,6 +212,21 @@ export function formatDatesLine(dates: string[]): string {
   return `${formatRange(uniq[0], uniq[uniq.length - 1])}, ${year}`;
 }
 
+/**
+ * How a set of showtimes reads as one line. One visit: its days ("Sat, Feb 20
+ * and Sun, Feb 21, 2027"). Several visits: never one continuous range, which
+ * would read as a run of weeks; a count between two dates instead ("8 shows
+ * between Dec 19, 2026 and Feb 21, 2027").
+ */
+export function showsPhrase(dates: string[], visitCount: number): string {
+  const sorted = [...dates].sort();
+  if (!sorted.length) return '';
+  if (visitCount <= 1) return formatDatesLine(sorted);
+  const a = sorted[0]; const b = sorted[sorted.length - 1];
+  const day = (ymd: string) => `${formatRange(ymd, ymd)}, ${ymd.slice(0, 4)}`;
+  return `${sorted.length} shows between ${a.slice(0, 4) === b.slice(0, 4) ? formatRange(a, a) : day(a)} and ${day(b)}`;
+}
+
 // ── what is upcoming, by the clock ──────────────────────────────────────────
 
 export interface StopTimeline {
@@ -223,7 +240,7 @@ export interface StopTimeline {
 }
 
 /** A performance past its start time is past, by the clock, whatever its date. */
-export function stopTimeline(stop: Pick<EventStop, 'visits' | 'performances'>, now: Date): StopTimeline {
+export function stopTimeline(stop: Pick<EventStop, 'visits' | 'performances'> & { timezone?: string }, now: Date): StopTimeline {
   const t = now.getTime();
   const isUpcoming = (p: EventPerformance) => { const at = Date.parse(p.startsAt); return Number.isFinite(at) && at > t; };
   const visitOf = (id: string): EventVisit => stop.visits.find((v) => v.visitId === id) ?? { visitId: id, startDate: id, endDate: id };
@@ -237,7 +254,9 @@ export function stopTimeline(stop: Pick<EventStop, 'visits' | 'performances'>, n
   const past = byVisit(sorted.filter((p) => !isUpcoming(p)));
   const lastVisit = past.length ? past[past.length - 1] : null;
   const upcomingVisitIds = new Set(upcoming.map((g) => g.visit.visitId));
-  const todayYmd = now.toISOString().slice(0, 10);
+  // "Today" is the venue's day, not UTC's: a visit that starts tomorrow in
+  // Los Angeles is still a later visit at 6 PM Pacific the evening before.
+  const todayYmd = ymdInZone(now, stop.timezone);
   const later = stop.visits.filter((v) => !upcomingVisitIds.has(v.visitId) && EVENT_YMD_RE.test(v.startDate) && v.startDate > todayYmd).sort((a, b) => a.startDate.localeCompare(b.startDate));
   return { upcoming, lastVisit, returnsYear: !upcoming.length && later.length ? Number(later[0].startDate.slice(0, 4)) : null };
 }
@@ -276,8 +295,11 @@ export const showsBagRule = (b: BagBlock | null): boolean => !!b && b.kind !== '
 // ── parking notes: what survives on an event day ────────────────────────────
 
 const LEAGUE_WORDS = ['NFL', 'NBA', 'NHL', 'MLB', 'MLS', 'WNBA', 'NCAA'];
-const GAME_WORDS_RE = /\b(?:games?|gamedays?|first pitch|kick-?offs?|seasons?)\b/i;
-const CURRENCY_RE = /[$£€]\s?\d|\d\s?(?:dollars?|bucks)\b|\bUSD\b/i;
+const GAME_WORDS_RE = /\b(?:games?|gamedays?|first pitch|kick[- ]?offs?|seasons?|pre-?games?|post-?games?|tip-?offs?|puck drop|match(?:es)?|match ?days?|supporters?)\b/i;
+/** Transit only (review 2026-11-18): a clock time, a fare claim, or a
+ *  before-and-after service note belongs to the event it was written for. */
+const TRANSIT_WORDS_RE = /\b\d{1,2}:\d{2}\s?(?:a\.?m\.?|p\.?m\.?)?|\b\d{1,2}\s?(?:a\.?m\.?|p\.?m\.?)\b|\b(?:pre-event|post-event|fares?|free|promo(?:tion)?s?|kids?|children)\b/i;
+const CURRENCY_RE = /[$£€]\s?\d|\d\s?(?:dollars?|bucks)\b|\bUSD\b|\bdollars?\b|\b\d+\s+per\s+(?:car|vehicle|space|day)\b/i;
 
 /** Sentences of a hub parking note. Splits on a full stop, question mark or
  *  exclamation mark followed by a space and a capital, so "St. Paul" and
@@ -295,22 +317,47 @@ export function splitSentences(text: string): string[] {
  * prints alone).
  */
 export function eventSafeParkingNote(note: string | null | undefined, tenantNames: string[]): string {
-  const names = [...LEAGUE_WORDS, ...tenantNames].map((n) => n.trim()).filter((n) => n.length >= 3);
-  const nameRe = names.length ? new RegExp(`\\b(?:${names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'i') : null;
+  const nameRe = tenantNameRe(tenantNames);
   return splitSentences(note ?? '')
-    .filter((s) => !CURRENCY_RE.test(s) && !GAME_WORDS_RE.test(s) && !(nameRe && nameRe.test(s)))
+    .filter((x) => !CURRENCY_RE.test(x) && !GAME_WORDS_RE.test(x) && !(nameRe && nameRe.test(x)))
+    .join(' ');
+}
+function tenantNameRe(tenantNames: string[]): RegExp | null {
+  const names = [...LEAGUE_WORDS, ...tenantNames].map((n) => n.trim()).filter((n) => n.length >= 3);
+  return names.length ? new RegExp(`\\b(?:${names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'i') : null;
+}
+/** A lot NAME that carries a price or a tenant is not printed at all. */
+export function eventSafeLotName(name: string | null | undefined, tenantNames: string[]): string {
+  const n = String(name ?? '').trim();
+  const nameRe = tenantNameRe(tenantNames);
+  return n && !CURRENCY_RE.test(n) && !(nameRe && nameRe.test(n)) ? n : '';
+}
+/**
+ * The hub's transit note, cut for an event page: the parking rule plus the
+ * transit words. A hub note written around a home game can carry that game's
+ * trolley times, a fare offer or a match-day frequency (Snapdragon Stadium,
+ * review 2026-11-18); none of that holds for a touring show.
+ */
+export function eventSafeTransitNote(note: string | null | undefined, tenantNames: string[]): string {
+  const nameRe = tenantNameRe(tenantNames);
+  return splitSentences(note ?? '')
+    .filter((x) => !CURRENCY_RE.test(x) && !GAME_WORDS_RE.test(x) && !TRANSIT_WORDS_RE.test(x) && !(nameRe && nameRe.test(x)))
     .join(' ');
 }
 
 /** Every word a tenant goes by: "Minnesota Vikings" also gives "Vikings". */
-export function tenantNameWords(names: string[]): string[] {
+export function tenantNameWords(names: string[], placeWords: string[] = []): string[] {
+  // "Minnesota United FC" gives the full name and "United"; "Boston Red Sox"
+  // gives "Sox". The place words (the city and state the caller passes) are
+  // left out, or "Minnesota" would silence every sentence naming the state.
+  const skip = new Set(placeWords.flatMap((w) => String(w || '').toLowerCase().split(/\s+/)).filter(Boolean));
+  const generic = new Set(['the', 'and', 'city', 'club', 'new', 'san', 'los', 'las', 'bay', 'red', 'blue', 'golden', 'state']);
   const out = new Set<string>();
   for (const n of names) {
     const clean = String(n || '').trim();
     if (!clean) continue;
     out.add(clean);
-    const last = clean.split(/\s+/).pop();
-    if (last && last.length >= 4) out.add(last);
+    for (const w of clean.split(/\s+/)) if (w.length >= 3 && !skip.has(w.toLowerCase()) && !generic.has(w.toLowerCase())) out.add(w);
   }
   return [...out];
 }
@@ -350,8 +397,10 @@ export function hubTitle(showName: string, year: number | null): string {
   return `${showName}${year ? ` ${year}` : ''}: Dates, Tickets and Venue Guides`;
 }
 
-export function stopDescription(o: { showName: string; searchCity: string; venueName: string; dates: string[]; bagRule: boolean; parking: boolean; transit: boolean; pitParty: boolean }): string {
-  const when = o.dates.length ? `${o.showName} is at ${o.venueName} in ${o.searchCity} on ${formatDatesLine(o.dates)}.` : `${o.showName} at ${o.venueName} in ${o.searchCity}.`;
+export function stopDescription(o: { showName: string; searchCity: string; venueName: string; dates: string[]; visitCount?: number; bagRule: boolean; parking: boolean; transit: boolean; pitParty: boolean }): string {
+  // Nothing upcoming: say so, and promise nothing.
+  if (!o.dates.length) return `${o.showName} at ${o.venueName} in ${o.searchCity}. No upcoming dates are listed right now.`;
+  const when = (o.visitCount ?? 1) > 1 ? `${o.showName} has ${showsPhrase(o.dates, o.visitCount ?? 1)} at ${o.venueName} in ${o.searchCity}.` : `${o.showName} is at ${o.venueName} in ${o.searchCity} on ${formatDatesLine(o.dates)}.`;
   const has = [o.bagRule ? 'the bag policy' : null, o.parking ? 'parking' : null, o.transit ? 'transit' : null, o.pitParty ? 'Pit Party times' : null].filter(Boolean) as string[];
   const list = has.length > 1 ? `${has.slice(0, -1).join(', ')} and ${has[has.length - 1]}` : has[0];
   return `${when} Showtimes and tickets${list ? `, plus ${list}` : ''}.`;
@@ -405,9 +454,12 @@ export function stopFaqs(o: { showName: string; searchCity: string; venueName: s
   const out: EventFaq[] = [];
   const perfLine = (p: EventPerformance) => `${formatLongDay(p.date)} at ${formatClock(p.startTime)}`;
   if (o.upcoming.length) {
-    const list = o.upcoming.map(perfLine);
+    const visitCount = new Set(o.upcoming.map((p) => p.visitId)).size;
+    // A long run is summarised: eight dates in one sentence answer nothing.
+    if (o.upcoming.length > 4) out.push({ q: `When is ${o.showName} in ${o.searchCity}?`, a: `${o.showName} has ${showsPhrase(o.upcoming.map((p) => p.date), Math.max(visitCount, 2))} at ${o.venueName}. Every showtime is listed at the top of this page. Times are local to the venue.` });
+    const list = o.upcoming.length > 4 ? [] : o.upcoming.map(perfLine);
     const joined = list.length === 2 ? `${list[0]} and ${list[1]}` : list.length > 2 ? `${list.slice(0, -1).join('; ')}; and ${list[list.length - 1]}` : list[0];
-    out.push({ q: `When is ${o.showName} in ${o.searchCity}?`, a: `${joined}, at ${o.venueName}. Times are local to the venue.` });
+    if (list.length) out.push({ q: `When is ${o.showName} in ${o.searchCity}?`, a: `${joined}, at ${o.venueName}. Times are local to the venue.` });
   }
   if (o.bag && o.bag.kind === 'event-rule') out.push({ q: `What is the bag policy for ${o.showName} at ${o.venueName}?`, a: o.bag.rules.map((r) => r.text).join(' ') });
   else if (o.bag && o.bag.kind === 'operator-rule') out.push({ q: `What is the bag policy at ${o.venueName}?`, a: o.bag.text });
@@ -433,4 +485,8 @@ export function showLabel(p: Pick<EventPerformance, 'date' | 'startTime'>): stri
   return `${WEEKDAYS_LONG[ymdParts(p.date).dow]} ${part} show`;
 }
 
-export const STATUS_LABEL: Record<EventPerformanceStatus, string> = { onsale: 'Tickets', soldout: 'Sold out', unknown: 'Not on sale' };
+/** What a row with no link says. "Sold out" only for the stored sold-out
+ *  status; a row whose status or event id is simply missing claims nothing
+ *  about the sale. */
+export const STATUS_LABEL: Record<EventPerformanceStatus, string> = { onsale: 'No link yet', soldout: 'Sold out', unknown: 'No link yet' };
+export const STARTED_LABEL = 'Started';

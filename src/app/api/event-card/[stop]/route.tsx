@@ -31,7 +31,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ stop: st
   const tl = stopTimeline(stop, new Date());
   const up = upcomingPerformances(tl);
   const year = stopYear(stop, tl);
-  const dates = up.length ? formatRangeWithYear(up[0].date, up[up.length - 1].date) : tl.returnsYear ? `Returns in ${tl.returnsYear}` : '';
+  // Several visits: a count between two dates, never one continuous range.
+  const dates = up.length ? (tl.upcoming.length > 1 ? `${up.length} shows · ${formatRangeWithYear(up[0].date, up[0].date)} to ${formatRangeWithYear(up[up.length - 1].date, up[up.length - 1].date)}` : formatRangeWithYear(up[0].date, up[up.length - 1].date)) : tl.returnsYear ? `Returns in ${tl.returnsYear}` : '';
   const venueName = displayVenueName(hub.name);
 
   const stamp = stop.updatedAt ? String(Date.parse(stop.updatedAt)) : '0';
@@ -47,16 +48,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ stop: st
     (
       <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', background: INK, color: '#ffffff', fontFamily: 'DM Sans', padding: '56px 64px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', fontSize: 34, fontWeight: 700, letterSpacing: 1 }}>
+          <div style={{ display: 'flex', fontSize: 42, fontWeight: 700, letterSpacing: 1 }}>
             <span style={{ color: '#ffffff' }}>PROMO</span>
             <span style={{ color: ACCENT }}>NIGHT</span>
           </div>
-          <div style={{ display: 'flex', fontSize: 22, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', color: SOFT }}>Live event</div>
+          <div style={{ display: 'flex', fontSize: 30, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', color: SOFT }}>Live event</div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <div style={{ display: 'block', fontSize: headline.length > 20 ? 96 : 120, fontWeight: 700, lineHeight: 0.95, letterSpacing: -3, textTransform: 'uppercase', lineClamp: 2 }}>{headline}</div>
-          <div style={{ display: 'block', fontSize: 38, fontWeight: 400, color: SOFT, lineClamp: 1 }}>{`${venueName} · ${stop.searchCity}`}</div>
-          {dates ? <div style={{ display: 'block', fontSize: 30, fontWeight: 700, letterSpacing: 4, textTransform: 'uppercase', color: ACCENT }}>{dates}</div> : null}
+          <div style={{ display: 'block', fontSize: headline.length > 20 ? 92 : 112, fontWeight: 700, lineHeight: 0.95, letterSpacing: -3, textTransform: 'uppercase', lineClamp: 2 }}>{headline}</div>
+          <div style={{ display: 'block', fontSize: 46, fontWeight: 400, color: SOFT, lineClamp: 1 }}>{`${venueName} · ${stop.searchCity}`}</div>
+          {dates ? <div style={{ display: 'block', fontSize: 38, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: ACCENT }}>{dates}</div> : null}
         </div>
       </div>
     ),

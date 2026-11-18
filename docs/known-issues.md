@@ -4314,3 +4314,31 @@ ux-review of `fix/gsc-cleanup-2026-11` (C4), present on production. On /cfb the 
 ## 99. On package promo pages the date tile stretches with the taller CTA column (deferred, logged 2026-11-10)
 
 ux-review of `fix/gsc-cleanup-followup` (P3). The CTA section is `flex items-stretch`, so the date tile beside the buttons grows with the column; the package disclosure (known-issues 97) makes the column taller, and at 390 the tile goes from 189 to 285px with its 91px of content floating in it (137 to 213px at 768 and 1280). Cosmetic. Fix: align the tile to the top (`self-start`) or center its content, checked against the non-package pages, whose layout must not move.
+
+## 100. The venue page's "Upcoming events" module pushes "Plan your visit" below the fold at 390px (waived at build, logged 2026-11-18)
+
+ux-review of `feature/events-pages` (defect 2). On /venues/us-bank-stadium the module adds 167px at 390, which moves the SpotHero and Expedia card from y 749 to y 916. It renders only while EVENTS_PAGES_LIVE is on and a stop is upcoming at the building. Waived: the module is the spec's main bridge into /events. Read after launch: event_link_click with link_surface venue_events_module against affiliate_click on web_venue for the same buildings, before and after the flag.
+
+## 101. Event stop pages print the hub's lot notes, which were written for the home team (deferred, logged 2026-11-18)
+
+ux-review of `feature/events-pages` (defect 4) and the adversarial review (finding 9). A stop page lists each hub lot with its note cut by the event-day rule (no price, tenant, league or game-day word). What survives can still be a game-day label ("Club", "Suite parking" at Raymond James Stadium; "Supporters lot" was added to the dropped words) or carry no note at all. The fix is data: an event-day parking read from the operator's page per stop, stored on the stop like the bag rule. Until then the card says rates and access can differ on an event day.
+
+## 102. Event stop pages: small "source" links, and no source line on the hub's parking and transit facts (deferred, logged 2026-11-18)
+
+ux-review of `feature/events-pages` (defects 12 and 13). The "source" links under venue-printed facts are 33x12px and all share the name "source". The Parking and Transit cards print the hub's published facts without their source line; the "Also at" card links the venue guide, which carries them.
+
+## 103. Event stop and index pages shift 0.024 to 0.027 at 768px (deferred, logged 2026-11-18)
+
+ux-review of `feature/events-pages` (defect 19). Measured on the branch dev server at 768 only; the cause was not confirmed (the generated card has width and height set). Under the 0.1 threshold. Re-measure on a production build before the flag is turned on.
+
+## 104. Back from a footer link on a team page does not restore scroll (pre-existing, logged 2026-11-18)
+
+Found by the ux-review of `feature/events-pages` (defect 20) and present on production: after following a footer link from /nfl/minnesota-vikings, browser back lands 226 to 2,379px from the saved position. The new footer "Events" link inherits it. Not caused by the events branch.
+
+## 105. Event stop pages: what the server HTML can show for up to an hour after a show starts (accepted, logged 2026-11-18)
+
+Adversarial review of `feature/events-pages` (finding 2). The stop page is ISR with an hour's revalidate. The Tickets button is dropped in the browser at the start instant by a client leaf (ShowtimeGate), but the server HTML, and the Event JSON-LD offer in it, can carry the started show until the next regeneration. The live guard tolerates two hours. A sold-out performance has no offer in the JSON-LD at all (no link is built for it), so the SoldOut availability is never emitted.
+
+## 106. /mlb/atlanta-braves is over the 950,000-byte team page cap in production (found 2026-11-18, not caused by the events branch)
+
+Measured while sizing the events team link: production /mlb/atlanta-braves served 955,720 bytes on 2026-11-18, over the cap the live battery enforces; /mlb/minnesota-twins was 931,434. The events branch adds 383 bytes to every page (the footer Events link) once EVENTS_PAGES_LIVE is on, and 1,062 bytes to a team page whose building has an upcoming stop (none of those is within 50,000 bytes of the cap). The Braves page needs its own trim before the next live battery run.

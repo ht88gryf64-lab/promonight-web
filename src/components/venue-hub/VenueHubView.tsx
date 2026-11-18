@@ -555,7 +555,9 @@ export function VenueHubView({
                 {bagCard}
                 {factBand ? <div className="mb-3 overflow-hidden rounded-xl">{factBand}</div> : null}
                 {nextGiveawaysBlock}
-                {events}
+                {/* Inside the slot the module drops its own page gutter and
+                    takes the slot's 12px rhythm (ux-review 2026-11-18, defect 1). */}
+                {events ? <div className="mb-3 [&>section]:max-w-none [&>section]:px-0 [&>section]:pt-0">{events}</div> : null}
                 {postseason}
               </div>
             ) : postseason ? (

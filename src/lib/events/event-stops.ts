@@ -205,12 +205,14 @@ export interface EventStopPage { stop: EventStop; hub: VenueHub; floor: EventFlo
 export const getEventStopPages = cache(async (show: string): Promise<EventStopPage[]> => {
   if (!eventShowOf(show)) return [];
   const stops = (await loadEventStops()).filter((s) => s.show === show);
+  // In parallel: one hub read per stop (review 2026-11-18, finding 4).
+  const hubs = await Promise.all(stops.map((stop) => getVenueHub(stop.hubId)));
   const out: EventStopPage[] = [];
-  for (const stop of stops) {
-    const hub = await getVenueHub(stop.hubId);
+  stops.forEach((stop, i) => {
+    const hub = hubs[i];
     const floor = eventFloorOf(hub);
     if (hub && floor.ok) out.push({ stop, hub, floor });
-  }
+  });
   return out.sort((a, b) => a.stop.venueSlug.localeCompare(b.stop.venueSlug));
 });
 
@@ -236,25 +238,37 @@ export interface EventStopSummary {
   nextDate: string;
   lastDate: string;
   upcomingCount: number;
+  /** The first upcoming date of each upcoming visit, oldest first. */
+  visitStarts: string[];
   updatedAt: string | null;
+}
+
+function summaryOf(stop: EventStop, venueName: string, now: Date): EventStopSummary[] {
+  if (stop.tombstoned) return [];
+  const groups = stopTimeline(stop, now).upcoming;
+  const up = groups.flatMap((g) => g.performances);
+  if (!up.length) return [];
+  return [{ show: stop.show, venueSlug: stop.venueSlug, hubId: stop.hubId, venueName, searchCity: stop.searchCity, nextDate: up[0].date, lastDate: up[up.length - 1].date, upcomingCount: up.length, visitStarts: groups.map((g) => g.performances[0].date), updatedAt: stop.updatedAt }];
 }
 
 /** Stops with at least one upcoming performance, soonest first. Tombstoned stops never list. */
 export async function getUpcomingStopSummaries(show: string, now: Date): Promise<EventStopSummary[]> {
   const pages = await getEventStopPages(show);
-  return pages.flatMap(({ stop, hub }) => {
-    if (stop.tombstoned) return [];
-    const up = stopTimeline(stop, now).upcoming.flatMap((g) => g.performances);
-    if (!up.length) return [];
-    return [{ show: stop.show, venueSlug: stop.venueSlug, hubId: stop.hubId, venueName: hub.name, searchCity: stop.searchCity, nextDate: up[0].date, lastDate: up[up.length - 1].date, upcomingCount: up.length, updatedAt: stop.updatedAt }];
-  }).sort((a, b) => a.nextDate.localeCompare(b.nextDate) || a.venueSlug.localeCompare(b.venueSlug));
+  return pages.flatMap(({ stop, hub }) => summaryOf(stop, hub.name, now)).sort((a, b) => a.nextDate.localeCompare(b.nextDate) || a.venueSlug.localeCompare(b.venueSlug));
 }
 
-/** Upcoming stops at one building, across every show (the venue page module and the team page link). */
+/**
+ * Upcoming stops at ONE building, across every show (the venue page module
+ * and the team page link). The stops are filtered to the building BEFORE any
+ * hub is read, so a venue or team page reads one hub (its own, already
+ * request-cached), not every stop's (review 2026-11-18, finding 4).
+ */
 export async function getUpcomingStopsAtHub(hubId: string, now: Date): Promise<EventStopSummary[]> {
-  const all: EventStopSummary[] = [];
-  for (const show of Object.keys(EVENT_SHOWS)) all.push(...(await getUpcomingStopSummaries(show, now)).filter((s) => s.hubId === hubId));
-  return all.sort((a, b) => a.nextDate.localeCompare(b.nextDate));
+  const stops = (await loadEventStops()).filter((x) => x.hubId === hubId && !!eventShowOf(x.show));
+  if (!stops.length) return [];
+  const hub = await getVenueHub(hubId);
+  if (!hub || !eventFloorOf(hub).ok) return [];
+  return stops.flatMap((x) => summaryOf(x, hub.name, now)).sort((a, b) => a.nextDate.localeCompare(b.nextDate));
 }
 
 /** Sitemap entries: every indexable /events URL. Empty while the flag is off (the caller checks). */
