@@ -88,7 +88,9 @@ export function EventHubView({ show, stops, year }: { show: EventShow; stops: Ev
       </EventHero>
       {stops.length ? (
         months.map((ym) => {
-          const rows = stops.filter((s) => s.visits.some((v) => v.start.slice(0, 7) === ym));
+          // Soonest first by THIS month's first visit (a stop with an earlier visit in another month does not jump the queue).
+          const firstIn = (s: EventStopSummary) => s.visits.find((v) => v.start.slice(0, 7) === ym)?.start ?? '';
+          const rows = stops.filter((s) => firstIn(s)).sort((a, b) => firstIn(a).localeCompare(firstIn(b)));
           return (
             <section key={ym} className="mt-6 flex flex-col gap-2.5" data-month={ym}>
               <h2 className="rd-display m-0 text-[22px] uppercase text-rd-ink">{monthLabel(ym)}</h2>
