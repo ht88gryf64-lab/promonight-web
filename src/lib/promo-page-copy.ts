@@ -306,7 +306,8 @@ export const PACKAGE_TITLE_HARD_MAX = 70;
 export type PackageTitleForm = 'a' | 'b' | 'c';
 
 /**
- * The <title> of a package page whose name carries " Ticket Package" (rule
+ * The <title> of a package page whose name carries " Ticket Package", added
+ * by packagePageName or already in the stored name (rule
  * 2). One rule for every such page (Gate 3 follow-up, ruling 2026-11-10),
  * always an ABSOLUTE title, never " | PromoNight":
  *   a. `{Item} Ticket Package | {Nickname} {Mon D}` when it fits 60 (a played
@@ -877,6 +878,14 @@ export function sameDistinctiveWords(a: string, b: string): boolean {
 }
 
 const PACKAGE_QUALIFIER = 'Ticket Package';
+
+/** True when a page name carries "Ticket Package", whether packagePageName
+ *  added it or the stored name already had it (ruling 2026-11-18: the Braves'
+ *  2027 rows are stored as "Star Wars Ticket Package"). Every such page takes
+ *  the a/b/c title rule, absolute and without the " | PromoNight" suffix. */
+export function carriesPackageQualifier(name: string): boolean {
+  return /\bticket package\b/i.test(cleanText(name));
+}
 
 /**
  * Rule 2 (ruling 2026-11-10): the name a special-ticket package page puts in
