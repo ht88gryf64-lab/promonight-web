@@ -101,6 +101,11 @@ test('the team page names at most the next 20 upcoming promos as Events, soonest
   // No partner URL or sub ID. (A partner's NAME in an FAQ answer is prose, not a link.)
   const hit = /lusg\.net|ticketnetwork\.com|ticketmaster\.com|spothero\.com|expedia\.com|fanatics\.com|subId\d|aff_sub|evyy\.net/i.exec(JSON.stringify(blocks));
   assert.equal(hit, null, hit?.[0]);
+  // A row with no usable date is not an Event and takes no slot.
+  const odd = [{ title: 'No date', date: '', type: 'giveaway' }, { title: 'TBD', date: 'TBD', type: 'giveaway' }, ...promos.slice(0, 2)] as unknown as Promo[];
+  const oddHtml = renderToStaticMarkup(<JsonLd team={team('Atlanta', 'Braves', 'atlanta-braves')} upcomingPromos={odd} venue={venue} upcomingCounts={counts} coverage={coverage} />);
+  assert.equal((oddHtml.match(/&quot;@type&quot;:&quot;Event&quot;|"@type":"Event"/g) ?? []).length, 2);
+  assert.equal(/startDate(&quot;|"):(&quot;|")(&quot;|")/.test(oddHtml), false);
   // Fewer than the cap: every one is named.
   const few = renderToStaticMarkup(<JsonLd team={team('Atlanta', 'Braves', 'atlanta-braves')} upcomingPromos={promos.slice(0, 3)} venue={venue} upcomingCounts={counts} coverage={coverage} />);
   assert.equal((few.match(/"@type":"Event"|&quot;@type&quot;:&quot;Event&quot;/g) ?? []).length, 3);

@@ -154,9 +154,10 @@ test('a page whose dates have all been played sells nothing (ruling 2026-11-08):
   assert.match(html, /<a [^>]*href="\/nhl\/detroit-red-wings"[^>]*>Next Detroit Red Wings promo<\/a>/);
 });
 
-test('a series carries no ticket link in its JSON-LD offers', () => {
+test('a series offers only its dates still to be played, and no ticket link sits in its JSON-LD', () => {
   const html = render([row({ promoId: 'a', date: '2026-10-20', tnEventUrl: EV(1, 'played') }), row({ promoId: 'b', date: '2026-11-18', tnEventUrl: BRUINS })]);
-  assert.deepEqual(eventOffers(html), [['2026-10-20', pageUrl(html)], ['2026-11-18', pageUrl(html)]]);
+  // The played date has no ticket control on the page, so it carries no offer; the upcoming date offers the page.
+  assert.deepEqual(eventOffers(html), [['2026-11-18', pageUrl(html)]]);
   assert.ok(ldClean(html), 'no ticket link, played or not, in JSON-LD');
 });
 
@@ -195,7 +196,7 @@ test('flagged club, series: no per-date links, every Event offers the page', () 
   const tm = anchor(render(rows, '2026-11-02', LEAFS_PLAIN), 'Also on Ticketmaster');
   assert.equal(anchor(html, 'Get tickets'), tm);
   assert.equal(anchors(html, 'Tickets'), 0);
-  assert.deepEqual(eventOffers(html), [['2026-10-20', pageUrl(html)], ['2026-11-21', pageUrl(html)], ['2026-12-12', pageUrl(html)]]);
+  assert.deepEqual(eventOffers(html), [['2026-11-21', pageUrl(html)], ['2026-12-12', pageUrl(html)]]);
   assert.ok(ldClean(html));
   assert.ok(!/ticketnetwork/i.test(html));
 });

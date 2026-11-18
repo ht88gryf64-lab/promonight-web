@@ -371,6 +371,9 @@ test('JSON-LD: WebPage with dateModified = updatedAt, one Event per date with im
   // No ticket link for a date: no offer for it (the page cannot sell it), never a guessed one.
   const noLink = promoPageJsonLd({ ...base, ticketUrl: null, ticketUrlFor: (r) => (r.date === '2026-11-18' ? 'https://ticketnetwork.lusg.net/c/x' : null) });
   assert.deepEqual(noLink.filter((x) => x['@type'] === 'Event').map((e) => 'offers' in e), [false, true]);
+  // The per-date answer is final: a date it returns null for gets no offer even when the page has a primary link.
+  const played = promoPageJsonLd({ ...base, ticketUrl: 'https://ticketnetwork.lusg.net/c/primary', ticketUrlFor: (r) => (r.date === '2026-10-29' ? null : 'https://ticketnetwork.lusg.net/c/x') });
+  assert.deepEqual(played.filter((x) => x['@type'] === 'Event').map((e) => 'offers' in e), [false, true]);
   // Removed: cancelled, no offer. No stamp: no dateModified.
   const gone = promoPageJsonLd({ canonical: 'c', title: 't', description: 'd', promoName: 'p', teamName: 'T', rows: [row({ tombstoned: true })], removed: true, imageUrl: 'i', location: null, ticketUrl: 'x', dateModified: null, faqs: [], breadcrumbs: [] });
   assert.equal((gone[1] as Record<string, any>).eventStatus, 'https://schema.org/EventCancelled');

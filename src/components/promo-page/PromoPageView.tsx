@@ -402,7 +402,9 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
     ticketUrl: tickets,
     // Read by the JSON-LD only as "this date has a ticket link" (ruling
     // 2026-11-18): the offer's url is the page, never one of these links.
-    ticketUrlFor: (r) => (tnAllowed ? buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: eventUrlOf(r), pageSlug: page.slug }) : ticketmaster),
+    // A date already played has no ticket control on the page, so it gets no
+    // offer (review 2026-11-18: a played date in a partly played series kept one).
+    ticketUrlFor: (r) => (r.date < today ? null : tnAllowed ? buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: eventUrlOf(r), pageSlug: page.slug }) : ticketmaster),
     dateModified: page.updatedAt,
     faqs: storedFaqs,
     // The visible trail, item for item (Google asks the markup to reflect it):

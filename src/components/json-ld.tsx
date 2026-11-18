@@ -60,7 +60,8 @@ export function JsonLd({
   // 950,000-byte cap the live battery enforces. The structured data now names
   // the NEXT TEAM_EVENT_JSONLD_MAX upcoming promos, soonest first; the page
   // itself still lists every one, and each promo page carries its own Event.
-  const nextPromos = [...upcomingPromos].sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(0, TEAM_EVENT_JSONLD_MAX);
+  // A row with no usable date is not an Event (it would sort first and emit an empty startDate).
+  const nextPromos = upcomingPromos.filter((p) => /^\d{4}-\d{2}-\d{2}/.test(String(p.date ?? ''))).sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(0, TEAM_EVENT_JSONLD_MAX);
   const events = nextPromos.map((promo) => ({
     '@context': 'https://schema.org',
     '@type': 'Event',
