@@ -156,6 +156,7 @@ const ICONS = {
   transit: <svg {...ICON}><rect x="5" y="3" width="14" height="14" rx="3" /><path d="M8 13h8M9 17l-2 4M15 17l2 4M9 8h6" /></svg>,
   parking: <svg {...ICON}><rect x="4" y="4" width="16" height="16" rx="3" /><path d="M10 16V8h3a2.5 2.5 0 0 1 0 5h-3" /></svg>,
   reentry: <svg {...ICON}><path d="M4 12a8 8 0 1 0 3-6.2" /><path d="M4 4v4h4" /></svg>,
+  kids: <svg {...ICON}><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z" /><path d="M14 6v12" strokeDasharray="2 3" /></svg>,
 } as const;
 /** One row of the Before you go card: an icon, a small label, then the row's own content. */
 function Row({ icon, label, last, children, ...rest }: { icon: keyof typeof ICONS; label: string; last: boolean; children: ReactNode } & Record<`data-${string}`, string>) {
@@ -198,8 +199,15 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
   // The venue page's own parking section, when it has one (the same model its card renders from).
   const venueParkingHref = parkingLotsModel(hub) ? `${venueHref}#parking` : null;
   // Parking facts the VENUE printed for this event (eventPolicies on the stop). None is stored today.
-  const parkingFacts = stop.parkingFacts.filter((r) => tl.upcoming.some((g) => g.visit.visitId === r.visitId));
-  const reEntry = stop.reEntry.filter((r) => tl.upcoming.some((g) => g.visit.visitId === r.visitId));
+  // A fact prints for a STORED, live visit with an upcoming show (as on the hub): stopTimeline synthesizes a visit for
+  // performances whose visit doc is missing or tombstoned, so the stored list is checked too (review 2026-11-19).
+  const storedVisits = new Set(stop.visits.map((v) => v.visitId));
+  const forLiveVisit = (r: { visitId: string }) => storedVisits.has(r.visitId) && tl.upcoming.some((g) => g.visit.visitId === r.visitId);
+  const parkingFacts = stop.parkingFacts.filter(forLiveVisit);
+  const reEntry = stop.reEntry.filter(forLiveVisit);
+  // The child ticket rule the venue prints for this event (Phase 5D). One line per distinct rule: the same
+  // sentence stored for two visits prints once.
+  const kidsTickets = stop.childTicket.filter(forLiveVisit).filter((r, i, all) => all.findIndex((x) => x.text === r.text) === i);
   const faqs = stop.tombstoned ? [] : stopFaqs({ showName: show.name, searchCity: stop.searchCity, venueName, upcoming, bag, bagAnswer: bag && bag.kind === 'event-rule' ? bag.rules.map((r) => [r.text, head.bagScopeNote(r.text)].filter(Boolean).join(' ')).join(' ') : '', pitParty, gateTimes });
 
   const jsonLd: Array<Record<string, unknown>> = [
@@ -219,7 +227,7 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
   // otherwise each block names its own date and showtime (two Saturday shows, or a Saturday in another visit).
   const soleDay = days.length === 1 && upcoming.filter((p) => weekdayLong(p.date) === weekdayLong(days[0].p.date)).length === 1;
   const showParking = upcoming.length > 0 && (!!parkingHref || !!venueParkingHref || parkingFacts.length > 0);
-  const rows = stop.tombstoned ? [] : ([bag ? 'bags' : null, transit ? 'transit' : null, showParking ? 'parking' : null, reEntry.length ? 'reentry' : null].filter(Boolean) as string[]);
+  const rows = stop.tombstoned ? [] : ([bag ? 'bags' : null, transit ? 'transit' : null, showParking ? 'parking' : null, reEntry.length ? 'reentry' : null, kidsTickets.length ? 'kids' : null].filter(Boolean) as string[]);
   const isLast = (k: string) => rows[rows.length - 1] === k;
 
   return (
@@ -359,7 +367,8 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
                     <a href={x.url} target="_blank" rel="noopener nofollow" className={`${EVENTS_ACCENT_TEXT} underline underline-offset-2`}>source</a>
                   </span>
                 ))}
-                <span>The showtime is the one on the ticket listing. The Pit Party is a separate pass and is not sold through the ticket buttons above.</span>
+                {/* The Pit Party sentence only where a Pit Party window is stored (review 2026-11-19): a gates-only card says nothing about one. */}
+                <span>{pitParty.length ? 'The showtime is the one on the ticket listing. The Pit Party is a separate pass and is not sold through the ticket buttons above.' : 'The showtime is the one on the ticket listing.'}</span>
               </div>
             </div>
           </section>
@@ -453,6 +462,17 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
                 <Row icon="reentry" label="Re-entry" last={isLast('reentry')} data-row="reentry">
                   {reEntry.map((r, i) => (
                     <div key={i} className="flex flex-col gap-1.5" data-re-entry="">
+                      <Body>{r.text}</Body>
+                      <Source url={r.sourceUrl} observedAt={r.observedAt} />
+                    </div>
+                  ))}
+                </Row>
+              ) : null}
+
+              {kidsTickets.length ? (
+                <Row icon="kids" label="Kids' tickets" last={isLast('kids')} data-row="kids">
+                  {kidsTickets.map((r, i) => (
+                    <div key={i} className="flex flex-col gap-1.5" data-kids-tickets="">
                       <Body>{r.text}</Body>
                       <Source url={r.sourceUrl} observedAt={r.observedAt} />
                     </div>
