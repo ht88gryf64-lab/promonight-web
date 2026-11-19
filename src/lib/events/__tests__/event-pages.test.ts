@@ -20,6 +20,10 @@ import {
   formatClock,
   formatDatesLine,
   formatRange,
+  hubDescription,
+  hubFaqs,
+  hubH1,
+  hubScopeLine,
   hubTitle,
   monthVisitLine,
   isEventsPagesLive,
@@ -179,7 +183,16 @@ test('titles: the search city leads, the year is the last upcoming performance, 
   assert.equal(stopTitle('Monster Jam', 'Minneapolis', null, false), 'Monster Jam Minneapolis: Dates and Tickets');
   // The H1 is the show and the search city (ruling 2026-11-18); the venue is on the line under it.
   assert.equal(stopH1('Monster Jam', 'Anaheim'), 'Monster Jam Anaheim');
-  assert.equal(hubTitle('Monster Jam', 2027), 'Monster Jam 2027: Dates, Tickets and Venue Guides');
+  assert.equal(hubTitle('Monster Jam', 2027), 'Monster Jam 2027 Schedule: Dates, Cities and Tickets');
+  assert.equal(hubTitle('Monster Jam', null), 'Monster Jam Schedule: Dates, Cities and Tickets');
+  assert.equal(hubH1('Monster Jam', 2027), 'Monster Jam 2027 schedule');
+  // "schedule" is allowed because the scope line under the H1 carries the limit, with computed counts.
+  const scope = hubScopeLine('Monster Jam', 3, 7);
+  assert.match(scope, /^This page lists the 3 Monster Jam stops \(7 shows\) at venues PromoNight covers\. It is not the full tour schedule\./);
+  assert.match(hubScopeLine('Monster Jam', 1, 1), /the 1 Monster Jam stop \(1 show\) at venues/);
+  const desc = hubDescription('Monster Jam', 2027);
+  for (const w of ['schedule', 'dates', 'tickets', 'venues PromoNight covers']) assert.ok(desc.includes(w), w);
+  for (const text of [hubTitle('Monster Jam', 2027), hubH1('Monster Jam', 2027), desc, scope]) assert.doesNotMatch(text, /\b(full|complete|every|all|entire|official)\b(?! tour schedule\.)|\d{4}.*\btour\b(?! schedule\.)/i);
   // A stop that spans New Year takes the LAST upcoming performance's year.
   const span = { visits: [], performances: [perf('2026-12-30T1900'), perf('2027-01-02T1900')] };
   assert.equal(stopYear(span, stopTimeline(span, at('2026-11-18T00:00:00Z'))), 2027);
@@ -373,4 +386,18 @@ test('FAQs come from stored fields only: no run time, no noise, no ages, no stro
   assert.equal(faqs.some((f) => /bag policy/i.test(f.q)), false);
   // Nothing upcoming, nothing stored: no questions at all.
   assert.deepEqual(stopFaqs({ showName: 'Monster Jam', searchCity: 'X', venueName: 'Y', upcoming: [], bag: null, pitParty: pit, gateTimes: [] }), []);
+});
+
+test('hub questions: a run-time or kids question renders only from a stored venue fact', () => {
+  const none = hubFaqs({ showName: 'Monster Jam', hasStops: true, runTime: [], kids: [] });
+  assert.deepEqual(none.map((f) => f.q), ['What is Monster Jam?', 'Where can I find bag, parking and transit details?']);
+  // The definition: two sentences, our own words, no affiliation claim.
+  assert.equal(none[0].a!.split('. ').length, 2);
+  assert.doesNotMatch(none.map((f) => f.a).join(' '), /\b(official|partner|hours?|minutes?|kids|children|ears?|loud|ages?)\b/i);
+  const fact = { venueName: 'Example Arena', text: 'Children under 2 do not need a ticket.', sourceUrl: 'https://venue.example/event' };
+  const some = hubFaqs({ showName: 'Monster Jam', hasStops: true, runTime: [{ ...fact, text: 'The show runs about two hours.' }], kids: [fact] });
+  assert.deepEqual(some.map((f) => f.q), ['What is Monster Jam?', 'How long is a Monster Jam show?', 'Is Monster Jam good for kids?', 'Where can I find bag, parking and transit details?']);
+  // A fact answer is the stored facts and nothing else: no prose of ours.
+  assert.equal(some[1].a, undefined); assert.deepEqual(some[2].facts, [fact]);
+  assert.deepEqual(hubFaqs({ showName: 'Monster Jam', hasStops: false, runTime: [], kids: [] }).map((f) => f.q), ['What is Monster Jam?']);
 });

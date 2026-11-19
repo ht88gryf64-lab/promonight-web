@@ -21,7 +21,7 @@ import 'server-only';
 import { cache } from 'react';
 import { db } from '../firebase';
 import { makeCollectionLoader } from '../collection-cache';
-import { getVenueHub, rendersTransit, venueHubIsIndexable, type VenueHub } from '../venue-hub';
+import { displayVenueName, getVenueHub, rendersTransit, venueHubIsIndexable, type VenueHub } from '../venue-hub';
 import { rendersBag, rendersParking } from '../venue-field-exclusions';
 import {
   EVENT_SHOWS,
@@ -41,6 +41,7 @@ import {
   type EventShowSlug,
   type EventStop,
   type EventVisit,
+  type HubVenueFact,
 } from './event-pages';
 
 type Doc = Record<string, unknown>;
@@ -157,6 +158,9 @@ export function mapEventStop(id: string, d: Doc, visits: Array<{ id: string; dat
     reEntry: mapRules(ep.reEntry),
     // The slot for event-day parking facts. The pipeline writes no such key yet, so this is always [].
     parkingFacts: mapRules(ep.parking),
+    // Hub question facts (Phase 5A). childTicket is a stored slot no stop fills today; runTime is not written yet.
+    childTicket: mapRules(ep.childTicket),
+    runTime: mapRules(ep.runTime),
     visits: visits.flatMap((v) => { const m = mapEventVisit(v.id, v.data); return m ? [m] : []; }).sort((a, b) => a.visitId.localeCompare(b.visitId)),
     performances: performances.flatMap((p) => { const m = mapEventPerformance(p.id, p.data); return m ? [m] : []; }).sort((a, b) => a.key.localeCompare(b.key)),
     updatedAt: stamps.length ? stamps[stamps.length - 1] : null,
@@ -236,6 +240,8 @@ export interface EventStopSummary {
   hubId: string;
   venueName: string;
   searchCity: string;
+  /** The hub's state, for "City, State" on the show hub (as the hub stores it); null when the hub has none. */
+  state: string | null;
   /** The next upcoming performance's date, and the last one's. */
   nextDate: string;
   lastDate: string;
@@ -247,18 +253,44 @@ export interface EventStopSummary {
   updatedAt: string | null;
 }
 
-function summaryOf(stop: EventStop, venueName: string, now: Date): EventStopSummary[] {
+function summaryOf(stop: EventStop, venueName: string, state: string | null, now: Date): EventStopSummary[] {
   if (stop.tombstoned) return [];
   const groups = stopTimeline(stop, now).upcoming;
   const up = groups.flatMap((g) => g.performances);
   if (!up.length) return [];
-  return [{ show: stop.show, venueSlug: stop.venueSlug, hubId: stop.hubId, venueName, searchCity: stop.searchCity, nextDate: up[0].date, lastDate: up[up.length - 1].date, upcomingCount: up.length, visitStarts: groups.map((g) => g.performances[0].date), visits: groups.map((g) => ({ start: g.performances[0].date, end: g.performances[g.performances.length - 1].date, shows: g.performances.length })), updatedAt: stop.updatedAt }];
+  return [{ show: stop.show, venueSlug: stop.venueSlug, hubId: stop.hubId, venueName, searchCity: stop.searchCity, state, nextDate: up[0].date, lastDate: up[up.length - 1].date, upcomingCount: up.length, visitStarts: groups.map((g) => g.performances[0].date), visits: groups.map((g) => ({ start: g.performances[0].date, end: g.performances[g.performances.length - 1].date, shows: g.performances.length })), updatedAt: stop.updatedAt }];
 }
 
 /** Stops with at least one upcoming performance, soonest first. Tombstoned stops never list. */
 export async function getUpcomingStopSummaries(show: string, now: Date): Promise<EventStopSummary[]> {
   const pages = await getEventStopPages(show);
-  return pages.flatMap(({ stop, hub }) => summaryOf(stop, hub.name, now)).sort((a, b) => a.nextDate.localeCompare(b.nextDate) || a.venueSlug.localeCompare(b.venueSlug));
+  return pages.flatMap(({ stop, hub }) => summaryOf(stop, hub.name, hub.state, now)).sort((a, b) => a.nextDate.localeCompare(b.nextDate) || a.venueSlug.localeCompare(b.venueSlug));
+}
+
+/**
+ * Stored venue facts behind the show hub's run-time and kids questions: one
+ * line per venue and text, for visits that still have an upcoming show. Empty
+ * lists mean the question is not rendered.
+ */
+export async function getHubQuestionFacts(show: string, now: Date): Promise<{ runTime: HubVenueFact[]; kids: HubVenueFact[] }> {
+  const pages = await getEventStopPages(show);
+  return hubQuestionFactsOf(pages, now);
+}
+export function hubQuestionFactsOf(pages: Array<{ stop: EventStop; hub: { name: string } }>, now: Date): { runTime: HubVenueFact[]; kids: HubVenueFact[] } {
+  const pick = (key: 'runTime' | 'childTicket'): HubVenueFact[] => {
+    const out = new Map<string, HubVenueFact>();
+    for (const { stop, hub } of pages) {
+      if (stop.tombstoned) continue;
+      // A stored, live visit with an upcoming show: stopTimeline synthesizes a visit for
+      // performances whose visit doc is missing or tombstoned, so the stored list is checked too (review 2026-11-19).
+      const stored = new Set(stop.visits.map((v) => v.visitId));
+      const live = new Set(stopTimeline(stop, now).upcoming.map((g) => g.visit.visitId).filter((id) => stored.has(id)));
+      const venueName = displayVenueName(hub.name);
+      for (const f of stop[key]) if (live.has(f.visitId)) out.set(`${venueName}|${f.text}`, { venueName, text: f.text, sourceUrl: f.sourceUrl });
+    }
+    return [...out.values()].sort((a, b) => a.venueName.localeCompare(b.venueName));
+  };
+  return { runTime: pick('runTime'), kids: pick('childTicket') };
 }
 
 /**
@@ -272,7 +304,7 @@ export async function getUpcomingStopsAtHub(hubId: string, now: Date): Promise<E
   if (!stops.length) return [];
   const hub = await getVenueHub(hubId);
   if (!hub || !eventFloorOf(hub).ok) return [];
-  return stops.flatMap((x) => summaryOf(x, hub.name, now)).sort((a, b) => a.nextDate.localeCompare(b.nextDate));
+  return stops.flatMap((x) => summaryOf(x, hub.name, hub.state, now)).sort((a, b) => a.nextDate.localeCompare(b.nextDate));
 }
 
 /** Sitemap entries: every indexable /events URL. Empty while the flag is off (the caller checks). */
