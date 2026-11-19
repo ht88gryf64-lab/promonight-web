@@ -8,6 +8,7 @@ import {
   EVENTS_INDEX_PATH,
   EVENTS_NOT_AFFILIATED,
   breadcrumbJsonLd,
+  cityPillLabels,
   eventHubPath,
   eventPageHref,
   formatRangeWithYear,
@@ -69,6 +70,7 @@ export function EventHubView({ show, stops, year, facts }: { show: EventShow; st
   const total = stops.reduce((n, s) => n + s.upcomingCount, 0);
   // Find your city: every listed stop, alphabetical by the city fans search.
   const cities = [...stops].sort((a, b) => a.searchCity.localeCompare(b.searchCity) || a.venueSlug.localeCompare(b.venueSlug));
+  const cityLabels = cityPillLabels(cities.map((s) => ({ venueSlug: s.venueSlug, searchCity: s.searchCity, venueName: displayVenueName(s.venueName) })));
   const faqs = hubFaqs({ showName: show.name, hasStops: stops.length > 0, runTime: facts.runTime, kids: facts.kids });
   return (
     <Shell>
@@ -94,20 +96,27 @@ export function EventHubView({ show, stops, year, facts }: { show: EventShow; st
         </p>
       </EventHero>
       {cities.length ? (
-        <section className="mt-6 flex flex-col gap-2.5" data-find-city="">
+        <section className="mt-6 flex flex-col gap-2.5 lg:items-center" data-find-city="">
           <h2 className="rd-display m-0 text-[22px] uppercase text-rd-ink">Find your city</h2>
-          <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
-            {cities.map((s) => {
-              const link = eventPageHref({ kind: 'stop', show: s.show, venue: s.venueSlug }, 'events_hub_list');
-              return link ? (
-                <li key={s.venueSlug}>
-                  <EventPageLink href={link.href} linkSurface={link.surface} show={s.show} venueSlug={s.venueSlug} className="inline-flex min-h-11 items-center rounded-full border border-rd-line bg-rd-card px-3.5 font-rd text-[14px] font-semibold text-rd-ink no-underline hover:border-rd-ink">
-                    {s.state ? `${s.searchCity}, ${s.state}` : s.searchCity}
-                  </EventPageLink>
-                </li>
-              ) : null;
-            })}
-          </ul>
+          {/* Compact (Phase 5B). Phone: one row that scrolls sideways, so the first date stays near the first
+              screen; a fade on the right edge says there is more (a cut pill alone does not at every width).
+              From lg: small pills that wrap, centered with their heading and set 64px wider than the column
+              each side, which holds today's stops in two rows with even gaps. City only; a shared city adds the venue. */}
+          <div className="relative -mx-4 self-stretch lg:-mx-16">
+            <ul className="m-0 flex list-none gap-1.5 overflow-x-auto py-0 pl-4 pr-10 [scrollbar-width:none] lg:flex-wrap lg:justify-center lg:gap-1 lg:overflow-visible lg:px-0 [&::-webkit-scrollbar]:hidden" data-city-pills="">
+              {cities.map((s) => {
+                const link = eventPageHref({ kind: 'stop', show: s.show, venue: s.venueSlug }, 'events_hub_list');
+                return link ? (
+                  <li key={s.venueSlug} className="shrink-0">
+                    <EventPageLink href={link.href} linkSurface={link.surface} show={s.show} venueSlug={s.venueSlug} className="inline-flex min-h-11 items-center whitespace-nowrap rounded-full border border-rd-line bg-rd-card px-3 font-rd text-[14px] font-semibold text-rd-ink no-underline hover:border-rd-ink lg:min-h-8 lg:px-2 lg:text-[12px]">
+                      {cityLabels.get(s.venueSlug)}
+                    </EventPageLink>
+                  </li>
+                ) : null;
+              })}
+            </ul>
+            <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-10 lg:hidden" style={{ background: 'linear-gradient(to right, rgba(247,243,234,0), var(--color-rd-cream))' }} />
+          </div>
         </section>
       ) : null}
       {stops.length ? (

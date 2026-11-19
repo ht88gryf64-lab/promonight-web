@@ -438,6 +438,14 @@ export function hubScopeLine(showName: string, stops: number, shows: number): st
   return `This page lists the ${n} at venues PromoNight covers. It is not the full tour schedule. Each stop page has the showtimes and ticket links, plus the venue's bag rule or a link to its bag policy, and transit lines where the venue guide lists them.`;
 }
 
+/** The hub's city pills: the search city alone; when two listed stops share a
+ *  city name, each of them adds its venue ("Anaheim · Angel Stadium"). Keyed by venue slug. */
+export function cityPillLabels(stops: Array<{ venueSlug: string; searchCity: string; venueName: string }>): Map<string, string> {
+  const count = new Map<string, number>();
+  for (const s of stops) count.set(s.searchCity.toLowerCase(), (count.get(s.searchCity.toLowerCase()) ?? 0) + 1);
+  return new Map(stops.map((s) => [s.venueSlug, (count.get(s.searchCity.toLowerCase()) ?? 0) > 1 ? `${s.searchCity} · ${s.venueName}` : s.searchCity]));
+}
+
 // ── hub questions: stored facts only ────────────────────────────────────────
 
 /** A stored venue fact as the hub prints it: the stored text, the venue, its own page. */
