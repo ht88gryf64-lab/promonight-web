@@ -227,7 +227,7 @@ test('the bag block: the first that exists and nothing else, in the ruled order'
   const c = bagBlockFor({ bagPolicy: other, bagRules: [] }, 'V', ['2027-02-20']);
   assert.deepEqual([c?.kind, c && 'caveat' in c ? c.caveat : null], ['other-event-rule', 'The operator says this is subject to change.']);
   const d = bagBlockFor({ bagPolicy: { ...pointer, perEvent: true }, bagRules: [] }, 'U.S. Bank Stadium', ['2027-02-20']);
-  assert.deepEqual([d?.kind, d && 'text' in d ? d.text : null], ['pointer', 'U.S. Bank Stadium sets its bag policy per event.']);
+  assert.deepEqual([d?.kind, d && 'text' in d ? d.text : null], ['pointer', 'Bag policy at U.S. Bank Stadium depends on the event.']);
   assert.equal(bagBlockFor({ bagPolicy: null, bagRules: [] }, 'V', []), null);
   // An event rule read for another visit is not this visit's; the same words for two visits print once.
   assert.equal(bagBlockFor({ bagPolicy: pointer, bagRules: [{ ...rule, visitId: '2027-01-09' }] }, 'V', ['2027-02-20'])?.kind, 'pointer');
@@ -443,7 +443,7 @@ test('6B bag pointer line: "per event" only where the stored operator quote says
   assert.equal(bagQuoteSaysPerEvent('Our bag policy does not vary by event.'), false);
   assert.equal(bagQuoteSaysPerEvent('Bag policies may vary by event.'), true);
   const block = (perEvent: boolean | undefined, name: string) => { const b = bagBlockFor({ bagPolicy: { mode: 'pointer', sourceUrl: 'https://venue.example/bags', ...(perEvent === undefined ? {} : { perEvent }) }, bagRules: [] }, name, []); return b && b.kind === 'pointer' ? [b.text, b.sourceUrl] : null; };
-  assert.deepEqual(block(true, 'U.S. Bank Stadium'), ['U.S. Bank Stadium sets its bag policy per event.', 'https://venue.example/bags']);
+  assert.deepEqual(block(true, 'U.S. Bank Stadium'), ['Bag policy at U.S. Bank Stadium depends on the event.', 'https://venue.example/bags']);
   assert.deepEqual(block(false, 'Fiserv Forum'), ["Check Fiserv Forum's bag policy before you go.", 'https://venue.example/bags']);
   assert.deepEqual(block(undefined, 'Some Arena'), ["Check Some Arena's bag policy before you go.", 'https://venue.example/bags']);
 });

@@ -300,7 +300,7 @@ export function bagQuoteSaysPerEvent(quote: string | null | undefined): boolean 
 }
 /** The pointer line: "per event" only where the stored quote says so; otherwise a line that claims nothing. */
 export function bagPointerText(venueName: string, perEvent: boolean): string {
-  return perEvent ? `${venueName} sets its bag policy per event.` : `Check ${venueName}'s bag policy before you go.`;
+  return perEvent ? `Bag policy at ${venueName} depends on the event.` : `Check ${venueName}'s bag policy before you go.`;
 }
 
 export function bagBlockFor(stop: Pick<EventStop, 'bagPolicy' | 'bagRules'> & { hubId?: string }, venueName: string, visitIds: string[]): BagBlock | null {
