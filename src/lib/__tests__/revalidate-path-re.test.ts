@@ -140,3 +140,15 @@ test('the shared validator accepts /sitemap.xml exactly, and no other dotted pat
   for (const p of [...ACCEPT, ...PROMO_ACCEPT]) assert.equal(isRevalidatePath(p), true, p);
   for (const p of [...REJECT, ...PROMO_REJECT.filter((x) => x !== '/promos/blaze-orange-hat')]) assert.equal(isRevalidatePath(p), false, p);
 });
+
+// Phase 6A (2026-11-19): the web's list of hubs whose operator page says the bag policy depends on the event
+// is held to the pipeline's reviewed bag scope file: a pointer entry classified varies-not-printed with a quote.
+test('pipeline copy: BAG_PER_EVENT_STATED is exactly the bag scope file\'s quoted varies-not-printed pointers', async (t) => {
+  if (!pipelinePresent(t)) return;
+  const { BAG_PER_EVENT_STATED, BAG_PER_EVENT_NOT_BACKED } = await import('../events/event-pages');
+  const scope = JSON.parse(readFileSync(join(PIPELINE_DIR, 'data/event-stops-bag-scope.json'), 'utf8')) as { hubs: Record<string, { mode: string; classification?: string; quote?: string | null }> };
+  const backed = Object.entries(scope.hubs).filter(([, e]) => e.mode === 'pointer' && e.classification === 'varies-not-printed' && typeof e.quote === 'string' && e.quote.trim().length > 0).map(([k]) => k).sort();
+  // Every listed hub is such an entry; the only such entries left out are the named, reasoned exclusions.
+  assert.deepEqual([...BAG_PER_EVENT_STATED, ...BAG_PER_EVENT_NOT_BACKED].sort(), backed);
+  for (const h of BAG_PER_EVENT_NOT_BACKED) assert.equal(BAG_PER_EVENT_STATED.has(h), false);
+});
