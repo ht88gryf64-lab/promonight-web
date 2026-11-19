@@ -11,9 +11,13 @@ import {
   eventHubPath,
   eventPageHref,
   formatRangeWithYear,
+  hubFaqs,
+  hubH1,
+  hubScopeLine,
   monthVisitLine,
   monthLabel,
   type EventShow,
+  type HubVenueFact,
 } from '@/lib/events/event-pages';
 
 // The show hub (/events/{show}) and the index (/events), Phase 2, 2026-11-18.
@@ -57,12 +61,15 @@ function StopRow({ s, last, ym }: { s: EventStopSummary; last: boolean; ym?: str
   );
 }
 
-export function EventHubView({ show, stops, year }: { show: EventShow; stops: EventStopSummary[]; year: number | null }) {
+export function EventHubView({ show, stops, year, facts }: { show: EventShow; stops: EventStopSummary[]; year: number | null; facts: { runTime: HubVenueFact[]; kids: HubVenueFact[] } }) {
   // A stop is listed under EVERY month one of its visits starts in, so a
   // building with four weekends is found in each of their months.
   const months = [...new Set(stops.flatMap((s) => s.visits.map((v) => v.start.slice(0, 7))))].sort();
   const indexLink = eventPageHref({ kind: 'index' }, 'events_hub_list');
   const total = stops.reduce((n, s) => n + s.upcomingCount, 0);
+  // Find your city: every listed stop, alphabetical by the city fans search.
+  const cities = [...stops].sort((a, b) => a.searchCity.localeCompare(b.searchCity) || a.venueSlug.localeCompare(b.venueSlug));
+  const faqs = hubFaqs({ showName: show.name, hasStops: stops.length > 0, runTime: facts.runTime, kids: facts.kids });
   return (
     <Shell>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd([{ name: 'Events', path: EVENTS_INDEX_PATH }, { name: show.name, path: eventHubPath(show.slug) }])).replace(/</g, '\\u003c') }} />
@@ -81,11 +88,28 @@ export function EventHubView({ show, stops, year }: { show: EventShow; stops: Ev
           {/* "we cover": the count is of the stops listed here, never the tour's. */}
           {stops.length ? <span className={`font-rd text-[11px] font-semibold uppercase tracking-[0.12em] ${EVENTS_ACCENT_TEXT}`}>{`${stops.length} ${stops.length === 1 ? 'stop' : 'stops'} we cover · ${showsOf(total)}`}</span> : null}
         </div>
-        <h1 className="rd-display m-0 text-[44px] uppercase leading-[0.92] tracking-[-0.01em] text-white lg:text-[54px]">{`${show.name}${year ? ` ${year}` : ''} dates and venue guides`}</h1>
+        <h1 className="rd-display m-0 text-[44px] uppercase leading-[0.92] tracking-[-0.01em] text-white lg:text-[54px]">{hubH1(show.name, year)}</h1>
         <p className="m-0 font-rd text-[15px] leading-[1.45] text-[#e9e3d8]">
-          {`This page lists ${show.name} stops at venues PromoNight covers. It is not the full tour schedule. Each stop page has the showtimes, ticket links, and what the venue says about bags and transit.`}
+          {stops.length ? hubScopeLine(show.name, stops.length, total) : `This page lists ${show.name} stops at venues PromoNight covers. It is not the full tour schedule.`}
         </p>
       </EventHero>
+      {cities.length ? (
+        <section className="mt-6 flex flex-col gap-2.5" data-find-city="">
+          <h2 className="rd-display m-0 text-[22px] uppercase text-rd-ink">Find your city</h2>
+          <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+            {cities.map((s) => {
+              const link = eventPageHref({ kind: 'stop', show: s.show, venue: s.venueSlug }, 'events_hub_list');
+              return link ? (
+                <li key={s.venueSlug}>
+                  <EventPageLink href={link.href} linkSurface={link.surface} show={s.show} venueSlug={s.venueSlug} className="inline-flex min-h-11 items-center rounded-full border border-rd-line bg-rd-card px-3.5 font-rd text-[14px] font-semibold text-rd-ink no-underline hover:border-rd-ink">
+                    {s.state ? `${s.searchCity}, ${s.state}` : s.searchCity}
+                  </EventPageLink>
+                </li>
+              ) : null;
+            })}
+          </ul>
+        </section>
+      ) : null}
       {stops.length ? (
         months.map((ym) => {
           // Soonest first by THIS month's first visit (a stop with an earlier visit in another month does not jump the queue).
@@ -103,6 +127,25 @@ export function EventHubView({ show, stops, year }: { show: EventShow; stops: Ev
       ) : (
         <p className="m-0 mt-6 font-rd text-[15px] leading-[1.45] text-rd-ink-soft">No upcoming stops are listed right now.</p>
       )}
+      {/* The stop pages' Questions markup. A fact answer prints the stored text, "per {Venue}", with the venue's own page. */}
+      <section className="mt-6 flex flex-col gap-2.5" data-hub-questions="">
+        <h2 className="rd-display m-0 text-[22px] uppercase text-rd-ink">Questions</h2>
+        <div className="flex flex-col rounded-2xl border border-rd-line bg-rd-card px-3.5 py-1">
+          {faqs.map((f, i) => (
+            <div key={f.q} className={`flex flex-col gap-1 py-3 ${i < faqs.length - 1 ? 'border-b border-rd-line' : ''}`}>
+              <h3 className="m-0 font-rd text-[15px] font-semibold text-rd-ink">{f.q}</h3>
+              {f.a ? <p className="m-0 font-rd text-[14px] leading-[1.45] text-rd-ink-soft">{f.a}</p> : null}
+              {f.facts?.map((x) => (
+                <p key={`${x.venueName}|${x.text}`} className="m-0 font-rd text-[14px] leading-[1.45] text-rd-ink-soft">
+                  {`${x.text} (per `}
+                  <a href={x.sourceUrl} rel="noopener nofollow" target="_blank" className="text-rd-link underline">{x.venueName}</a>
+                  {')'}
+                </p>
+              ))}
+            </div>
+          ))}
+        </div>
+      </section>
       <Note />
     </Shell>
   );

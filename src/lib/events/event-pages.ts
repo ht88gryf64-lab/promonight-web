@@ -148,6 +148,10 @@ export interface EventStop {
   reEntry: EventRuleFact[];
   /** Parking facts the venue printed for THIS event (eventPolicies.parking). None is stored today. */
   parkingFacts: EventRuleFact[];
+  /** Child ticket rules the venue printed for this event (eventPolicies.childTicket). The slot is stored; no stop holds one today. */
+  childTicket: EventRuleFact[];
+  /** How long the show runs, as the venue printed it (eventPolicies.runTime). The pipeline writes no such key yet, so this is always []. */
+  runTime: EventRuleFact[];
   visits: EventVisit[];
   /** Live (not tombstoned) performances, oldest first. */
   performances: EventPerformance[];
@@ -416,8 +420,43 @@ export function stopTitle(showName: string, searchCity: string, year: number | n
   return bagRule ? `${head}: Dates, Tickets and Bag Policy` : `${head}: Dates and Tickets`;
 }
 
+/** The hub may say "schedule" (ruling 2026-11-19, Phase 5A): the scope line
+ *  directly under the H1 carries the limit (stops at venues we cover, with
+ *  computed counts), so the word does not claim the full tour. */
 export function hubTitle(showName: string, year: number | null): string {
-  return `${showName}${year ? ` ${year}` : ''}: Dates, Tickets and Venue Guides`;
+  return `${showName}${year ? ` ${year}` : ''} Schedule: Dates, Cities and Tickets`;
+}
+export function hubH1(showName: string, year: number | null): string {
+  return `${showName}${year ? ` ${year}` : ''} schedule`;
+}
+export function hubDescription(showName: string, year: number | null): string {
+  return `${showName}${year ? ` ${year}` : ''} schedule at venues PromoNight covers: dates by city and month, with showtimes and tickets on each stop page and links to each venue's bag and parking details.`;
+}
+/** The line directly under the hub H1. Counts are of the stops listed, never the tour's. */
+export function hubScopeLine(showName: string, stops: number, shows: number): string {
+  const n = `${stops} ${showName} ${stops === 1 ? 'stop' : 'stops'} (${shows} ${shows === 1 ? 'show' : 'shows'})`;
+  return `This page lists the ${n} at venues PromoNight covers. It is not the full tour schedule. Each stop page has the showtimes and ticket links, plus the venue's bag rule or a link to its bag policy, and transit lines where the venue guide lists them.`;
+}
+
+// ── hub questions: stored facts only ────────────────────────────────────────
+
+/** A stored venue fact as the hub prints it: the stored text, the venue, its own page. */
+export interface HubVenueFact { venueName: string; text: string; sourceUrl: string }
+export interface HubFaq { q: string; a?: string; facts?: HubVenueFact[] }
+
+/**
+ * The hub's Questions block (Phase 5A, 2026-11-19). The definition and the
+ * pointer are our own words about what this site lists. The run-time and kids
+ * questions render ONLY from stored venue facts, each printed as stored and
+ * attributed "per {Venue}" with its source link; with no stored fact the
+ * question is not rendered. Nothing here is written from general knowledge.
+ */
+export function hubFaqs(o: { showName: string; hasStops: boolean; runTime: HubVenueFact[]; kids: HubVenueFact[] }): HubFaq[] {
+  const out: HubFaq[] = [{ q: `What is ${o.showName}?`, a: `${o.showName} is a touring monster truck show held in stadiums and arenas. This page lists its stops at venues PromoNight covers, with dates and a link to each stop page.` }];
+  if (o.runTime.length) out.push({ q: `How long is a ${o.showName} show?`, facts: o.runTime });
+  if (o.kids.length) out.push({ q: `Is ${o.showName} good for kids?`, facts: o.kids });
+  if (o.hasStops) out.push({ q: 'Where can I find bag, parking and transit details?', a: "On the stop page for each city listed above. A stop page shows the bag rule the venue has published where we have one, and otherwise links to the venue's bag policy page. It links to parking, and lists transit lines where the venue guide has them. The venue guide linked under each stop has what the building publishes about bags and parking, and about transit where it publishes any." });
+  return out;
 }
 
 export function stopDescription(o: { showName: string; searchCity: string; venueName: string; dates: string[]; visitCount?: number; bagRule: boolean; transit: boolean; pitParty: boolean }): string {

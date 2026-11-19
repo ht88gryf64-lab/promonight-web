@@ -39,7 +39,7 @@ test('the mapper copies named fields only: quotes, contexts, provider read times
   const map = mapWith(m);
   void mapEventStop; void mapEventPerformance; void mapEventVisit; void eventFloorOf; void map;
   const stop = map()!;
-  assert.deepEqual(Object.keys(stop).sort(), ['bagPolicy', 'bagRules', 'gateTimes', 'hubId', 'parkingFacts', 'performances', 'pitParty', 'previousSlugs', 'reEntry', 'searchCity', 'show', 'timezone', 'tombstoned', 'updatedAt', 'venueSlug', 'visits']);
+  assert.deepEqual(Object.keys(stop).sort(), ['bagPolicy', 'bagRules', 'childTicket', 'gateTimes', 'hubId', 'parkingFacts', 'performances', 'pitParty', 'previousSlugs', 'reEntry', 'runTime', 'searchCity', 'show', 'timezone', 'tombstoned', 'updatedAt', 'venueSlug', 'visits']);
   assert.deepEqual(stop.pitParty, [{ visitId: '2027-02-20', sourceUrl: 'https://www.usbankstadium.com/news/detail/get-ready', observedAt: '2026-11-18T13:55:21.901Z', performance: '2027-02-20T1700', start: '12:30', end: '15:30' }]);
   assert.deepEqual(stop.performances[0], { key: '2027-02-20T1700', date: '2027-02-20', startTime: '17:00', startsAt: '2027-02-20T17:00:00-06:00', visitId: '2027-02-20', status: 'onsale', tnEventId: 8258515 });
   assert.deepEqual(stop.visits, [{ visitId: '2027-02-20', startDate: '2027-02-20', endDate: '2027-02-21' }]);
@@ -135,4 +135,23 @@ test('the floor: verified, indexable, a sourced bag claim, and a sourced parking
   // A parking map link and an official parking page are pointers too.
   const noLots = eventFloorOf(hub({ parkingLots: [], parkingLotMapUrl: 'https://arena.example/map.pdf', officialParkingUrls: ['https://arena.example/parking'], publicTransit: null }));
   assert.deepEqual([noLots.parking, noLots.transit, noLots.ok], [false, false, false]);
+});
+
+test('hub question facts: only a stored, live visit with an upcoming show contributes (a tombstoned visit never does)', async () => {
+  const m = await load();
+  const map = mapWith(m);
+  const f = { visitId: '2027-02-20', text: 'Children under 2 do not need a ticket.', quote: 'Children under 2 do not need a ticket.', sourceUrl: 'https://www.usbankstadium.com/events/detail/monster-jam-10', observedAt: '2026-11-18T13:55:11.703Z' };
+  const doc = { ...STOP_DOC, eventPolicies: { ...STOP_DOC.eventPolicies, childTicket: [f], runTime: [{ ...f, text: 'The show runs about two hours.', quote: 'x' }] } };
+  const hub = { name: 'U.S. Bank Stadium' };
+  const before = new Date('2026-11-19T00:00:00Z');
+  const live = m.hubQuestionFactsOf([{ stop: map(doc)!, hub }], before);
+  assert.deepEqual(live.kids, [{ venueName: 'U.S. Bank Stadium', text: f.text, sourceUrl: f.sourceUrl }]);
+  assert.equal(live.runTime.length, 1);
+  // The visit doc tombstoned, its performance rows still live: no fact.
+  const gone = map(doc, PERFS, [{ ...VISIT, data: { ...VISIT.data, tombstoned: true } as typeof VISIT.data }])!;
+  assert.deepEqual(m.hubQuestionFactsOf([{ stop: gone, hub }], before), { runTime: [], kids: [] });
+  // After the last show, and on a tombstoned stop: no fact. A fact with no quote never mapped at all.
+  assert.deepEqual(m.hubQuestionFactsOf([{ stop: map(doc)!, hub }], new Date('2027-03-01T00:00:00Z')), { runTime: [], kids: [] });
+  assert.deepEqual(m.hubQuestionFactsOf([{ stop: map({ ...doc, tombstoned: true })!, hub }], before), { runTime: [], kids: [] });
+  assert.deepEqual(map({ ...STOP_DOC, eventPolicies: { ...STOP_DOC.eventPolicies, childTicket: [{ ...f, quote: '' }] } })!.childTicket, []);
 });
