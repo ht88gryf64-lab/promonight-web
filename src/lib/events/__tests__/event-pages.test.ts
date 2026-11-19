@@ -20,6 +20,7 @@ import {
   formatClock,
   formatDatesLine,
   formatRange,
+  cityPillLabels,
   hubDescription,
   hubFaqs,
   hubH1,
@@ -400,4 +401,18 @@ test('hub questions: a run-time or kids question renders only from a stored venu
   // A fact answer is the stored facts and nothing else: no prose of ours.
   assert.equal(some[1].a, undefined); assert.deepEqual(some[2].facts, [fact]);
   assert.deepEqual(hubFaqs({ showName: 'Monster Jam', hasStops: false, runTime: [], kids: [] }).map((f) => f.q), ['What is Monster Jam?']);
+});
+
+test('hub city pills: the city alone, and the venue name added only when two listed stops share a city', () => {
+  const stops = [
+    { venueSlug: 'angel-stadium', searchCity: 'Anaheim', venueName: 'Angel Stadium' },
+    { venueSlug: 'honda-center', searchCity: 'Anaheim', venueName: 'Honda Center' },
+    { venueSlug: 'ball-arena', searchCity: 'Denver', venueName: 'Ball Arena' },
+  ];
+  const labels = cityPillLabels(stops);
+  assert.equal(labels.get('angel-stadium'), 'Anaheim · Angel Stadium');
+  assert.equal(labels.get('honda-center'), 'Anaheim · Honda Center');
+  assert.equal(labels.get('ball-arena'), 'Denver');
+  // No state, ever, and one stop per city stays the bare city.
+  assert.deepEqual([...cityPillLabels(stops.slice(1)).values()], ['Anaheim', 'Denver']);
 });
