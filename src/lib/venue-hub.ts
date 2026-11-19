@@ -481,6 +481,18 @@ export function displayVenueName(name: string): string {
  *  X the most recent former name (formerNames is newest first); the display
  *  name alone everywhere else. Only the H1 uses this: the <title>, the index,
  *  team pages, chips and FAQ keep the current name (website-former-names-spec.md). */
+/** "Formerly {X}" for a renamed building (X the most recent former name), or null. Printed on its own line
+ *  under the venue page H1 and under the venue line of an event stop page (Phase 6A, not merged). */
+export function venueFormerLine(hub: Pick<VenueHub, 'formerNames'>): string | null {
+  const former = hub.formerNames?.[0];
+  return former ? `Formerly ${former}` : null;
+}
+/** A meta description that keeps the former name findable: the sentence is appended once, never duplicated. */
+export function withFormerName(description: string, hub: Pick<VenueHub, 'formerNames'>): string {
+  const former = hub.formerNames?.[0];
+  return former && !description.includes(former) ? `${description} Formerly ${former}.` : description;
+}
+
 export function venueHubHeading(hub: Pick<VenueHub, 'name' | 'formerNames'>): string {
   const short = displayVenueName(hub.name);
   const former = hub.formerNames?.[0];

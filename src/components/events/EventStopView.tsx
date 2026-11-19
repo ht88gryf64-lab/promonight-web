@@ -263,6 +263,7 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
             <p className="m-0 font-rd text-[16px] leading-[1.4] text-[#e9e3d8]">
               <strong className="text-white">{place ? `${venueName}, ${place}` : venueName}</strong>
               <br />
+              {hub.formerNames?.[0] ? <><span data-former-name="">{`Formerly ${hub.formerNames[0]}`}</span><br /></> : null}
               {stop.tombstoned
                 ? 'This stop has been removed from the schedule.'
                 : upcoming.length

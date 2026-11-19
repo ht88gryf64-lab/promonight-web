@@ -1,7 +1,7 @@
 import { HubUpcomingEvents } from '@/components/venue-hub/HubUpcomingEvents';
 import { getUpcomingStopsAtHub } from '@/lib/events/event-stops';
 import { isEventsPagesLive } from '@/lib/events/event-pages';
-import { displayVenueName } from '@/lib/venue-hub';
+import { displayVenueName, withFormerName } from '@/lib/venue-hub';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { archivoHouse } from '@/components/redesign/fonts-house';
@@ -59,7 +59,7 @@ export async function generateMetadata({
     // constant, never getFullYear() — see SEASON_YEAR in lib/venue-hub.
     title: bagEligible ? { absolute: venueBagTitle(hub) } : venueHubTitle(hub, { hasVendors: vendors.length > 0 }),
     // Per-building answer-first description generated from verified facts.
-    description: bagEligible ? venueBagDescription(hub) : venueHubDescription(hub),
+    description: withFormerName(bagEligible ? venueBagDescription(hub) : venueHubDescription(hub), hub),
     alternates: { canonical },
     // Without this the page inherits the root layout's openGraph wholesale and
     // every one of the 222 buildings shares the homepage og:url.

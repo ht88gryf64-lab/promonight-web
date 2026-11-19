@@ -49,6 +49,7 @@ import {
   type VenueHubWeekPromo,
   displayVenueName,
   venueHubHeading,
+  venueFormerLine,
   cityState,
   spotHeroCovers,
   dimsString,
@@ -126,7 +127,9 @@ export function VenueHubView({
   const bagAnswer = bagEligible ? bagAnswerModel(hub) : null;
   // H1 only: "(formerly X)" on a renamed building. Everything else on the page
   // (FAQ, chips, cards) names the building by its current name, `short`.
-  const heading = bagEligible ? venueBagHeading(hub) : venueHubHeading(hub);
+  // The former name moves out of the H1 onto its own line under it (Phase 6A branch): the H1 is the current name.
+  const formerLine = venueFormerLine(hub);
+  const heading = (bagEligible ? venueBagHeading(hub) : venueHubHeading(hub)).replace(hub.formerNames?.[0] ? ` (formerly ${hub.formerNames[0]})` : '\u0000', '');
   const loc = cityState(hub);
   // The overlay's stored displayName is the raw slug on 73 of 186 verified
   // tenants, nearly all CFB ("penn-state", "unlv", "purdue"), because
@@ -513,6 +516,7 @@ export function VenueHubView({
           <div className="relative z-10 mx-auto max-w-[980px] px-4 pb-5 pt-5 md:px-8 md:pb-6 md:pt-7">
             <p className="font-rd text-[10px] font-semibold uppercase tracking-[0.14em] text-white/60">Gameday Guide</p>
             <h1 className="rd-display mt-1 text-2xl text-white md:text-4xl">{heading}</h1>
+            {formerLine ? <p className="mt-0.5 font-rd text-[13px] font-semibold text-white/80" data-former-name="">{formerLine}</p> : null}
             <p className="mt-0.5 font-rd text-[12px] text-white/65">{subtitle}</p>
           </div>
         </section>
