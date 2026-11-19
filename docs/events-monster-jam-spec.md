@@ -223,6 +223,59 @@ Design target: `docs/events-monster-jam-mockup-v2.html`. It supersedes the first
 - **IndexNow:** the index, the hub and every stored stop URL were submitted once at 2026-11-19T00:14Z through `/api/indexnow/submit` (response 200, all accepted). `EVENT_STOPS_INDEXNOW_LIVE=true` is set in the pipeline operator's env file; an event-stops execute reads it from its shell.
 - **Checks passed with the flag on:** the live battery (the /events guard in its flag-on branch), status, indexability and self canonical on the index, the hub and three stops, the text card as og:image, no affiliate or tracked URL in JSON-LD, the ticket link subId1 form `web_event_page_{show}_{venueSlug}`, the three entry points with their surfaces, the `div.pn-promo-page > article.page-content` wrapper, and the `page_view` payload (`page_type: event_stop`, `show`, `venue_slug`, `content_group: events`), captured in a browser because it is built client side from the path.
 
+## Live as of 2026-11-19 (Phases 5A to 7D)
+
+This section is the current state. Where it disagrees with an older section above, this section is right.
+
+### Hub (/events/monster-jam)
+- Title "Monster Jam {Year} Schedule: Dates, Cities and Tickets | PromoNight", H1 "Monster Jam {Year} schedule", with the scope line under the H1 carrying the limit and the computed stop and show counts.
+- "Find your city": city-only pills, one sideways-scrolling row on a phone, two centered rows from 1024. A pill adds the venue name only when two listed stops share a city.
+- Questions: "What is Monster Jam?" (our words), "Do kids need a ticket for Monster Jam?" and the pointer question. The kids question renders only from stored child ticket rules, each printed as stored and attributed "per {Venue}" with its source link, under the lead "Each venue sets its own rule, and other venues may differ. These venues print a rule for their shows:". The run time question renders only from a stored run time; none is stored, so it does not render.
+
+### Stop pages
+- Kids' tickets row in Before you go: only where the stop stores a child ticket rule for a stored, upcoming visit; one line per distinct rule, with its source.
+- Bag pointer line, two forms. "Bag policy at {Venue} depends on the event." prints only where the operator's stored quote itself says the bag policy varies by event (decided on the server from the quote's words by `bagQuoteSaysPerEvent`; today Ball Arena and U.S. Bank Stadium). Every other pointer stop prints "Check {Venue}'s bag policy before you go." Both carry the same link to the operator's bag page. The quotes are a copy of the pipeline's reviewed bag scope file (`src/lib/events/bag-scope-quotes.json`), held equal by a pipeline-copy test, and never reach a page.
+- A bag rule that covers some visits says so as a positive statement only ("{Venue} prints this for the Feb 6 to 7 shows."). The page never says what a venue has not published.
+- Pit Party wording: "Separate pass." and the two pass sentences print only where the stored venue quote or its context names a pass, for every window shown (`passStated`, computed on the server). Where the quote names no pass, the entry is the window and its attribution and nothing more.
+- Hour by hour sources: one line per source page. Where a venue has one page per show, each line names the show it covers ("Sat, Feb 6 gate time as listed by Lucas Oil Stadium").
+- A renamed venue: the stop prints "Formerly {name}" under the venue line when the hub has a former name. The venue page keeps its ruled H1 form, "{Name} Bag Policy (formerly {FormerName})".
+
+### Facts written in Phase 5D (2026-11-19)
+Each stored with its verbatim quote, page and read time, after Matt's review stamp.
+- AT&T Stadium: child ticket rule; event page address with the trailing slash.
+- Ball Arena: child ticket rule.
+- Lucas Oil Stadium: child ticket rule; gate times for both shows (3:30 PM Saturday, 1:30 PM Sunday, the Sunday time from the Day 2 page).
+- Delta Center and Golden 1 Center: the bag rule each event page prints.
+- Pipeline fields added beside the child ticket slot: run time, hearing protection note, age note (optional keys, text equal to the quote). None is stored.
+- Source rule: a fact's page must be on the hub's stored host (the operator page in the reviewed bag scope file), its subdomain, or a named alternate host. Nothing from the tour operator's sites.
+
+### Reliant Stadium (renamed from NRG Stadium), executed 2026-11-19
+- Display name "Reliant Stadium" on the venue hub, the older venues doc, the Texans home game docs and the pipeline display strings. Former name "NRG Stadium" recorded on the hub with no end date, because the operator's site prints none.
+- Slugs, doc ids and map keys stay `nrg-stadium`. No redirect. `/world-cup` and the street address are unchanged by ruling.
+- reliantpark.com is the operator's named alternate host for nrg-stadium only. The Houston stop's source links point there.
+
+### Weekly refresh (pipeline, `.github/workflows/event-stops-refresh.yml`)
+- Runs every Monday at 13:00 UTC and by hand. Always a dry run with a production baseline. An execute under a schedule is refused by both scripts; a write stays a person's command with a record, its sha256 and named stops.
+- A run ends failed, with a short summary, when it proposes any change or tombstone, when a stop is held or a stored stop could not be planned, when a stored quote, context or extra quote is gone from its page, or when a page that carries a stored fact for a show inside 30 days could not be read. No proposals is a green run. A stop with no venue page on file, or an unread page that carries no stored fact, is a printed note.
+- Partial read tripwire: with at least eight future stored shows carrying catalog ids, a catalog read that holds fewer than half of them is reported as a partial read and proposes nothing.
+- Venue pages: a plain request first. A page that refuses it (401, 403, 406, 429 or a 5xx) is read once through Firecrawl in basic mode; stealth, enhanced and auto are banned in code. A page on the venue's own site that a stored fact was read on, news pages included, may be re-read.
+- Per-fact check: each stored fact is verified on the page it was read on, covering its quote, its context and any extra quotes.
+- Matching: a stored string that starts or ends with a digit does not match inside a longer number or time ("1:30 PM" is not found in "11:30 PM"). A quote and its context must sit within 600 characters of visible page text, in the same text body.
+
+### The floor export chore
+- The refresh reads the committed `data/event-stops-floor.json` in the pipeline repo and accepts it up to 35 days old. It cannot make one itself, because the export runs the web repo's own predicates.
+- Re-export at least monthly and after any venue rename, then commit and push. The staleness failure prints the command. Last export 2026-11-19; the next is due by about 2026-12-20.
+- A record planned from a floor older than 48 hours cannot be executed: export a fresh floor and plan again before any execute.
+
+## Held and parked
+
+- Gillette Stadium and MetLife Stadium (April shows): held, not live. Gillette's hub is below the floor on the page as built; MetLife has no performances planned. Both have entries in the reviewed files and can be planned when their holds clear.
+- U.S. Bank Stadium, Sunday Pit Party: the venue still prints 9:30 a.m. to 11:30 a.m. for the 3 p.m. Sunday show. Removed by ruling and not stored; it stays out unless the page prints a different window.
+- Angel Stadium: the operator's bag policy does not say which events it covers, so it is not filed (ruling 2026-11-19). The stop has no venue event page on file and shows no bag rule, gate time or Pit Party.
+- Run time, hearing protection and age notes: no venue page read so far prints one. The fields exist; the hub's run time question stays unrendered.
+- Not filed by ruling: Rocket Arena's ear plug sentence (inside merchandise copy), Ford Field's "Backpacks are NOT permitted" (a partial rule), Rocket Arena's "Ages 2 & up require a ticket" (inside the Pit Pass item), Ball Arena's "Doors 6:00 PM" (not tied to a show).
+- Block-aware matching: the proximity rule measures distance, not page structure. Tying a quote to its own heading or list block is parked; see known-issues 117.
+
 ## Phase 0 findings (2026-11-17)
 - TicketNetwork: the Impact catalog returns 233 Monster Jam items at 71 venues with stable event ids, but no showtimes (LaunchDate is midnight UTC). Showtimes, availability and the same event id come from the venue-scoped TicketNetwork page. 47 of 71 venues have two shows on one day, so performances are keyed by date and time and the date-keyed matcher is not reused.
 - Images: no program terms on file cover performer or event images. Generated card only. Never fetch or store the TicketNetwork performer image or the catalog seating-chart ImageUrl. The catalog Text1 price range must never render.
