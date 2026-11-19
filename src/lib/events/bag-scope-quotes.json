@@ -1,0 +1,16 @@
+{
+  "_comment": "The operator bag page quote for each pointer hub, copied from the pipeline reviewed file data/event-stops-bag-scope.json (a pipeline-copy test holds the two equal). Server only: read by src/lib/events/event-stops.ts to decide the pointer line; the quotes never reach a page.",
+  "quotes": {
+    "ball-arena": "Items which have varying policies for concerts and special events include: bags, cameras, video/audio recording equipment, and signs/flags/banners/posters.",
+    "delta-center": "Bags (including purses) will not be allowed at Delta Center.",
+    "fiserv-forum": "Additional bag restrictions may apply for specific events, please see the individual event page",
+    "ford-field": "The Detroit Lions have implemented the NFL’s new bag policy for their games at Ford Field.",
+    "golden-1-center": "Bags larger that 8″x6″1″ are prohibited.",
+    "lucas-oil-stadium": "The Clear Bag Policy is implemented at all Indianapolis Colts events and other events as determined by the promoter.",
+    "metlife-stadium": "all permissible bags per the policy of the event will be permitted into the Stadium",
+    "paycom-center": "Bags smaller than 6” x 9” x 2” are allowed (this includes clear bags).",
+    "ppg-paints-arena": "For additional restrictions regarding bags or in-arena phone use, please click into your event on the",
+    "rocket-arena": "Concerts and other events may have different guidelines set by the artist or promoter.",
+    "us-bank-stadium": "All permissible bags, per the policy of the event, will be permitted into the stadium"
+  }
+}

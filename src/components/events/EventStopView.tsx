@@ -39,7 +39,6 @@ import {
   stopFaqs,
   timelineSourceLines,
   pitPassStated,
-  PIT_ACCESS_LINE,
   stopH1,
   stopTimeline,
   stopTitle,
@@ -108,9 +107,8 @@ export function eventStopHead(stop: EventStop, hub: VenueHub, now: Date) {
     if (tl.upcoming.length < 2 || covered.length === tl.upcoming.length || !covered.length) return null;
     const shows = covered.reduce((n, g) => n + g.performances.length, 0);
     const which = `${venueName} prints this for the ${covered.map((g) => formatRange(g.performances[0].date, g.performances[g.performances.length - 1].date)).join(' and ')} ${shows === 1 ? 'show' : 'shows'}.`;
-    // "No rule for the other dates" only when some upcoming visit really has none (another visit may carry its own rule).
-    const someUncovered = tl.upcoming.some((g) => !stop.bagRules.some((x) => x.visitId === g.visit.visitId));
-    return someUncovered ? `${which} It has not published a rule for the other dates on this page.` : which;
+    // A positive statement only (ruling 2026-11-19, Phase 6B): which shows the rule is printed for, nothing about the others.
+    return which;
   };
   const upKeys = new Set(upcoming.map((p) => p.key));
   const pitParty = stop.pitParty.filter((p) => upKeys.has(p.performance));
@@ -263,6 +261,8 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
             <p className="m-0 font-rd text-[16px] leading-[1.4] text-[#e9e3d8]">
               <strong className="text-white">{place ? `${venueName}, ${place}` : venueName}</strong>
               <br />
+              {/* A renamed building: its former name on its own line (Phase 6B). The venue page keeps its ruled H1 form. */}
+              {hub.formerNames?.[0] ? <><span data-former-name="">{`Formerly ${hub.formerNames[0]}`}</span><br /></> : null}
               {stop.tombstoned
                 ? 'This stop has been removed from the schedule.'
                 : upcoming.length
@@ -368,7 +368,7 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
                   </span>
                 ))}
                 {/* The Pit Party sentence only where a Pit Party window is stored (review 2026-11-19): a gates-only card says nothing about one. */}
-                <span>{!pitParty.length ? 'The showtime is the one on the ticket listing.' : pitPassStated(pitParty) ? 'The showtime is the one on the ticket listing. The Pit Party is a separate pass and is not sold through the ticket buttons above.' : `The showtime is the one on the ticket listing. ${PIT_ACCESS_LINE}`}</span>
+                <span>{pitPassStated(pitParty) ? 'The showtime is the one on the ticket listing. The Pit Party is a separate pass and is not sold through the ticket buttons above.' : 'The showtime is the one on the ticket listing.'}</span>
               </div>
             </div>
           </section>

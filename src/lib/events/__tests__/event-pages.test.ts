@@ -23,11 +23,9 @@ import {
   cityPillLabels,
   hubDescription,
   hubFaqs,
-  bagPointerText,
-  BAG_PER_EVENT_STATED,
+  bagQuoteSaysPerEvent,
   pitPassLine,
   pitPassStated,
-  PIT_ACCESS_LINE,
   timelineSourceLines,
   HUB_KIDS_LEAD,
   hubH1,
@@ -228,7 +226,7 @@ test('the bag block: the first that exists and nothing else, in the ruled order'
   assert.equal(bagBlockFor({ bagPolicy: operatorRule, bagRules: [] }, 'V', ['2027-02-20'])?.kind, 'operator-rule');
   const c = bagBlockFor({ bagPolicy: other, bagRules: [] }, 'V', ['2027-02-20']);
   assert.deepEqual([c?.kind, c && 'caveat' in c ? c.caveat : null], ['other-event-rule', 'The operator says this is subject to change.']);
-  const d = bagBlockFor({ bagPolicy: pointer, bagRules: [], hubId: 'us-bank-stadium' }, 'U.S. Bank Stadium', ['2027-02-20']);
+  const d = bagBlockFor({ bagPolicy: { ...pointer, perEvent: true }, bagRules: [] }, 'U.S. Bank Stadium', ['2027-02-20']);
   assert.deepEqual([d?.kind, d && 'text' in d ? d.text : null], ['pointer', 'U.S. Bank Stadium sets its bag policy per event.']);
   assert.equal(bagBlockFor({ bagPolicy: null, bagRules: [] }, 'V', []), null);
   // An event rule read for another visit is not this visit's; the same words for two visits print once.
@@ -428,28 +426,34 @@ test('hub city pills: the city alone, and the venue name added only when two lis
   assert.deepEqual([...cityPillLabels(stops.slice(1)).values()], ['Anaheim', 'Denver']);
 });
 
-test('6A bag pointer line: "per event" only where the operator quote says so; otherwise a line that claims nothing', () => {
-  const pointer = { bagPolicy: { mode: 'pointer' as const, sourceUrl: 'https://venue.example/bags' }, bagRules: [] };
-  const text = (hubId: string | undefined, name: string) => { const b = bagBlockFor({ ...pointer, hubId }, name, []); return b && b.kind === 'pointer' ? [b.text, b.sourceUrl] : null; };
-  // Backed: the operator's stored quote says the policy depends on the event.
-  assert.deepEqual(text('us-bank-stadium', 'U.S. Bank Stadium'), ['U.S. Bank Stadium sets its bag policy per event.', 'https://venue.example/bags']);
-  assert.equal(bagPointerText('Ball Arena', 'ball-arena'), 'Ball Arena sets its bag policy per event.');
-  // Not backed (a not-stated or tenant-only page, or no hub id at all): the same link, no claim about the venue.
-  assert.deepEqual(text('paycom-center', 'Paycom Center'), ["Check Paycom Center's bag policy before you go.", 'https://venue.example/bags']);
-  assert.deepEqual(text('ford-field', 'Ford Field'), ["Check Ford Field's bag policy before you go.", 'https://venue.example/bags']);
-  assert.deepEqual(text(undefined, 'Some Arena'), ["Check Some Arena's bag policy before you go.", 'https://venue.example/bags']);
-  assert.doesNotMatch(bagPointerText('Angel Stadium', 'angel-stadium'), /per event|sets its/);
-  assert.equal(BAG_PER_EVENT_STATED.has('lucas-oil-stadium'), false);
+test('6B bag pointer line: "per event" only where the stored operator quote says the policy varies by event', () => {
+  // Derived from the quote's words, not from venue names.
+  assert.equal(bagQuoteSaysPerEvent('All permissible bags, per the policy of the event, will be permitted into the stadium'), true);
+  assert.equal(bagQuoteSaysPerEvent('Items which have varying policies for concerts and special events include: bags, cameras'), true);
+  assert.equal(bagQuoteSaysPerEvent('Additional bag restrictions may apply for specific events, please see the individual event page'), false);
+  assert.equal(bagQuoteSaysPerEvent('For additional restrictions regarding bags or in-arena phone use, please click into your event on the'), false);
+  assert.equal(bagQuoteSaysPerEvent('Concerts and other events may have different guidelines set by the artist or promoter.'), false); // never mentions bags
+  assert.equal(bagQuoteSaysPerEvent('The Clear Bag Policy is implemented at all Indianapolis Colts events and other events as determined by the promoter.'), false);
+  assert.equal(bagQuoteSaysPerEvent('Bags smaller than 6 x 9 x 2 are allowed.'), false);
+  assert.equal(bagQuoteSaysPerEvent(null), false);
+  // Negated, or the by-event wording is about something else in another sentence: not backed.
+  assert.equal(bagQuoteSaysPerEvent('Bags are not subject to varying policies; one rule applies at every event.'), false);
+  assert.equal(bagQuoteSaysPerEvent('Camera policies vary by event. Bags larger than 12x12 are prohibited at all events.'), false);
+  assert.equal(bagQuoteSaysPerEvent('All bags are searched. Re-entry is per the policy of the event.'), false);
+  assert.equal(bagQuoteSaysPerEvent('Our bag policy does not vary by event.'), false);
+  assert.equal(bagQuoteSaysPerEvent('Bag policies may vary by event.'), true);
+  const block = (perEvent: boolean | undefined, name: string) => { const b = bagBlockFor({ bagPolicy: { mode: 'pointer', sourceUrl: 'https://venue.example/bags', ...(perEvent === undefined ? {} : { perEvent }) }, bagRules: [] }, name, []); return b && b.kind === 'pointer' ? [b.text, b.sourceUrl] : null; };
+  assert.deepEqual(block(true, 'U.S. Bank Stadium'), ['U.S. Bank Stadium sets its bag policy per event.', 'https://venue.example/bags']);
+  assert.deepEqual(block(false, 'Fiserv Forum'), ["Check Fiserv Forum's bag policy before you go.", 'https://venue.example/bags']);
+  assert.deepEqual(block(undefined, 'Some Arena'), ["Check Some Arena's bag policy before you go.", 'https://venue.example/bags']);
 });
 
-test('6A Pit Party: "pass" only where every window shown is one whose stored venue quote says so', () => {
+test('6B Pit Party: "pass" only where every window shown is one whose stored quote says so; otherwise nothing is added', () => {
   assert.equal(pitPassStated([{ passStated: true }, { passStated: true }]), true);
   assert.equal(pitPassStated([{ passStated: true }, { passStated: false }]), false);
   assert.equal(pitPassStated([]), false);
   assert.match(pitPassLine([{ passStated: true }]), /needs its own pass/);
-  assert.equal(pitPassLine([{ passStated: false }]), PIT_ACCESS_LINE);
-  assert.equal(PIT_ACCESS_LINE, 'Pit Party access is not sold through the ticket links on this page.');
-  assert.doesNotMatch(PIT_ACCESS_LINE, /pass/i);
+  assert.equal(pitPassLine([{ passStated: false }]), '');
 });
 
 test('6A hour-by-hour sources: one source keeps the plain line; a source per show names the show it covers', () => {

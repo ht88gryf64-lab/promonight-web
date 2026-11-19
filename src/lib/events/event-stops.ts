@@ -23,7 +23,9 @@ import { db } from '../firebase';
 import { makeCollectionLoader } from '../collection-cache';
 import { displayVenueName, getVenueHub, rendersTransit, venueHubIsIndexable, type VenueHub } from '../venue-hub';
 import { rendersBag, rendersParking } from '../venue-field-exclusions';
+import bagScopeQuotes from './bag-scope-quotes.json';
 import {
+  bagQuoteSaysPerEvent,
   EVENT_SHOWS,
   EVENTS_INDEX_PATH,
   EVENT_YMD_RE,
@@ -44,6 +46,7 @@ import {
   type HubVenueFact,
 } from './event-pages';
 
+const BAG_SCOPE_QUOTES: unknown = bagScopeQuotes.quotes;
 type Doc = Record<string, unknown>;
 const isObj = (v: unknown): v is Doc => !!v && typeof v === 'object' && !Array.isArray(v);
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);
@@ -67,11 +70,12 @@ const isoOf = (v: unknown): string | null => {
   return null;
 };
 
-function mapBagPolicy(v: unknown): EventBagPolicy | null {
+function mapBagPolicy(v: unknown, hubId: string): EventBagPolicy | null {
   if (!isObj(v)) return null;
   const sourceUrl = httpsUrl(v.sourceUrl);
   if (!sourceUrl) return null;
-  if (v.mode === 'pointer') return { mode: 'pointer', sourceUrl };
+  // perEvent: decided here, on the server, from the operator's stored quote for the hub; the quote stays here.
+  if (v.mode === 'pointer') return { mode: 'pointer', sourceUrl, perEvent: bagQuoteSaysPerEvent((BAG_SCOPE_QUOTES as Record<string, string>)[hubId]) };
   const text = isObj(v.rule) ? cleanText(v.rule.text) : null;
   const observedAt = isoOf(v.observedAt);
   // A rule with no verbatim quote behind it is not a rule (the pipeline's
@@ -151,7 +155,7 @@ export function mapEventStop(id: string, d: Doc, visits: Array<{ id: string; dat
     searchCity,
     timezone,
     tombstoned: d.tombstoned === true,
-    bagPolicy: mapBagPolicy(d.bagPolicy),
+    bagPolicy: mapBagPolicy(d.bagPolicy, hubId),
     bagRules: mapRules(ep.bagRule),
     pitParty: mapPitParty(ep.pitParty),
     gateTimes: mapGateTimes(ep.doorsTime),

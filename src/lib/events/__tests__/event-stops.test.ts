@@ -49,7 +49,8 @@ test('the mapper copies named fields only: quotes, contexts, provider read times
   assert.equal(passOf({ quote: 'Pit Party open from 12:30 p.m. Fans surpass expectations.', context: 'Saturday' }), false);
   assert.deepEqual(stop.performances[0], { key: '2027-02-20T1700', date: '2027-02-20', startTime: '17:00', startsAt: '2027-02-20T17:00:00-06:00', visitId: '2027-02-20', status: 'onsale', tnEventId: 8258515 });
   assert.deepEqual(stop.visits, [{ visitId: '2027-02-20', startDate: '2027-02-20', endDate: '2027-02-21' }]);
-  assert.deepEqual(stop.bagPolicy, { mode: 'pointer', sourceUrl: 'https://www.usbankstadium.com/plan-your-visit/safety' });
+  // perEvent is decided on the server from the operator's stored quote for the hub (us-bank-stadium's says "per the policy of the event").
+  assert.deepEqual(stop.bagPolicy, { mode: 'pointer', sourceUrl: 'https://www.usbankstadium.com/plan-your-visit/safety', perEvent: true });
   const wire = JSON.stringify(stop);
   for (const hidden of ['Pit Party open from', 'Saturday, February 20, 2027', 'impact-catalog', 'tnVenueId', '22700', 'minneapolis-us-bank-stadium', 'lineup', 'sourceReadAt', 'observedAtByField']) assert.equal(wire.includes(hidden), false, hidden);
   // The parking slot: empty today (the pipeline writes no such key); a stored, quoted fact would map like any rule,

@@ -141,14 +141,12 @@ test('the shared validator accepts /sitemap.xml exactly, and no other dotted pat
   for (const p of [...REJECT, ...PROMO_REJECT.filter((x) => x !== '/promos/blaze-orange-hat')]) assert.equal(isRevalidatePath(p), false, p);
 });
 
-// Phase 6A (2026-11-19): the web's list of hubs whose operator page says the bag policy depends on the event
-// is held to the pipeline's reviewed bag scope file: a pointer entry classified varies-not-printed with a quote.
-test('pipeline copy: BAG_PER_EVENT_STATED is exactly the bag scope file\'s quoted varies-not-printed pointers', async (t) => {
+// Phase 6B (2026-11-19): the operator bag quotes the web reads for the pointer line are a copy of the pipeline's
+// reviewed bag scope file: every pointer entry with a quote, word for word, and nothing else.
+test('pipeline copy: bag-scope-quotes.json is the bag scope file\'s pointer quotes, word for word', (t) => {
   if (!pipelinePresent(t)) return;
-  const { BAG_PER_EVENT_STATED, BAG_PER_EVENT_NOT_BACKED } = await import('../events/event-pages');
-  const scope = JSON.parse(readFileSync(join(PIPELINE_DIR, 'data/event-stops-bag-scope.json'), 'utf8')) as { hubs: Record<string, { mode: string; classification?: string; quote?: string | null }> };
-  const backed = Object.entries(scope.hubs).filter(([, e]) => e.mode === 'pointer' && e.classification === 'varies-not-printed' && typeof e.quote === 'string' && e.quote.trim().length > 0).map(([k]) => k).sort();
-  // Every listed hub is such an entry; the only such entries left out are the named, reasoned exclusions.
-  assert.deepEqual([...BAG_PER_EVENT_STATED, ...BAG_PER_EVENT_NOT_BACKED].sort(), backed);
-  for (const h of BAG_PER_EVENT_NOT_BACKED) assert.equal(BAG_PER_EVENT_STATED.has(h), false);
+  const scope = JSON.parse(readFileSync(join(PIPELINE_DIR, 'data/event-stops-bag-scope.json'), 'utf8')) as { hubs: Record<string, { mode: string; quote?: string | null }> };
+  const want = Object.fromEntries(Object.entries(scope.hubs).filter(([, e]) => e.mode === 'pointer' && typeof e.quote === 'string' && e.quote.trim().length > 0).map(([k, e]) => [k, e.quote]).sort());
+  const have = JSON.parse(readFileSync('src/lib/events/bag-scope-quotes.json', 'utf8')) as { quotes: Record<string, string> };
+  assert.deepEqual(have.quotes, want);
 });
