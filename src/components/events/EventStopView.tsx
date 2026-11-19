@@ -37,6 +37,9 @@ import {
   showsBagRule,
   stopDescription,
   stopFaqs,
+  timelineSourceLines,
+  pitPassStated,
+  PIT_ACCESS_LINE,
   stopH1,
   stopTimeline,
   stopTitle,
@@ -219,10 +222,7 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
 
   // The hour-by-hour card: one block per upcoming show that has a stored Pit Party or gate time.
   const days = upcoming.map((p) => ({ p, rows: showTimeline(p, pitParty, gateTimes) })).filter((d): d is { p: EventPerformance; rows: NonNullable<ReturnType<typeof showTimeline>> } => !!d.rows);
-  const timelineSources = [
-    ...[...new Set(pitParty.map((x) => x.sourceUrl))].map((u) => ({ what: 'Pit Party times', url: u, observedAt: pitParty.find((x) => x.sourceUrl === u)!.observedAt })),
-    ...[...new Set(gateTimes.map((x) => x.sourceUrl))].map((u) => ({ what: 'Gate times', url: u, observedAt: gateTimes.find((x) => x.sourceUrl === u)!.observedAt })),
-  ];
+  const timelineSources = [...timelineSourceLines('Pit Party', pitParty), ...timelineSourceLines('Gate', gateTimes)];
   // "Your Saturday" only when the card's one show is the page's only upcoming show on that weekday;
   // otherwise each block names its own date and showtime (two Saturday shows, or a Saturday in another visit).
   const soleDay = days.length === 1 && upcoming.filter((p) => weekdayLong(p.date) === weekdayLong(days[0].p.date)).length === 1;
@@ -326,7 +326,7 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
                         {pit.filter((x, i, arr) => arr.findIndex((y) => y.start === x.start && y.end === x.end) === i).map((x, i) => (
                           <div key={i} className="flex items-center gap-2 rounded-[10px] bg-[#fbf3cf] px-2.5 py-2 text-rd-ink" data-pit-strip={p.key}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
-                            <span className="font-rd text-[13px] leading-[1.35]"><strong>{`Pit Party ${formatClock(x.start)} to ${formatClock(x.end)}`}</strong>{`, per ${venueName}. Separate pass.`}</span>
+                            <span className="font-rd text-[13px] leading-[1.35]"><strong>{`Pit Party ${formatClock(x.start)} to ${formatClock(x.end)}`}</strong>{x.passStated ? `, per ${venueName}. Separate pass.` : `, per ${venueName}.`}</span>
                           </div>
                         ))}
                       </div>
@@ -368,7 +368,7 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
                   </span>
                 ))}
                 {/* The Pit Party sentence only where a Pit Party window is stored (review 2026-11-19): a gates-only card says nothing about one. */}
-                <span>{pitParty.length ? 'The showtime is the one on the ticket listing. The Pit Party is a separate pass and is not sold through the ticket buttons above.' : 'The showtime is the one on the ticket listing.'}</span>
+                <span>{!pitParty.length ? 'The showtime is the one on the ticket listing.' : pitPassStated(pitParty) ? 'The showtime is the one on the ticket listing. The Pit Party is a separate pass and is not sold through the ticket buttons above.' : `The showtime is the one on the ticket listing. ${PIT_ACCESS_LINE}`}</span>
               </div>
             </div>
           </section>

@@ -104,7 +104,7 @@ function mapPitParty(v: unknown): EventPitParty[] {
     const b = factBase(f);
     if (!b || !isObj(f)) return [];
     const performance = str(f.performance); const start = str(f.start); const end = str(f.end);
-    return performance && PERF_KEY_RE.test(performance) && start && end && HHMM_RE.test(start) && HHMM_RE.test(end) && start < end ? [{ ...b, performance, start, end }] : [];
+    return performance && PERF_KEY_RE.test(performance) && start && end && HHMM_RE.test(start) && HHMM_RE.test(end) && start < end ? [{ ...b, performance, start, end, passStated: /\bpass(es)?\b/i.test(`${str(f.quote) ?? ''} ${str(f.context) ?? ''}`) }] : [];
   });
 }
 function mapGateTimes(v: unknown): EventGateTime[] {

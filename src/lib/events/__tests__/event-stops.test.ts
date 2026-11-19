@@ -40,7 +40,13 @@ test('the mapper copies named fields only: quotes, contexts, provider read times
   void mapEventStop; void mapEventPerformance; void mapEventVisit; void eventFloorOf; void map;
   const stop = map()!;
   assert.deepEqual(Object.keys(stop).sort(), ['bagPolicy', 'bagRules', 'childTicket', 'gateTimes', 'hubId', 'parkingFacts', 'performances', 'pitParty', 'previousSlugs', 'reEntry', 'runTime', 'searchCity', 'show', 'timezone', 'tombstoned', 'updatedAt', 'venueSlug', 'visits']);
-  assert.deepEqual(stop.pitParty, [{ visitId: '2027-02-20', sourceUrl: 'https://www.usbankstadium.com/news/detail/get-ready', observedAt: '2026-11-18T13:55:21.901Z', performance: '2027-02-20T1700', start: '12:30', end: '15:30' }]);
+  assert.deepEqual(stop.pitParty, [{ visitId: '2027-02-20', sourceUrl: 'https://www.usbankstadium.com/news/detail/get-ready', observedAt: '2026-11-18T13:55:21.901Z', performance: '2027-02-20T1700', start: '12:30', end: '15:30', passStated: false }]);
+  // passStated is read from the stored quote and context on the server; neither string reaches the page.
+  const passOf = (over: Record<string, unknown>) => map({ ...STOP_DOC, eventPolicies: { ...STOP_DOC.eventPolicies, pitParty: [{ ...STOP_DOC.eventPolicies.pitParty[0], ...over }] } })!.pitParty[0].passStated;
+  assert.equal(passOf({ quote: 'Monster Jam Pit Pass: Preshow Pit Party From 9:30am - 11:00am' }), true);
+  assert.equal(passOf({ context: '(Saturday Event Ticket & Pit Party Pass required for entry)' }), true);
+  assert.equal(passOf({ quote: 'Start the excitement early on Saturday from 12:30 to 3:30 p.m.', context: 'Saturday, Jan. 30 at 5 p.m.' }), false);
+  assert.equal(passOf({ quote: 'Pit Party open from 12:30 p.m. Fans surpass expectations.', context: 'Saturday' }), false);
   assert.deepEqual(stop.performances[0], { key: '2027-02-20T1700', date: '2027-02-20', startTime: '17:00', startsAt: '2027-02-20T17:00:00-06:00', visitId: '2027-02-20', status: 'onsale', tnEventId: 8258515 });
   assert.deepEqual(stop.visits, [{ visitId: '2027-02-20', startDate: '2027-02-20', endDate: '2027-02-21' }]);
   assert.deepEqual(stop.bagPolicy, { mode: 'pointer', sourceUrl: 'https://www.usbankstadium.com/plan-your-visit/safety' });

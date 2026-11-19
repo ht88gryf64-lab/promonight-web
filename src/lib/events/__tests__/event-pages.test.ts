@@ -23,6 +23,12 @@ import {
   cityPillLabels,
   hubDescription,
   hubFaqs,
+  bagPointerText,
+  BAG_PER_EVENT_STATED,
+  pitPassLine,
+  pitPassStated,
+  PIT_ACCESS_LINE,
+  timelineSourceLines,
   HUB_KIDS_LEAD,
   hubH1,
   hubScopeLine,
@@ -222,7 +228,7 @@ test('the bag block: the first that exists and nothing else, in the ruled order'
   assert.equal(bagBlockFor({ bagPolicy: operatorRule, bagRules: [] }, 'V', ['2027-02-20'])?.kind, 'operator-rule');
   const c = bagBlockFor({ bagPolicy: other, bagRules: [] }, 'V', ['2027-02-20']);
   assert.deepEqual([c?.kind, c && 'caveat' in c ? c.caveat : null], ['other-event-rule', 'The operator says this is subject to change.']);
-  const d = bagBlockFor({ bagPolicy: pointer, bagRules: [] }, 'U.S. Bank Stadium', ['2027-02-20']);
+  const d = bagBlockFor({ bagPolicy: pointer, bagRules: [], hubId: 'us-bank-stadium' }, 'U.S. Bank Stadium', ['2027-02-20']);
   assert.deepEqual([d?.kind, d && 'text' in d ? d.text : null], ['pointer', 'U.S. Bank Stadium sets its bag policy per event.']);
   assert.equal(bagBlockFor({ bagPolicy: null, bagRules: [] }, 'V', []), null);
   // An event rule read for another visit is not this visit's; the same words for two visits print once.
@@ -267,7 +273,7 @@ test('the countdown: days to the first show on the venue calendar; today and tom
 
 test('the hour-by-hour card: stored times only, in clock order, and no card for a show with neither a Pit Party nor a gate time', () => {
   const sat = perf('2027-02-20T1700'); const sun = perf('2027-02-21T1500');
-  const pit = [{ visitId: '2027-02-20', performance: sat.key, start: '12:30', end: '15:30', sourceUrl: 'https://venue.example/pit', observedAt: '2026-11-18T00:00:00Z' }];
+  const pit = [{ visitId: '2027-02-20', performance: sat.key, start: '12:30', end: '15:30', sourceUrl: 'https://venue.example/pit', observedAt: '2026-11-18T00:00:00Z', passStated: true }];
   const gates = [{ visitId: '2027-02-20', performance: sat.key, opensAt: '15:30', sourceUrl: 'https://venue.example/gates', observedAt: '2026-11-18T00:00:00Z' }];
   assert.deepEqual(showTimeline(sat, pit, [])!.map((e) => `${e.at} ${e.text}`), ['12:30 Pit Party opens.', '15:30 Pit Party closes.', '17:00 Show starts.']);
   // A gate time at the same minute the Pit Party closes sorts after it; nothing else is added.
@@ -373,7 +379,7 @@ test('JSON-LD: one Event per performance with its offset, the building, a status
 
 test('FAQs come from stored fields only: no run time, no noise, no ages, no strollers', () => {
   const upcoming = STOP.performances;
-  const pit = [{ visitId: '2027-02-20', performance: '2027-02-20T1700', start: '12:30', end: '15:30', sourceUrl: 'https://venue.example/news', observedAt: '2026-11-18T13:55:21.901Z' }];
+  const pit = [{ visitId: '2027-02-20', performance: '2027-02-20T1700', start: '12:30', end: '15:30', sourceUrl: 'https://venue.example/news', observedAt: '2026-11-18T13:55:21.901Z', passStated: false }];
   const faqs = stopFaqs({ showName: 'Monster Jam', searchCity: 'Minneapolis', venueName: 'U.S. Bank Stadium', upcoming, bag: bagBlockFor({ bagPolicy: { mode: 'pointer', sourceUrl: 'https://venue.example/bags' }, bagRules: [] }, 'U.S. Bank Stadium', ['2027-02-20']), pitParty: pit, gateTimes: [] });
   assert.deepEqual(faqs.map((f) => f.q), ['When is Monster Jam in Minneapolis?', 'When is the Pit Party at U.S. Bank Stadium?']);
   assert.equal(faqs[0].a, 'Saturday, February 20, 2027 at 5:00 PM and Sunday, February 21, 2027 at 3:00 PM, at U.S. Bank Stadium. Times are local to the venue.');
@@ -420,4 +426,40 @@ test('hub city pills: the city alone, and the venue name added only when two lis
   assert.equal(labels.get('ball-arena'), 'Denver');
   // No state, ever, and one stop per city stays the bare city.
   assert.deepEqual([...cityPillLabels(stops.slice(1)).values()], ['Anaheim', 'Denver']);
+});
+
+test('6A bag pointer line: "per event" only where the operator quote says so; otherwise a line that claims nothing', () => {
+  const pointer = { bagPolicy: { mode: 'pointer' as const, sourceUrl: 'https://venue.example/bags' }, bagRules: [] };
+  const text = (hubId: string | undefined, name: string) => { const b = bagBlockFor({ ...pointer, hubId }, name, []); return b && b.kind === 'pointer' ? [b.text, b.sourceUrl] : null; };
+  // Backed: the operator's stored quote says the policy depends on the event.
+  assert.deepEqual(text('us-bank-stadium', 'U.S. Bank Stadium'), ['U.S. Bank Stadium sets its bag policy per event.', 'https://venue.example/bags']);
+  assert.equal(bagPointerText('Ball Arena', 'ball-arena'), 'Ball Arena sets its bag policy per event.');
+  // Not backed (a not-stated or tenant-only page, or no hub id at all): the same link, no claim about the venue.
+  assert.deepEqual(text('paycom-center', 'Paycom Center'), ["Check Paycom Center's bag policy before you go.", 'https://venue.example/bags']);
+  assert.deepEqual(text('ford-field', 'Ford Field'), ["Check Ford Field's bag policy before you go.", 'https://venue.example/bags']);
+  assert.deepEqual(text(undefined, 'Some Arena'), ["Check Some Arena's bag policy before you go.", 'https://venue.example/bags']);
+  assert.doesNotMatch(bagPointerText('Angel Stadium', 'angel-stadium'), /per event|sets its/);
+  assert.equal(BAG_PER_EVENT_STATED.has('lucas-oil-stadium'), false);
+});
+
+test('6A Pit Party: "pass" only where every window shown is one whose stored venue quote says so', () => {
+  assert.equal(pitPassStated([{ passStated: true }, { passStated: true }]), true);
+  assert.equal(pitPassStated([{ passStated: true }, { passStated: false }]), false);
+  assert.equal(pitPassStated([]), false);
+  assert.match(pitPassLine([{ passStated: true }]), /needs its own pass/);
+  assert.equal(pitPassLine([{ passStated: false }]), PIT_ACCESS_LINE);
+  assert.equal(PIT_ACCESS_LINE, 'Pit Party access is not sold through the ticket links on this page.');
+  assert.doesNotMatch(PIT_ACCESS_LINE, /pass/i);
+});
+
+test('6A hour-by-hour sources: one source keeps the plain line; a source per show names the show it covers', () => {
+  const at = '2026-11-19T14:34:15.250Z';
+  const one = timelineSourceLines('Gate', [{ performance: '2027-02-06T1700', sourceUrl: 'https://v.example/a', observedAt: at }, { performance: '2027-02-07T1500', sourceUrl: 'https://v.example/a', observedAt: at }]);
+  assert.deepEqual(one, [{ what: 'Gate times', url: 'https://v.example/a', observedAt: at }]);
+  const two = timelineSourceLines('Gate', [{ performance: '2027-02-06T1700', sourceUrl: 'https://v.example/day-1', observedAt: at }, { performance: '2027-02-07T1500', sourceUrl: 'https://v.example/day-2', observedAt: at }]);
+  assert.deepEqual(two.map((x) => [x.what, x.url]), [['Sat, Feb 6 gate time', 'https://v.example/day-1'], ['Sun, Feb 7 gate time', 'https://v.example/day-2']]);
+  // A page that covers two of three shows names both.
+  const mixed = timelineSourceLines('Pit Party', [{ performance: '2027-02-06T1700', sourceUrl: 'https://v.example/a', observedAt: at }, { performance: '2027-02-07T1500', sourceUrl: 'https://v.example/a', observedAt: at }, { performance: '2027-02-13T1700', sourceUrl: 'https://v.example/b', observedAt: at }]);
+  assert.deepEqual(mixed.map((x) => x.what), ['Sat, Feb 6 and Sun, Feb 7 Pit Party times', 'Sat, Feb 13 Pit Party time']);
+  assert.deepEqual(timelineSourceLines('Gate', []), []);
 });

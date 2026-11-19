@@ -123,7 +123,8 @@ export interface EventVisit {
 
 /** A fact the venue prints for this event. `sourceUrl` is the venue's own page. */
 export interface EventRuleFact { visitId: string; text: string; sourceUrl: string; observedAt: string }
-export interface EventPitParty { visitId: string; performance: string; start: string; end: string; sourceUrl: string; observedAt: string }
+/** `passStated`: the venue's stored quote (or its context) says the Pit Party needs a pass. The quote itself stays on the server. */
+export interface EventPitParty { visitId: string; performance: string; start: string; end: string; sourceUrl: string; observedAt: string; passStated: boolean }
 /** `opensAt` is HH:mm, the venue's wall clock (the stored gate-time entry of the stop's eventPolicies). */
 export interface EventGateTime { visitId: string; performance: string; opensAt: string; sourceUrl: string; observedAt: string }
 
@@ -284,7 +285,24 @@ export type BagBlock =
  * bag rule never renders on a stop page: it was sourced for the home team's
  * game days. `visitIds` limits (a) to the visits the page is showing.
  */
-export function bagBlockFor(stop: Pick<EventStop, 'bagPolicy' | 'bagRules'>, venueName: string, visitIds: string[]): BagBlock | null {
+/**
+ * The hubs whose OPERATOR page says, in its stored quote, that the bag policy
+ * depends on the event (the pipeline's reviewed bag scope file: a pointer entry
+ * classified varies-not-printed, with its quote). Only these print "{Venue}
+ * sets its bag policy per event."; every other pointer stop prints a line that
+ * claims nothing (ruling 2026-11-19, Phase 6A). A pipeline-copy test holds this
+ * list to the reviewed file. The stop doc stores no such flag yet.
+ */
+export const BAG_PER_EVENT_STATED: ReadonlySet<string> = new Set(['ball-arena', 'fiserv-forum', 'metlife-stadium', 'ppg-paints-arena', 'us-bank-stadium']);
+/** Classified varies-not-printed in the scope file, but the stored quote does not back the line (review 2026-11-19):
+ *  rocket-arena's quote ("Concerts and other events may have different guidelines set by the artist or promoter.") never mentions bags. */
+export const BAG_PER_EVENT_NOT_BACKED: ReadonlySet<string> = new Set(['rocket-arena']);
+/** The pointer line: what the operator's quote backs, or a line that claims nothing. */
+export function bagPointerText(venueName: string, hubId: string | null | undefined): string {
+  return hubId && BAG_PER_EVENT_STATED.has(hubId) ? `${venueName} sets its bag policy per event.` : `Check ${venueName}'s bag policy before you go.`;
+}
+
+export function bagBlockFor(stop: Pick<EventStop, 'bagPolicy' | 'bagRules'> & { hubId?: string }, venueName: string, visitIds: string[]): BagBlock | null {
   const rules = stop.bagRules.filter((r) => visitIds.includes(r.visitId));
   // One venue page often covers two visits with the same words: print it once.
   const distinct = rules.filter((r, i) => rules.findIndex((x) => x.text === r.text) === i);
@@ -293,7 +311,7 @@ export function bagBlockFor(stop: Pick<EventStop, 'bagPolicy' | 'bagRules'>, ven
   if (!b) return null;
   if (b.mode === 'rule') return { kind: 'operator-rule', label: `${venueName} bag policy for all events`, text: b.text, sourceUrl: b.sourceUrl, observedAt: b.observedAt };
   if (b.mode === 'other-event-rule') return { kind: 'other-event-rule', label: `${venueName} bag policy`, text: b.text, caveat: b.caveat, sourceUrl: b.sourceUrl, observedAt: b.observedAt };
-  return { kind: 'pointer', label: 'Bag policy', text: `${venueName} sets its bag policy per event.`, sourceUrl: b.sourceUrl };
+  return { kind: 'pointer', label: 'Bag policy', text: bagPointerText(venueName, stop.hubId), sourceUrl: b.sourceUrl };
 }
 /** Whether the page prints a bag RULE (a pointer is not one). */
 export const showsBagRule = (b: BagBlock | null): boolean => !!b && b.kind !== 'pointer';
@@ -534,6 +552,30 @@ export function breadcrumbJsonLd(items: Array<{ name: string; path: string }>): 
 
 export interface EventFaq { q: string; a: string }
 
+/** What the page says about buying into the Pit Party. "Pass" only where EVERY window shown is one whose stored
+ *  venue quote says a pass is needed (ruling 2026-11-19, Phase 6A); otherwise a line that names no pass. */
+export const PIT_ACCESS_LINE = 'Pit Party access is not sold through the ticket links on this page.';
+export const pitPassStated = (pits: ReadonlyArray<Pick<EventPitParty, 'passStated'>>): boolean => pits.length > 0 && pits.every((p) => p.passStated === true);
+export function pitPassLine(pits: ReadonlyArray<Pick<EventPitParty, 'passStated'>>): string {
+  return pitPassStated(pits) ? 'The Pit Party needs its own pass, which is not sold through the ticket buttons on this page.' : PIT_ACCESS_LINE;
+}
+
+/**
+ * The source lines under the hour-by-hour card. One source for a kind: "Gate times as listed by {Venue}".
+ * Several (a venue with a page per show): each line names the shows its page covers, "Sat, Feb 6 gate time".
+ */
+export function timelineSourceLines(kind: 'Pit Party' | 'Gate', facts: ReadonlyArray<{ performance: string; sourceUrl: string; observedAt: string }>): Array<{ what: string; url: string; observedAt: string }> {
+  const urls = [...new Set(facts.map((f) => f.sourceUrl))];
+  const noun = (n: number) => (kind === 'Gate' ? (n === 1 ? 'gate time' : 'gate times') : n === 1 ? 'Pit Party time' : 'Pit Party times');
+  return urls.map((url) => {
+    const own = facts.filter((f) => f.sourceUrl === url);
+    const days = [...new Set(own.map((f) => f.performance.slice(0, 10)))].sort().map(formatShortDay);
+    const list = days.length > 2 ? `${days.slice(0, -1).join(', ')} and ${days[days.length - 1]}` : days.join(' and ');
+    const what = urls.length > 1 ? `${list} ${noun(own.length)}` : `${kind} times`;
+    return { what, url, observedAt: own[0].observedAt };
+  });
+}
+
 /** Questions the page can answer from what is stored. Nothing about run time,
  *  noise, ages or strollers: none of that is stored. */
 export function stopFaqs(o: { showName: string; searchCity: string; venueName: string; upcoming: EventPerformance[]; bag: BagBlock | null; bagAnswer?: string; pitParty: EventPitParty[]; gateTimes: EventGateTime[] }): EventFaq[] {
@@ -554,7 +596,7 @@ export function stopFaqs(o: { showName: string; searchCity: string; venueName: s
   const pits = o.pitParty.filter((p) => upKeys.has(p.performance));
   if (pits.length) {
     const lines = pits.map((p) => { const perf = o.upcoming.find((x) => x.key === p.performance)!; return `${formatShortDay(perf.date)} (${formatClock(perf.startTime)} show): ${formatClock(p.start)} to ${formatClock(p.end)}`; });
-    out.push({ q: `When is the Pit Party at ${o.venueName}?`, a: `${o.venueName} lists these Pit Party times. ${lines.join('. ')}. The Pit Party needs its own pass, which is not sold through the ticket buttons on this page.` });
+    out.push({ q: `When is the Pit Party at ${o.venueName}?`, a: `${o.venueName} lists these Pit Party times. ${lines.join('. ')}. ${pitPassLine(pits)}` });
   }
   const gates = o.gateTimes.filter((g) => upKeys.has(g.performance));
   if (gates.length) {
