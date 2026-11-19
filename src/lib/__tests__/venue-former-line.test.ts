@@ -1,8 +1,11 @@
-import { test } from 'node:test';
+import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { venueFormerLine, withFormerName } from '../venue-hub';
 
-test('a renamed building: "Formerly {X}" on its own line, and the former name kept once in the description', () => {
+mock.module('server-only', { namedExports: {} });
+mock.module(new URL('../firebase.ts', import.meta.url).href, { namedExports: { db: {} } });
+
+test('a renamed building: "Formerly {X}" on its own line, and the former name kept once in the description', async () => {
+  const { venueFormerLine, withFormerName } = await import('../venue-hub');
   assert.equal(venueFormerLine({ formerNames: ['NRG Stadium'] }), 'Formerly NRG Stadium');
   assert.equal(venueFormerLine({ formerNames: [] }), null);
   // The most recent former name is the one printed.
