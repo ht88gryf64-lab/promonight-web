@@ -131,7 +131,7 @@ export interface EventGateTime { visitId: string; performance: string; opensAt: 
 export type EventBagPolicy =
   | { mode: 'rule'; text: string; sourceUrl: string; observedAt: string }
   | { mode: 'other-event-rule'; text: string; caveat: string; sourceUrl: string; observedAt: string }
-  | { mode: 'pointer'; sourceUrl: string };
+  | { mode: 'pointer'; sourceUrl: string; perEvent?: boolean };
 
 export interface EventStop {
   show: EventShowSlug;
@@ -286,20 +286,21 @@ export type BagBlock =
  * game days. `visitIds` limits (a) to the visits the page is showing.
  */
 /**
- * The hubs whose OPERATOR page says, in its stored quote, that the bag policy
- * depends on the event (the pipeline's reviewed bag scope file: a pointer entry
- * classified varies-not-printed, with its quote). Only these print "{Venue}
- * sets its bag policy per event."; every other pointer stop prints a line that
- * claims nothing (ruling 2026-11-19, Phase 6A). A pipeline-copy test holds this
- * list to the reviewed file. The stop doc stores no such flag yet.
+ * Whether an operator's stored bag page quote says the bag policy VARIES BY EVENT (ruling 2026-11-19, Phase 6B).
+ * Derived from the quote's own words, never from a list of venues: the quote must be about bags and must say the
+ * policy is the event's or differs between events. A quote that only says extra restrictions may apply for some
+ * events, or that a promoter may set other guidelines, does not qualify.
  */
-export const BAG_PER_EVENT_STATED: ReadonlySet<string> = new Set(['ball-arena', 'fiserv-forum', 'metlife-stadium', 'ppg-paints-arena', 'us-bank-stadium']);
-/** Classified varies-not-printed in the scope file, but the stored quote does not back the line (review 2026-11-19):
- *  rocket-arena's quote ("Concerts and other events may have different guidelines set by the artist or promoter.") never mentions bags. */
-export const BAG_PER_EVENT_NOT_BACKED: ReadonlySet<string> = new Set(['rocket-arena']);
-/** The pointer line: what the operator's quote backs, or a line that claims nothing. */
-export function bagPointerText(venueName: string, hubId: string | null | undefined): string {
-  return hubId && BAG_PER_EVENT_STATED.has(hubId) ? `${venueName} sets its bag policy per event.` : `Check ${venueName}'s bag policy before you go.`;
+export function bagQuoteSaysPerEvent(quote: string | null | undefined): boolean {
+  const q = typeof quote === 'string' ? quote.replace(/\s+/g, ' ') : '';
+  // One sentence must carry all of it: bags, the by-event wording, and no negation (review 2026-11-19: a bag word in
+  // one sentence and "vary by event" about cameras in another, or "not subject to varying policies", must not pass).
+  return q.split(/(?<=[.!?;])\s+/).some((s) => /\bbags?\b/i.test(s) && !/\b(?:not|no|never|n't)\b|n't/i.test(s)
+    && /per the policy of the event|varying policies|polic(?:y|ies) (?:may |can )?(?:varies|vary|differ|differs) (?:by|per|depending on the) event/i.test(s));
+}
+/** The pointer line: "per event" only where the stored quote says so; otherwise a line that claims nothing. */
+export function bagPointerText(venueName: string, perEvent: boolean): string {
+  return perEvent ? `${venueName} sets its bag policy per event.` : `Check ${venueName}'s bag policy before you go.`;
 }
 
 export function bagBlockFor(stop: Pick<EventStop, 'bagPolicy' | 'bagRules'> & { hubId?: string }, venueName: string, visitIds: string[]): BagBlock | null {
@@ -311,7 +312,7 @@ export function bagBlockFor(stop: Pick<EventStop, 'bagPolicy' | 'bagRules'> & { 
   if (!b) return null;
   if (b.mode === 'rule') return { kind: 'operator-rule', label: `${venueName} bag policy for all events`, text: b.text, sourceUrl: b.sourceUrl, observedAt: b.observedAt };
   if (b.mode === 'other-event-rule') return { kind: 'other-event-rule', label: `${venueName} bag policy`, text: b.text, caveat: b.caveat, sourceUrl: b.sourceUrl, observedAt: b.observedAt };
-  return { kind: 'pointer', label: 'Bag policy', text: bagPointerText(venueName, stop.hubId), sourceUrl: b.sourceUrl };
+  return { kind: 'pointer', label: 'Bag policy', text: bagPointerText(venueName, b.perEvent === true), sourceUrl: b.sourceUrl };
 }
 /** Whether the page prints a bag RULE (a pointer is not one). */
 export const showsBagRule = (b: BagBlock | null): boolean => !!b && b.kind !== 'pointer';
@@ -552,12 +553,10 @@ export function breadcrumbJsonLd(items: Array<{ name: string; path: string }>): 
 
 export interface EventFaq { q: string; a: string }
 
-/** What the page says about buying into the Pit Party. "Pass" only where EVERY window shown is one whose stored
- *  venue quote says a pass is needed (ruling 2026-11-19, Phase 6A); otherwise a line that names no pass. */
-export const PIT_ACCESS_LINE = 'Pit Party access is not sold through the ticket links on this page.';
 export const pitPassStated = (pits: ReadonlyArray<Pick<EventPitParty, 'passStated'>>): boolean => pits.length > 0 && pits.every((p) => p.passStated === true);
+/** The pass sentence, or nothing: where the venue's quote names no pass the entry is the window and its attribution only. */
 export function pitPassLine(pits: ReadonlyArray<Pick<EventPitParty, 'passStated'>>): string {
-  return pitPassStated(pits) ? 'The Pit Party needs its own pass, which is not sold through the ticket buttons on this page.' : PIT_ACCESS_LINE;
+  return pitPassStated(pits) ? 'The Pit Party needs its own pass, which is not sold through the ticket buttons on this page.' : '';
 }
 
 /**
@@ -596,7 +595,7 @@ export function stopFaqs(o: { showName: string; searchCity: string; venueName: s
   const pits = o.pitParty.filter((p) => upKeys.has(p.performance));
   if (pits.length) {
     const lines = pits.map((p) => { const perf = o.upcoming.find((x) => x.key === p.performance)!; return `${formatShortDay(perf.date)} (${formatClock(perf.startTime)} show): ${formatClock(p.start)} to ${formatClock(p.end)}`; });
-    out.push({ q: `When is the Pit Party at ${o.venueName}?`, a: `${o.venueName} lists these Pit Party times. ${lines.join('. ')}. ${pitPassLine(pits)}` });
+    out.push({ q: `When is the Pit Party at ${o.venueName}?`, a: `${o.venueName} lists these Pit Party times. ${lines.join('. ')}.${pitPassLine(pits) ? ` ${pitPassLine(pits)}` : ''}` });
   }
   const gates = o.gateTimes.filter((g) => upKeys.has(g.performance));
   if (gates.length) {
