@@ -144,13 +144,18 @@ export function EventHubView({ show, stops, year, facts }: { show: EventShow; st
             <div key={f.q} className={`flex flex-col gap-1 py-3 ${i < faqs.length - 1 ? 'border-b border-rd-line' : ''}`}>
               <h3 className="m-0 font-rd text-[15px] font-semibold text-rd-ink">{f.q}</h3>
               {f.a ? <p className="m-0 font-rd text-[14px] leading-[1.45] text-rd-ink-soft">{f.a}</p> : null}
-              {f.facts?.map((x) => (
-                <p key={`${x.venueName}|${x.text}`} className="m-0 font-rd text-[14px] leading-[1.45] text-rd-ink-soft">
-                  {`${x.text} (per `}
-                  <a href={x.sourceUrl} rel="noopener nofollow" target="_blank" className="text-rd-link underline">{x.venueName}</a>
-                  {')'}
-                </p>
-              ))}
+              {/* The venues' own rules as a list under the lead, so the block does not read as one paragraph. */}
+              {f.facts?.length ? (
+                <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5">
+                  {f.facts.map((x) => (
+                    <li key={`${x.venueName}|${x.text}`} className="font-rd text-[14px] leading-[1.45] text-rd-ink-soft">
+                      {`${x.text} (per `}
+                      <a href={x.sourceUrl} rel="noopener nofollow" target="_blank" className="text-rd-link underline">{x.venueName}</a>
+                      {')'}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           ))}
         </div>

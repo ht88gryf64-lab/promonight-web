@@ -459,10 +459,15 @@ export interface HubFaq { q: string; a?: string; facts?: HubVenueFact[] }
  * attributed "per {Venue}" with its source link; with no stored fact the
  * question is not rendered. Nothing here is written from general knowledge.
  */
+/** The line over the venues' child ticket rules on the hub: the rule is each venue's own. */
+export const HUB_KIDS_LEAD = 'Each venue sets its own rule, and other venues may differ. These venues print a rule for their shows:';
+
 export function hubFaqs(o: { showName: string; hasStops: boolean; runTime: HubVenueFact[]; kids: HubVenueFact[] }): HubFaq[] {
   const out: HubFaq[] = [{ q: `What is ${o.showName}?`, a: `${o.showName} is a touring monster truck show held in stadiums and arenas. This page lists its stops at venues PromoNight covers, with dates and a link to each stop page.` }];
   if (o.runTime.length) out.push({ q: `How long is a ${o.showName} show?`, facts: o.runTime });
-  if (o.kids.length) out.push({ q: `Is ${o.showName} good for kids?`, facts: o.kids });
+  // Renamed 2026-11-19 (Phase 5D): the stored fact is a child ticket rule, so the question asks what it answers.
+  // The lead says whose rule it is; the rules themselves are the venues' stored texts and nothing else.
+  if (o.kids.length) out.push({ q: `Do kids need a ticket for ${o.showName}?`, a: HUB_KIDS_LEAD, facts: o.kids });
   if (o.hasStops) out.push({ q: 'Where can I find bag, parking and transit details?', a: "On the stop page for each city listed above. A stop page shows the bag rule the venue has published where we have one, and otherwise links to the venue's bag policy page. It links to parking, and lists transit lines where the venue guide has them. The venue guide linked under each stop has what the building publishes about bags and parking, and about transit where it publishes any." });
   return out;
 }

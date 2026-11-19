@@ -23,6 +23,7 @@ import {
   cityPillLabels,
   hubDescription,
   hubFaqs,
+  HUB_KIDS_LEAD,
   hubH1,
   hubScopeLine,
   hubTitle,
@@ -397,9 +398,13 @@ test('hub questions: a run-time or kids question renders only from a stored venu
   assert.doesNotMatch(none.map((f) => f.a).join(' '), /\b(official|partner|hours?|minutes?|kids|children|ears?|loud|ages?)\b/i);
   const fact = { venueName: 'Example Arena', text: 'Children under 2 do not need a ticket.', sourceUrl: 'https://venue.example/event' };
   const some = hubFaqs({ showName: 'Monster Jam', hasStops: true, runTime: [{ ...fact, text: 'The show runs about two hours.' }], kids: [fact] });
-  assert.deepEqual(some.map((f) => f.q), ['What is Monster Jam?', 'How long is a Monster Jam show?', 'Is Monster Jam good for kids?', 'Where can I find bag, parking and transit details?']);
+  assert.deepEqual(some.map((f) => f.q), ['What is Monster Jam?', 'How long is a Monster Jam show?', 'Do kids need a ticket for Monster Jam?', 'Where can I find bag, parking and transit details?']);
   // A fact answer is the stored facts and nothing else: no prose of ours.
   assert.equal(some[1].a, undefined); assert.deepEqual(some[2].facts, [fact]);
+  // The kids' ticket lead says whose rule it is and promises nothing about other venues; it states no rule itself.
+  assert.equal(some[2].a, HUB_KIDS_LEAD);
+  assert.match(HUB_KIDS_LEAD, /Each venue sets its own rule, and other venues may differ\./);
+  assert.doesNotMatch(HUB_KIDS_LEAD, /\d|free|under|ages?\b|good for kids/i);
   assert.deepEqual(hubFaqs({ showName: 'Monster Jam', hasStops: false, runTime: [], kids: [] }).map((f) => f.q), ['What is Monster Jam?']);
 });
 
