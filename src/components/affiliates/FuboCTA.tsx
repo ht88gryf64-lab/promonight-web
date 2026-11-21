@@ -11,7 +11,8 @@ import { FUBO_CTA_LABEL, fuboAvailabilityLine, fuboCtaHref, type FuboSurface } f
 //
 // Variants, one per host:
 //   promo  the promo page CTA column, under "Also on Ticketmaster"
-//   tray   a team-page away row's CTA tray, under the ticket card
+//   tray   a team-page away row's CTA tray, under the ticket card, with its
+//          own eyebrow like the tray's other blocks (GET TICKETS, FIND PARKING)
 //   today  a /promos/today card, on its own line under the inline CTA row
 
 type Props = {
@@ -33,9 +34,13 @@ const LINK_CLASS: Record<Props['variant'], string> = {
   today: 'inline-flex min-h-11 items-center gap-1 font-rd text-[13px] font-semibold text-rd-link no-underline hover:underline',
 };
 
+// The availability line never overlaps the link (ux-review 2026-11-20,
+// defect 2: a -mt-2 on the line took the bottom 9px of the 44px hit area).
+// The promo wrapper's -mt-2 eats into the CTA column's 10px gap only, so the
+// link sits closer to "Also on Ticketmaster" (defect 3) without overlapping it.
 const WRAP_CLASS: Record<Props['variant'], string> = {
-  promo: 'flex flex-col items-center',
-  tray: 'flex flex-col items-start',
+  promo: '-mt-2 flex flex-col items-center',
+  tray: 'flex flex-col items-start gap-1',
   today: 'mt-1 flex flex-wrap items-center gap-x-2',
 };
 
@@ -45,6 +50,10 @@ export function FuboCTA({ league, gameId, surface, teamId, sport, promoId = null
   const availability = fuboAvailabilityLine(league);
   return (
     <div data-fubo-cta="" className={WRAP_CLASS[variant]}>
+      {variant === 'tray' ? (
+        // Text only, like the link: no icon or image anywhere in the block.
+        <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-accent-red">Stream the game</span>
+      ) : null}
       <TrackedAffiliateLink
         href={href}
         partner="fubo"
@@ -61,7 +70,7 @@ export function FuboCTA({ league, gameId, surface, teamId, sport, promoId = null
         {variant === 'promo' ? null : <span aria-hidden="true">→</span>}
       </TrackedAffiliateLink>
       {availability ? (
-        <p className={`m-0 font-rd text-[12px] leading-[1.4] text-rd-ink-faint${variant === 'promo' ? ' -mt-2' : variant === 'tray' ? ' -mt-2' : ''}`}>
+        <p className="m-0 font-rd text-[12px] leading-[1.4] text-rd-ink-faint">
           {availability}
         </p>
       ) : null}

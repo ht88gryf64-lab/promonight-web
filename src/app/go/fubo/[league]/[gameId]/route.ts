@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getGameById, getTeamBySlug } from '@/lib/data';
 import { tnSubId } from '@/lib/affiliates';
-import { buildFuboUrl, fuboBlockedByBroadcast, fuboLiveLeague, fuboSubId1, isFuboSurface } from '@/lib/affiliates/fubo';
+import { buildFuboUrl, fuboBlockedByBroadcast, fuboGamePlayed, fuboLiveLeague, fuboSubId1, isFuboSurface } from '@/lib/affiliates/fubo';
 import { teamDisplayName } from '@/lib/team-display-name';
 import { NOINDEX_HEADER } from '@/lib/social-bridge';
 
@@ -17,8 +17,10 @@ import { NOINDEX_HEADER } from '@/lib/social-bridge';
 //
 // Answers:
 //   valid link                -> fubo.tv with irad, sharedid, subId1
-//   game doc unreadable/gone  -> the league's fubo.tv landing, irad + subId1,
-//                                no sharedid (the click still lands tagged)
+//   game doc unreadable/gone, -> the league's fubo.tv landing, irad + subId1,
+//   or the game already played   no sharedid (the click still lands tagged;
+//                                a played game is only reachable from a page
+//                                left open past its date)
 //   anything else (bad league, surface or team; an NFL game on Prime,
 //   Netflix or Amazon)        -> the homepage
 
@@ -66,6 +68,7 @@ export async function GET(
   if (game.league !== league) return hop('/', request);
   if (teamId !== game.homeTeamSlug && teamId !== game.awayTeamSlug) return hop('/', request);
   if (fuboBlockedByBroadcast(league, game.broadcast?.network)) return hop('/', request);
+  if (fuboGamePlayed(game)) return hop(buildFuboUrl({ league, subId1: fuboSubId1(surface, teamId, game), names: null }), request);
 
   const [home, away] = await Promise.all([getTeamBySlug(game.homeTeamSlug), getTeamBySlug(game.awayTeamSlug)]);
   const names = home && away ? { home: teamDisplayName(home), away: teamDisplayName(away) } : null;

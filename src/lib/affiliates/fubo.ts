@@ -27,6 +27,7 @@
 // carry "Availability varies by market."
 
 import { awayGameSubKey, subIdToken, tnSubId } from '../affiliates';
+import { ymdInZone } from '../promo-date-tile';
 
 export const FUBO_ORIGIN = 'https://www.fubo.tv';
 export const FUBO_PUBLISHER_ID = '7236189';
@@ -77,6 +78,15 @@ export const FUBO_CTA_LABEL = 'Stream on Fubo';
 const NFL_NOT_ON_FUBO_RE = /prime|netflix|amazon/i;
 export function fuboBlockedByBroadcast(league: string, network: string | null | undefined): boolean {
   return league.toLowerCase() === 'nfl' && !!network && NFL_NOT_ON_FUBO_RE.test(network);
+}
+
+// PLAYED GAMES (ux-review 2026-11-20, defect 1). A game doc's status is not
+// a played signal: the NHL docs read 'scheduled' for every game, before and
+// after it is played. A game is played when its date is before today in its
+// own zone (the site's zone when the doc has none). The game's own day still
+// counts: it may be on now.
+export function fuboGamePlayed(game: { date: string; gameTimeTz?: string | null }, now: Date = new Date()): boolean {
+  return game.date < ymdInZone(now, game.gameTimeTz);
 }
 
 /** One club name as a sharedid part: accents stripped, whitespace as hyphens,

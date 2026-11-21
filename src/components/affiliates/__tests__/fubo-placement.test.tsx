@@ -25,6 +25,8 @@ const emptyQuery: any = {
   doc: () => ({ get: async () => ({ exists: false, data: () => undefined }), collection: () => emptyQuery }),
   get: async () => ({ docs: [], empty: true, size: 0, forEach: () => {} }),
 };
+// The away-row tray reads the clock (fuboGamePlayed); pinned to the fixtures' week.
+mock.timers.enable({ apis: ['Date'], now: new Date('2026-11-20T17:00:00Z') });
 mock.module('server-only', { namedExports: {} });
 mock.module(new URL('../../../lib/firebase.ts', import.meta.url).href, {
   namedExports: { db: { collection: () => emptyQuery, collectionGroup: () => emptyQuery } },
@@ -146,6 +148,7 @@ test('team page: an away row gets Fubo under the ticket card and above parking',
   assert.ok(tickets > 0 && tickets < fubo, 'below the ticket card');
   assert.ok(parking < 0 || fubo < parking, 'above parking');
   assert.ok(h.includes('Availability varies by market.'));
+  assert.ok(h.slice(fubo, h.indexOf('Stream on Fubo', fubo)).includes('Stream the game'), 'the tray block has its own eyebrow (defect 4), above the link');
   assertCopy(h);
   const modal = await renderRow(ctx(game(), false, RAVENS), BILLS, 'web_team_page_promolist');
   assert.deepEqual(fuboLinks(modal), ['/go/fubo/nfl/nfl-2026-11-22-buffalo-bills-at-baltimore-ravens?s=web_team_page_promolist&t=buffalo-bills']);
@@ -154,7 +157,12 @@ test('team page: an away row gets Fubo under the ticket card and above parking',
 test('team page: no Fubo on a home row, off the team-page surfaces, on a played or Prime game, or on MLB', async () => {
   assert.equal(fuboLinks(await renderRow(ctx(game(), true, BILLS), RAVENS)).length, 0, 'home row');
   assert.equal(fuboLinks(await renderRow(ctx(game(), false, RAVENS), BILLS, 'web_home_tonight')).length, 0, 'homepage modal');
-  assert.equal(fuboLinks(await renderRow(ctx(game({ status: 'completed' }), false, RAVENS), BILLS)).length, 0, 'played');
+  assert.equal(fuboLinks(await renderRow(ctx(game({ status: 'completed' }), false, RAVENS), BILLS)).length, 0, 'completed');
+  // ux-review defect 1: NHL docs keep status 'scheduled' after the game. The date decides.
+  const playedNhl = game({ id: '2026020200', league: 'nhl', date: '2026-11-12', gameTimeTz: 'America/Chicago', homeTeamSlug: HAWKS.id, awayTeamSlug: WILD.id, status: 'scheduled' });
+  assert.equal(fuboLinks(await renderRow(ctx(playedNhl, false, HAWKS), WILD)).length, 0, 'played, still "scheduled"');
+  const tonight = game({ id: '2026020201', league: 'nhl', date: '2026-11-20', gameTimeTz: 'America/Chicago', homeTeamSlug: HAWKS.id, awayTeamSlug: WILD.id });
+  assert.equal(fuboLinks(await renderRow(ctx(tonight, false, HAWKS), WILD)).length, 1, 'tonight still counts');
   assert.equal(fuboLinks(await renderRow(ctx(game({ broadcast: { network: 'Prime Video', isPrimetime: true } }), false, RAVENS), BILLS)).length, 0, 'Prime');
   const twinsAway = game({ id: 'mlb-x', league: 'mlb', homeTeamSlug: 'chicago-white-sox', awayTeamSlug: TWINS.id });
   assert.equal(fuboLinks(await renderRow(ctx(twinsAway, false, mk('chicago-white-sox', 'MLB', 'Chicago', 'White Sox')), TWINS)).length, 0, 'MLB');

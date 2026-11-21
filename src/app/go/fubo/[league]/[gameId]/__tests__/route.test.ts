@@ -21,10 +21,13 @@ const teams = new Map(
 const games = new Map<string, Record<string, unknown>>([
   ['nfl-2026-11-22-buffalo-bills-at-baltimore-ravens', { id: 'nfl-2026-11-22-buffalo-bills-at-baltimore-ravens', league: 'nfl', date: '2026-11-22', homeTeamSlug: 'baltimore-ravens', awayTeamSlug: 'buffalo-bills', status: 'scheduled', broadcast: { network: 'CBS', isPrimetime: false } }],
   ['nfl-2026-11-26-buffalo-bills-at-baltimore-ravens', { id: 'nfl-2026-11-26-buffalo-bills-at-baltimore-ravens', league: 'nfl', date: '2026-11-26', homeTeamSlug: 'baltimore-ravens', awayTeamSlug: 'buffalo-bills', status: 'scheduled', broadcast: { network: 'Prime Video', isPrimetime: true } }],
+  ['nhl-2026-11-19-st-louis-blues-at-montreal-canadiens', { id: 'nhl-2026-11-19-st-louis-blues-at-montreal-canadiens', league: 'nhl', date: '2026-11-19', gameTimeTz: 'America/Toronto', homeTeamSlug: 'montreal-canadiens', awayTeamSlug: 'st-louis-blues', status: 'scheduled' }],
   ['2025020345', { id: '2025020345', league: 'nhl', date: '2026-11-24', homeTeamSlug: 'montreal-canadiens', awayTeamSlug: 'st-louis-blues', status: 'scheduled' }],
 ]);
 let failRead = false;
 
+// The site's clock, pinned: the fixtures' games are upcoming on this day.
+mock.timers.enable({ apis: ['Date'], now: new Date('2026-11-20T17:00:00Z') });
 mock.module('server-only', { namedExports: {} });
 mock.module('next/server', { namedExports: { NextResponse, NextRequest } });
 mock.module(new URL('../../../../../../lib/data.ts', import.meta.url).href, {
@@ -104,4 +107,10 @@ test('a missing or unreadable game doc still lands tagged: the league landing, n
   } finally {
     failRead = false;
   }
+});
+
+test('a played game (status still "scheduled", date before today in its zone) lands on the league landing, tagged, no sharedid', async () => {
+  const res = await get('/go/fubo/nhl/nhl-2026-11-19-st-louis-blues-at-montreal-canadiens?s=web_team_page&t=st-louis-blues');
+  assert.equal(res.status, 307);
+  assert.equal(loc(res), 'https://www.fubo.tv/stream/nhl/?irmp=7236189&irad=409363&subId1=web_away_game_st-louis-blues_at_montreal-canadiens');
 });

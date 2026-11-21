@@ -7,7 +7,7 @@ import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
 import { FuboCTA } from '@/components/affiliates/FuboCTA';
-import { isFuboSurface } from '@/lib/affiliates/fubo';
+import { fuboGamePlayed, isFuboSurface } from '@/lib/affiliates/fubo';
 import { awayGameSubKey, ticketNetworkForGame } from '@/lib/affiliates';
 import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { formatGameTime } from '@/lib/format-game-time';
@@ -220,11 +220,15 @@ function GameExpandRow({
           />
         )}
         {/* Stream on Fubo (2026-11-20): away rows on the team page only (the
-         *  surface allowlist keeps it off the homepage modal), a game still to
-         *  be played, directly under the ticket card and never above it. The
-         *  sub ID is the row's away token, derived by the /go/fubo hop from
-         *  the game doc; FuboCTA renders nothing outside NFL, NBA and NHL. */}
-        {!isHome && team && game.status === 'scheduled' && isFuboSurface(surface) && (
+         *  surface allowlist keeps it off the homepage modal), a game not yet
+         *  played, directly under the ticket card and never above it. Played
+         *  is the date against today in the game's zone (fuboGamePlayed), not
+         *  status: NHL docs read 'scheduled' after the game (ux-review defect
+         *  1). This tray only ever renders on the client (lazy-mounted), so
+         *  the clock read cannot mismatch a server render. The sub ID is the
+         *  row's away token, derived by the /go/fubo hop from the game doc;
+         *  FuboCTA renders nothing outside NFL, NBA and NHL. */}
+        {!isHome && team && game.status === 'scheduled' && !fuboGamePlayed(game) && isFuboSurface(surface) && (
           <FuboCTA
             league={game.league}
             gameId={game.id}

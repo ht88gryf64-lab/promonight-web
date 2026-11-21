@@ -23,6 +23,7 @@ import {
   fuboAvailabilityLine,
   fuboBlockedByBroadcast,
   fuboCtaHref,
+  fuboGamePlayed,
   fuboNamePart,
   fuboSharedId,
   fuboSubId1,
@@ -172,4 +173,18 @@ test('join: without withGameIds nothing new is stamped (every other loader uncha
     assert.ok(!('gameNetwork' in p), 'no gameNetwork key');
   }
   assert.equal(empty.displayOpponent, 'Bills');
+});
+
+test('played: the date before today in the game\'s zone, never status; today still counts', () => {
+  const at = (iso: string) => new Date(iso);
+  // 2026-11-21 03:30Z is still Nov 20 in Los Angeles and Chicago, Nov 20 22:30 in New York.
+  assert.equal(fuboGamePlayed({ date: '2026-11-20', gameTimeTz: 'America/Los_Angeles' }, at('2026-11-21T03:30:00Z')), false);
+  assert.equal(fuboGamePlayed({ date: '2026-11-19', gameTimeTz: 'America/Los_Angeles' }, at('2026-11-21T03:30:00Z')), true);
+  // 2026-11-21 06:30Z: Nov 21 in New York, still Nov 20 in Los Angeles.
+  assert.equal(fuboGamePlayed({ date: '2026-11-20', gameTimeTz: 'America/New_York' }, at('2026-11-21T06:30:00Z')), true);
+  assert.equal(fuboGamePlayed({ date: '2026-11-20', gameTimeTz: 'America/Los_Angeles' }, at('2026-11-21T06:30:00Z')), false);
+  // No zone (or the legacy 'UTC' sentinel): the site's zone.
+  assert.equal(fuboGamePlayed({ date: '2026-11-20', gameTimeTz: '' }, at('2026-11-21T03:30:00Z')), false);
+  assert.equal(fuboGamePlayed({ date: '2026-11-20', gameTimeTz: null }, at('2026-11-21T06:30:00Z')), true);
+  assert.equal(fuboGamePlayed({ date: '2026-11-25' }, at('2026-11-20T12:00:00Z')), false);
 });
