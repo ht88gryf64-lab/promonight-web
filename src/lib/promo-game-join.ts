@@ -158,22 +158,33 @@ export function needsGameDisplay(p: Pick<PromoWithTeam, 'time' | 'opponent' | 't
 }
 
 /** Fill displayTime / displayOpponent on every row: the stored value when it
- *  is non-empty, else the resolved game value, else ''. Returns the same array. */
+ *  is non-empty, else the resolved game value, else ''. Returns the same array.
+ *
+ *  withGameIds (the Fubo CTA, 2026-11-20; /promos/today only, through
+ *  getPromosForDate): also stamp gameId, and gameNetwork when the doc stores
+ *  a broadcast, from the ONE live home game on the date. A doubleheader gets
+ *  neither, by the same never-guess rule as the time. */
 export function applyGameDisplay<T extends PromoWithTeam>(
   rows: T[],
   index: GameIndex,
   teamsById: ReadonlyMap<string, Pick<Team, 'name'>>,
+  opts: { withGameIds?: boolean } = {},
 ): T[] {
   for (const p of rows) {
     const storedTime = p.time || '';
     const storedOpponent = p.opponent || '';
     p.displayTime = storedTime;
     p.displayOpponent = storedOpponent;
-    if (storedTime && storedOpponent) continue;
+    if (storedTime && storedOpponent && !opts.withGameIds) continue;
     const resolved = resolveGameForPromo(p, index, teamsById);
     if (!resolved) continue;
     if (!storedTime && resolved.time) p.displayTime = resolved.time;
     if (!storedOpponent && resolved.opponent) p.displayOpponent = resolved.opponent;
+    if (opts.withGameIds && resolved.games.length === 1) {
+      const g = resolved.games[0];
+      p.gameId = g.id;
+      if (g.broadcast?.network) p.gameNetwork = g.broadcast.network;
+    }
   }
   return rows;
 }

@@ -414,7 +414,10 @@ export type AffiliatePartner =
   | 'spothero'
   | 'expedia'
   | 'ticketmaster'
-  | 'ticketnetwork';
+  | 'ticketnetwork'
+  // Streaming (2026-11-20, src/lib/affiliates/fubo.ts). destination_url is
+  // the on-site /go/fubo hop; the route adds irad, sharedid and subId1.
+  | 'fubo';
 
 export type AffiliateClickProperties = {
   surface: AnalyticsSurface;

@@ -6,6 +6,8 @@ import { ShareButton, formatShareDate, type ShareItem } from '@/components/share
 import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
+import { FuboCTA } from '@/components/affiliates/FuboCTA';
+import { isFuboSurface } from '@/lib/affiliates/fubo';
 import { awayGameSubKey, ticketNetworkForGame } from '@/lib/affiliates';
 import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { formatGameTime } from '@/lib/format-game-time';
@@ -215,6 +217,24 @@ function GameExpandRow({
             eventUrl={game.tnEventUrl ?? null}
             ticketNetwork={ticketNetworkForGame(game, isHome ? team : opponentTeam)}
             variant="card"
+          />
+        )}
+        {/* Stream on Fubo (2026-11-20): away rows on the team page only (the
+         *  surface allowlist keeps it off the homepage modal), a game still to
+         *  be played, directly under the ticket card and never above it. The
+         *  sub ID is the row's away token, derived by the /go/fubo hop from
+         *  the game doc; FuboCTA renders nothing outside NFL, NBA and NHL. */}
+        {!isHome && team && game.status === 'scheduled' && isFuboSurface(surface) && (
+          <FuboCTA
+            league={game.league}
+            gameId={game.id}
+            surface={surface}
+            teamId={team.id}
+            sport={team.league}
+            promoId={teamSlug ? `${teamSlug}:${game.date}:${game.id}` : null}
+            placement={placement}
+            broadcastNetwork={game.broadcast?.network ?? null}
+            variant="tray"
           />
         )}
         {!isHome && opponentTeam && (

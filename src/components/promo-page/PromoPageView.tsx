@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
+import { FuboCTA } from '@/components/affiliates/FuboCTA';
 import { TrackedAppLink } from '@/components/analytics-events';
 import { PromoShareImageButton, PromoShareRowButton, ShareLandingCapture, type PromoShareProps } from '@/components/promo-page/PromoShare';
 import { PromoShort } from '@/components/promo-page/PromoShort';
@@ -708,6 +709,25 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
               >
                 Also on Ticketmaster
               </TrackedAffiliateLink>
+            ) : null}
+            {/* Stream on Fubo (ruling 2, 2026-11-20): inside this section,
+                directly under "Also on Ticketmaster" (under the primary when a
+                club has no TicketNetwork), so it is below the ticket CTA and
+                adds no direct child to the article: the ad anchors do not
+                move. Only the primary date's single home game; FuboCTA renders
+                nothing outside NFL, NBA and NHL. */}
+            {ctx.game && ctx.game.date === primary.date && primary.date >= today ? (
+              <FuboCTA
+                league={team.sportSlug}
+                gameId={ctx.game.gameId}
+                surface={PROMO_PAGE_SURFACE}
+                teamId={team.id}
+                sport={team.league}
+                promoId={primary.promoId}
+                placement="promo_page_fubo"
+                broadcastNetwork={ctx.game.broadcastNetwork}
+                variant="promo"
+              />
             ) : null}
             <div className="flex flex-wrap gap-2">
               <TrackedAffiliateLink

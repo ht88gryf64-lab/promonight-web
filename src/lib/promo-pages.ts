@@ -279,6 +279,12 @@ export interface PromoPageGame {
   homeGamesTotal: number | null;
   /** The season label the count is over ("2026-27", "2026"). */
   seasonLabel: string | null;
+  /** The game doc's id when exactly ONE home game sits on the date, else
+   *  null (a doubleheader is never guessed). For the Fubo CTA's /go/fubo hop. */
+  gameId: string | null;
+  /** That game's stored broadcast network (NFL docs only), else null. Read by
+   *  the Fubo CTA's NFL guard (src/lib/affiliates/fubo.ts). */
+  broadcastNetwork: string | null;
 }
 
 /** The season timeline (spec Visuals 4): the team's home games of the
@@ -555,6 +561,8 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
         homeGameNumber: number > 0 ? number : null,
         homeGamesTotal: number > 0 ? homeSeason.length : null,
         seasonLabel: number > 0 ? seasonLabel : null,
+        gameId: onDate.length === 1 ? onDate[0].id : null,
+        broadcastNetwork: onDate.length === 1 ? onDate[0].broadcast?.network ?? null : null,
       };
     }
   }

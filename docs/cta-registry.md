@@ -58,6 +58,62 @@ when retiring a CTA.
 | ticketnetwork_promo_page_date | promo_page | series_date_row (upcoming dates only) | Tickets | TicketNetwork event page of that date's game when matched, else the team performer page; Impact tracked, subId1 web_promo_date_{team} | affiliate_click (surface web_promo_page, placement promo_page_date, ticket_link_level event / team) | 2026-11-02 | active |
 | share_promo_page_row | promo_page | cta_row_primary_right (same row as Get tickets, right of it) | Share (icon only below 340px) | navigator.share sheet where it exists, else a popover: Copy link, Text (sms:), Email (mailto:), X intent, Facebook sharer. Shared URL = canonical + utm_source=share, utm_medium={native,copy,sms,email,x,facebook}, utm_campaign=promo_page, s={8-char share id} | share_click (placement cta_row) + share_complete | 2026-11-03 | active |
 | share_promo_page_image | promo_page | promo_image_top_right_overlay | (share icon, aria-label "Share this promo") | same as share_promo_page_row | share_click (placement image) + share_complete | 2026-11-03 | active |
+| fubo_promo_page | promo_page | cta_row, directly under "Also on Ticketmaster" (under the primary when the club has no TicketNetwork); inside the CTA section, no new article child | Stream on Fubo + "Availability varies by market." | /go/fubo/{league}/{gameId}?s=web_promo_page&t={team} (307 to fubo.tv, see Fubo below) | affiliate_click (partner fubo, surface web_promo_page, placement promo_page_fubo) | 2026-11-20 | built, not merged |
+| fubo_team_away_row | team_page | away row CTA tray, directly under the ticket card (schedule list, calendar and list modal; lazy-mounted, never in served HTML) | Stream on Fubo → + "Availability varies by market." | /go/fubo/{league}/{gameId}?s={web_team_page or web_team_page_promolist}&t={pageTeam} | affiliate_click (partner fubo, placement away_game_card) | 2026-11-20 | built, not merged |
+| fubo_today_card | aggregator | today_card, own line under the inline ticket row | Stream on Fubo → + "Availability varies by market." | /go/fubo/{league}/{gameId}?s=web_today&t={homeTeam} | affiliate_click (partner fubo, surface web_today, placement today_card) | 2026-11-20 | built, not merged |
+
+## Fubo (2026-11-20)
+
+Impact campaign 5119, publisher 7236189, $30 per confirmed US subscription,
+30-day click window. Code: `src/lib/affiliates/fubo.ts` (table, URL builder),
+`src/app/go/fubo/[league]/[gameId]/route.ts` (the hop),
+`src/components/affiliates/FuboCTA.tsx` (the link). The build guard
+(`scripts/verify-affiliate-tracking.ts`, section 6) holds independent copies
+of every constant below and one sample URL.
+
+**The hop.** Every Fubo link is `/go/fubo/{league}/{gameId}?s={surface}&t={teamId}`
+on our own domain (Fubo's terms allow a same-domain out-redirect; never a
+redirect off another domain). The route reads the game doc and both team
+docs and answers 307, `x-robots-tag: noindex`, `cache-control: private, no-store`:
+
+```
+https://www.fubo.tv{path}?irmp=7236189&irad={irad}&sharedid={sharedid}&subId1={subId1}
+```
+
+| league | path | irad | live |
+|---|---|---|---|
+| nfl | /welcome/leagues/191277 | 356362 | yes |
+| nba | /stream/nba/ | 356361 | yes |
+| nhl | /stream/nhl/ | 409363 | yes |
+| mls | /welcome/leagues/191274 | 356375 | no (no games spine, no gameId) |
+| cfb | /welcome/leagues/191261 | 399332 | no (no surface in scope) |
+
+MLB and WNBA are not in the table.
+
+- **sharedid** `USA_{Sport}_{League}_{Away}-at-{Home}` (MLS `-vs-`): Sport is
+  Football, Basketball, Hockey, Soccer; League NFL, NBA, NHL, MLS, NCAAF. Club
+  display names (teamDisplayName) with accents stripped, spaces as hyphens,
+  `[A-Za-z0-9-]` only: `USA_Hockey_NHL_St-Louis-Blues-at-Montreal-Canadiens`.
+- **subId1** `{surface}_{team.id}`; on a team-page away row the shared away
+  token every other partner on that row carries,
+  `web_away_game_{pageTeam}_at_{homeTeam}` (Gate 1 ruling 7). The route
+  derives it from the game doc: the link's team is the away side.
+- **Surfaces** (the `s=` allowlist): web_team_page, web_team_page_promolist,
+  web_promo_page, web_today. Anything else, an unknown league, or a team that
+  is not one of the game's clubs is sent to `/`.
+- **Fallback.** A game doc that cannot be read sends the league landing with
+  irmp, irad and `{surface}_{team}` and no sharedid.
+- **NFL guard** (ruling 8). A game whose `broadcast.network` contains Prime,
+  Netflix or Amazon (any case) renders no Fubo link, and the hop refuses it.
+  NBA and NHL game docs carry no broadcast, so they are unguarded.
+- **Copy.** Text label only ("Stream on Fubo"), never the logo or wordmark.
+  Never "free Fubo" or anything implying Fubo is free ("7-day free trial" is
+  allowed). No price strings. NFL, NBA and NHL add "Availability varies by
+  market." The page's existing AffiliateDisclosure covers it.
+- **Order.** Always below the ticket CTA it sits with, never above it.
+- **Analytics.** affiliate_click fires on mousedown in the browser, partner
+  `fubo`; destination_url is the `/go/fubo` hop. No subId2=share (the share
+  session tags Impact-hosted hrefs only).
 
 ## Promo page share attribution (2026-11-03)
 
