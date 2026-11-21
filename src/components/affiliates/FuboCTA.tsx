@@ -26,6 +26,10 @@ type Props = {
   placement: string;
   broadcastNetwork?: string | null;
   variant: 'promo' | 'tray' | 'today';
+  /** The host card is dimmed (opacity-70, /promos/today's Tomorrow cards).
+   *  The link red composites to 3.22:1 and the faint line to 2.64:1 there
+   *  (ux-review round 2, N1); rd-ink composites to 5.89:1, so both use it. */
+  dimmed?: boolean;
 };
 
 const LINK_CLASS: Record<Props['variant'], string> = {
@@ -44,7 +48,7 @@ const WRAP_CLASS: Record<Props['variant'], string> = {
   today: 'mt-1 flex flex-wrap items-center gap-x-2',
 };
 
-export function FuboCTA({ league, gameId, surface, teamId, sport, promoId = null, placement, broadcastNetwork, variant }: Props) {
+export function FuboCTA({ league, gameId, surface, teamId, sport, promoId = null, placement, broadcastNetwork, variant, dimmed = false }: Props) {
   const href = fuboCtaHref({ league, gameId, surface, teamId, broadcastNetwork });
   if (!href) return null;
   const availability = fuboAvailabilityLine(league);
@@ -64,13 +68,13 @@ export function FuboCTA({ league, gameId, surface, teamId, sport, promoId = null
         placement={placement}
         target="_blank"
         rel="noopener noreferrer sponsored"
-        className={LINK_CLASS[variant]}
+        className={dimmed ? LINK_CLASS[variant].replace('text-rd-link', 'text-rd-ink') : LINK_CLASS[variant]}
       >
         {FUBO_CTA_LABEL}
         {variant === 'promo' ? null : <span aria-hidden="true">→</span>}
       </TrackedAffiliateLink>
       {availability ? (
-        <p className="m-0 font-rd text-[12px] leading-[1.4] text-rd-ink-faint">
+        <p className={`m-0 font-rd text-[12px] leading-[1.4] ${dimmed ? 'text-rd-ink' : 'text-rd-ink-faint'}`}>
           {availability}
         </p>
       ) : null}

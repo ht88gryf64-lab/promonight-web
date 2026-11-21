@@ -197,3 +197,16 @@ test('/promos/today: nothing without a joined game id, on Prime, or on MLB', asy
   assert.equal(fuboLinks(await renderCard(todayPromo(RAVENS, { gameId: 'nfl-x', gameNetwork: 'Prime Video' }))).length, 0, 'Prime');
   assert.equal(fuboLinks(await renderCard(todayPromo(TWINS, { gameId: 'mlb-x' }))).length, 0, 'MLB');
 });
+
+test('/promos/today: a dimmed (Tomorrow) card inks the Fubo link and line in rd-ink, which holds contrast under opacity-70 (ux-review N1)', async () => {
+  const { TodayPromoCard } = await import('../../promos-today/TodayPromoCard');
+  const p = todayPromo(RAVENS, { gameId: 'nfl-2026-11-22-buffalo-bills-at-baltimore-ravens' });
+  const dim = amp(renderToStaticMarkup(<TodayPromoCard promo={p} venue={null} surface="web_today" dimmed />));
+  const block = dim.slice(dim.indexOf('data-fubo-cta'));
+  assert.ok(dim.includes('opacity-70'));
+  assert.match(block, /<a [^>]*class="[^"]*text-rd-ink[ "][^"]*"[^>]*>Stream on Fubo/);
+  assert.ok(!/<a [^>]*text-rd-link[^>]*>Stream on Fubo/.test(block));
+  assert.match(block, /<p class="[^"]*text-rd-ink"[^>]*>Availability varies by market\.<\/p>/);
+  const lit = await renderCard(p);
+  assert.match(lit.slice(lit.indexOf('data-fubo-cta')), /<a [^>]*text-rd-link[^>]*>Stream on Fubo/, 'today cards keep the link red');
+});

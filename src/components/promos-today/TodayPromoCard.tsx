@@ -85,6 +85,7 @@ export function TodayPromoCard({
           placement="today_card"
           broadcastNetwork={p.gameNetwork ?? null}
           variant="today"
+          dimmed={dimmed}
         />
       ) : null}
     </div>
