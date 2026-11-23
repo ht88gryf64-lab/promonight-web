@@ -6,6 +6,8 @@ import { ShareButton, formatShareDate, type ShareItem } from '@/components/share
 import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
+import { FuboTrayCTA } from '@/components/affiliates/FuboTrayCTA';
+import { isFuboSurface } from '@/lib/affiliates/fubo';
 import { awayGameSubKey, ticketNetworkForGame } from '@/lib/affiliates';
 import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { formatGameTime } from '@/lib/format-game-time';
@@ -215,6 +217,27 @@ function GameExpandRow({
             eventUrl={game.tnEventUrl ?? null}
             ticketNetwork={ticketNetworkForGame(game, isHome ? team : opponentTeam)}
             variant="card"
+          />
+        )}
+        {/* Stream on Fubo (2026-11-20): away rows on the team page only (the
+         *  surface allowlist keeps it off the homepage modal), a game not yet
+         *  played, directly under the ticket card and never above it. Played
+         *  is the date against today in the game's zone (fuboGamePlayed), not
+         *  status: NHL docs read 'scheduled' after the game (ux-review defect
+         *  1). FuboTrayCTA renders only after mount: CalendarGrid server-
+         *  renders a hidden GameExpand for windowed dates, and neither the
+         *  link nor the clock read may reach a server render (adversarial
+         *  review finding 1). The sub ID is the row's away token, derived by
+         *  the /go/fubo hop from the game doc; nothing renders outside NFL,
+         *  NBA and NHL. */}
+        {!isHome && team && game.status === 'scheduled' && isFuboSurface(surface) && (
+          <FuboTrayCTA
+            game={game}
+            surface={surface}
+            teamId={team.id}
+            sport={team.league}
+            promoId={teamSlug ? `${teamSlug}:${game.date}:${game.id}` : null}
+            placement={placement}
           />
         )}
         {!isHome && opponentTeam && (

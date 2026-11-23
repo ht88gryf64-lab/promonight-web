@@ -38,13 +38,14 @@ import { VENUE_RESOLUTION_MAP } from './venue-resolution-map';
 import { VENUE_LOCATIONS_STATIC } from './venue-locations';
 import { resolveMlbZone } from './mlb-venue-tz';
 import { gameZoneAbbrev } from './format-game-time';
-import { applyGameDisplay, buildGameIndex, gameEventLinkUrl, needsGameDisplay } from './promo-game-join';
+import { JOIN_LEAGUES, applyGameDisplay, buildGameIndex, gameEventLinkUrl, needsGameDisplay } from './promo-game-join';
 import { attachPromoPageFields, stampPromoPageCanonical } from './promo-page-stamp';
 import { isSplitSeasonLeague } from './season-label';
 import type { SeasonEligible } from './seasons/season-window';
 import { groupLeagueTeams, leagueSuperGroups, type HubSuperGroup, type HubTeamGroup } from './hub-grouping';
 import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
 import { ticketNetworkEventLinkFor } from './affiliates';
+import { FUBO_LIVE_LEAGUES } from './affiliates/fubo';
 
 function tsToIso(v: unknown): string | null {
   if (!v) return null;
@@ -360,7 +361,7 @@ export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
       const team = teamById.get(teamRef.id);
       if (team) results.push(promoWithTeam(doc, team));
     }
-    return withGameDisplay(linkPromoPages(dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id))));
+    return withGameDisplay(linkPromoPages(dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id))), undefined, { gameIdLeagues: FUBO_LIVE_LEAGUES });
   } catch {
     const all: PromoWithTeam[] = [];
     await Promise.all(
@@ -376,7 +377,7 @@ export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
         }
       })
     );
-    return withGameDisplay(linkPromoPages(dropTicketPackageRows(dedupePromos(all.filter(isVisiblePromo), (p) => p.team.id))));
+    return withGameDisplay(linkPromoPages(dropTicketPackageRows(dedupePromos(all.filter(isVisiblePromo), (p) => p.team.id))), undefined, { gameIdLeagues: FUBO_LIVE_LEAGUES });
   }
 }
 
@@ -1010,7 +1011,7 @@ export function gameWindowFloorYmd(): string {
 export async function withGameDisplay<T extends PromoWithTeam>(
   rows: T[],
   floorYmd: string = gameWindowFloorYmd(),
-  opts: { cacheTtlMs?: number } = {},
+  opts: { cacheTtlMs?: number; gameIdLeagues?: readonly string[] } = {},
 ): Promise<T[]> {
   // Lower edge of the window (B5, 2026-10-29): a row dated before yesterday,
   // the site's own day, keeps its stored values and never widens the read.
@@ -1019,7 +1020,12 @@ export async function withGameDisplay<T extends PromoWithTeam>(
   // regeneration and the open-ended loaders about 2,500. Yesterday rather
   // than today so a page regenerated just after midnight still fills last
   // night's rows, which /promos/today keeps showing through the morning.
-  const needs = rows.filter((p) => p.date >= floorYmd && needsGameDisplay(p));
+  // gameIdLeagues (the Fubo CTA on /promos/today): a row of one of those
+  // leagues needs the read, since its gameId is wanted even when both slots
+  // are stored.
+  const needs = rows.filter(
+    (p) => p.date >= floorYmd && (needsGameDisplay(p) || (opts.gameIdLeagues?.includes(p.team.sportSlug) === true && JOIN_LEAGUES.includes(p.team.sportSlug))),
+  );
   if (needs.length === 0) return rows;
   let start = needs[0].date;
   let end = needs[0].date;
@@ -1033,12 +1039,28 @@ export async function withGameDisplay<T extends PromoWithTeam>(
       ttl > 0 ? loadGamesInDateRangeCached(start, end, ttl) : loadGamesInDateRange(start, end),
       getAllTeams(),
     ]);
-    return applyGameDisplay(rows, buildGameIndex(games), new Map(teams.map((t) => [t.id, t])));
+    return applyGameDisplay(rows, buildGameIndex(games), new Map(teams.map((t) => [t.id, t])), { gameIdLeagues: opts.gameIdLeagues });
   } catch (err) {
     console.error('[withGameDisplay] games read failed; rows keep their stored time and opponent', err);
     return rows;
   }
 }
+
+/** One game by its id, or null. For the /go/fubo hop. Every ingest writes
+ *  the doc under its own id field, so the direct read is the normal path; the
+ *  id query covers a doc whose stored id ever differs from its key. */
+// Every stored game id is [A-Za-z0-9_-] (nfl-2026-11-22-..., numeric NHL ids).
+// Anything else is refused before a read: the /go/fubo hop is public, and a
+// junk id would otherwise cost a doc read plus the id query.
+const GAME_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
+export async function getGameById(gameId: string): Promise<Game | null> {
+  if (!GAME_ID_RE.test(gameId)) return null;
+  const doc = await db.collection('games').doc(gameId).get();
+  if (doc.exists) return mapGameDoc(doc);
+  const snap = await db.collection('games').where('id', '==', gameId).limit(1).get();
+  return snap.empty ? null : mapGameDoc(snap.docs[0]);
+}
+
 export const getGamesForTeam = cache(async (teamSlug: string, league: string): Promise<Game[]> => {
   if (!GAME_LEAGUES.includes(league)) return [];
   const [homeSnap, awaySnap] = await Promise.all([

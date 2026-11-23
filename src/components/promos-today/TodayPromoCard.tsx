@@ -6,6 +6,8 @@ import { RedesignPromoRow, type PromoRowShare } from '@/components/redesign/Rede
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
 import { ticketNetworkForGame } from '@/lib/affiliates';
+import { FuboCTA } from '@/components/affiliates/FuboCTA';
+import { isFuboSurface } from '@/lib/affiliates/fubo';
 
 // One /promos/today promo unit. Reuses the EXACT team-page promo row
 // (RedesignPromoRow) so the visual — date stamp, category icon, Giveaways + HOT
@@ -67,6 +69,25 @@ export function TodayPromoCard({
           layout="inline"
         />
       </div>
+
+      {/* Stream on Fubo (2026-11-20): its own line UNDER the ticket row, never
+          in it or above it. NFL, NBA and NHL cards whose date joined exactly
+          one home game (p.gameId, getPromosForDate); FuboCTA renders nothing
+          otherwise. */}
+      {isFuboSurface(surface) ? (
+        <FuboCTA
+          league={p.team.sportSlug}
+          gameId={p.gameId}
+          surface={surface}
+          teamId={p.team.id}
+          sport={p.team.league}
+          promoId={promoKey}
+          placement="today_card"
+          broadcastNetwork={p.gameNetwork ?? null}
+          variant="today"
+          dimmed={dimmed}
+        />
+      ) : null}
     </div>
   );
 }

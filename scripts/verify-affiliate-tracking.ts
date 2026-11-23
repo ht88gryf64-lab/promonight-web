@@ -42,6 +42,7 @@ import { KNOWN_SURFACE_VALUES } from '../src/lib/analytics';
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { dirname, join, relative, resolve } from 'path';
 import { AFFILIATE_TRACKING_CONSTANTS } from '../src/lib/affiliates';
+import { FUBO_LEAGUES, FUBO_LIVE_LEAGUES, FUBO_ORIGIN, FUBO_PUBLISHER_ID, FUBO_SURFACES, buildFuboUrl } from '../src/lib/affiliates/fubo';
 
 // Mirror `next build`'s env loading for the one var this guard shape-checks:
 // prebuild runs under bare tsx (which does NOT read .env.local), but the
@@ -325,6 +326,47 @@ for (const pageFile of routeFiles(APP).sort()) {
   if (buildEventTicketLink({ provider: 'ticketnetwork', eventId: null, show: 'monster-jam', venueSlug: 'us-bank-stadium', surface: 'web_event_page' }) !== null) failures.push('Event ticket link built without an event id: a performance with no id must get no link.');
 }
 
+// ── 6. Fubo (streaming, 2026-11-20) ─────────────────────────────────────────
+//
+// The publisher id, the origin and the per-league path + irad live in
+// src/lib/affiliates/fubo.ts; the blessed copies are HERE, typed out again.
+// Also checked: the live leagues are exactly NFL, NBA and NHL (rulings 5);
+// every Fubo surface is a known analytics surface; and one built URL matches
+// the brief's shape byte for byte (sharedid accents stripped, [A-Za-z0-9-]).
+{
+  const FUBO_BLESSED = {
+    origin: 'https://www.fubo.tv',
+    publisher: '7236189',
+    leagues: {
+      nfl: { path: '/welcome/leagues/191277', irad: '356362' },
+      nba: { path: '/stream/nba/', irad: '356361' },
+      nhl: { path: '/stream/nhl/', irad: '409363' },
+      mls: { path: '/welcome/leagues/191274', irad: '356375' },
+      cfb: { path: '/welcome/leagues/191261', irad: '399332' },
+    } as Record<string, { path: string; irad: string }>,
+  };
+  if (FUBO_ORIGIN !== FUBO_BLESSED.origin) failures.push(`Fubo origin drifted: ${JSON.stringify(FUBO_ORIGIN)}`);
+  if (FUBO_PUBLISHER_ID !== FUBO_BLESSED.publisher) failures.push(`Fubo irmp (publisher id) drifted: ${JSON.stringify(FUBO_PUBLISHER_ID)}`);
+  const tableKeys = Object.keys(FUBO_LEAGUES).sort().join(',');
+  const blessedKeys = Object.keys(FUBO_BLESSED.leagues).sort().join(',');
+  if (tableKeys !== blessedKeys) failures.push(`Fubo league table keys drifted: expected ${blessedKeys}, actual ${tableKeys}`);
+  for (const [league, want] of Object.entries(FUBO_BLESSED.leagues)) {
+    const got = FUBO_LEAGUES[league as keyof typeof FUBO_LEAGUES];
+    if (!got || got.path !== want.path || got.irad !== want.irad) {
+      failures.push(`Fubo ${league} entry drifted: expected ${JSON.stringify(want)}, actual ${JSON.stringify(got ? { path: got.path, irad: got.irad } : null)}`);
+    }
+  }
+  if ([...FUBO_LIVE_LEAGUES].sort().join(',') !== 'nba,nfl,nhl') failures.push(`Fubo live leagues must be exactly nfl, nba, nhl: actual ${FUBO_LIVE_LEAGUES.join(',')}`);
+  for (const sfc of FUBO_SURFACES) {
+    if (!(KNOWN_SURFACE_VALUES as readonly string[]).includes(sfc)) failures.push(`Fubo surface ${sfc} is missing from KNOWN_SURFACE_VALUES (src/lib/analytics.ts).`);
+  }
+  const fuboSample = buildFuboUrl({ league: 'nhl', subId1: 'web_promo_page_minnesota-wild', names: { away: 'St. Louis Blues', home: 'Montréal Canadiens' } });
+  const fuboExpected =
+    'https://www.fubo.tv/stream/nhl/?irmp=7236189&irad=409363' +
+    '&sharedid=USA_Hockey_NHL_St-Louis-Blues-at-Montreal-Canadiens&subId1=web_promo_page_minnesota-wild';
+  if (fuboSample !== fuboExpected) failures.push(`Fubo URL drifted: expected=${JSON.stringify(fuboExpected)} actual=${JSON.stringify(fuboSample)}`);
+}
+
 if (failures.length > 0) {
   console.error('[verify-affiliate-tracking] BUILD BLOCKED: affiliate tracking would be broken or unattributed.');
   for (const f of failures) console.error(`  - ${f}`);
@@ -334,5 +376,6 @@ if (failures.length > 0) {
 console.log(
   `[verify-affiliate-tracking] OK: ${Object.keys(BLESSED).length} hardcoded tracking constants match; ` +
     `Ticketmaster wrap ${wrap ? 'present and well-formed' : 'absent (tolerated on this non-production target)'}; ` +
-    `${routesWithCtas} of ${routesChecked} routes render affiliate CTAs and every one reaches AffiliateDisclosure.`,
+    `${routesWithCtas} of ${routesChecked} routes render affiliate CTAs and every one reaches AffiliateDisclosure; ` +
+    `Fubo table, live leagues, surfaces and sample URL match.`,
 );

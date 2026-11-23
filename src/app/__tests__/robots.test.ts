@@ -65,12 +65,12 @@ describe('robots.txt', async () => {
     assert.equal(existsSync(join(__dirname, '..', 'robots.ts')), false);
   });
 
-  it('every group, in order, reads Allow: /api/promo-card/, Allow: /api/share-card/, Allow: /api/event-card/, Disallow: /api/, Allow: /', () => {
+  it('every group, in order, reads Allow: /api/promo-card/, Allow: /api/share-card/, Allow: /api/event-card/, Disallow: /api/, Disallow: /go/, Allow: /', () => {
     const g = groups(text);
     assert.deepEqual(g.map(([a]) => a), [...NAMED_GROUPS, '*']);
     assert.deepEqual(g.map(([a]) => a), [...ROBOTS_AGENTS]);
     for (const [agent, lines] of g) {
-      assert.deepEqual(lines, ['Allow: /api/promo-card/', 'Allow: /api/share-card/', 'Allow: /api/event-card/', 'Disallow: /api/', 'Allow: /'], agent);
+      assert.deepEqual(lines, ['Allow: /api/promo-card/', 'Allow: /api/share-card/', 'Allow: /api/event-card/', 'Disallow: /api/', 'Disallow: /go/', 'Allow: /'], agent);
     }
   });
 
@@ -93,13 +93,18 @@ describe('robots.txt', async () => {
         assert.equal(read('/api/subscribe', ua), false);
         assert.equal(read('/api/revalidate', ua), false);
         assert.equal(read('/api/', ua), false);
+        // The affiliate out-redirects (/go/fubo, 2026-11-22) are hops, not pages.
+        assert.equal(read('/go/fubo/nhl/nhl-2026-11-21-minnesota-wild-at-vancouver-canucks?s=web_team_page&t=minnesota-wild', ua), false);
+        assert.equal(read('/go/', ua), false);
+        // ...and the prefix is the directory only: a page path that merely starts with "go" stays open.
+        assert.equal(read('/govee', ua), true);
       }
     });
   }
 
   it('the two readings agree for every agent on every path', () => {
     for (const ua of [...NAMED_GROUPS, ...STAR_AGENTS]) {
-      for (const path of [...PAGES, PROMO_CARD, SHARE_CARD, '/api/subscribe', '/api/geo-region', '/api/']) {
+      for (const path of [...PAGES, PROMO_CARD, SHARE_CARD, '/api/subscribe', '/api/geo-region', '/api/', '/go/fubo/nba/x?s=web_today&t=y', '/govee']) {
         assert.equal(firstMatch(text, path, ua), longest(path, ua), `${ua} ${path}`);
       }
     }

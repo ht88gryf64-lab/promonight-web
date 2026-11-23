@@ -23,7 +23,10 @@ export type AffiliatePartner =
   | 'spothero'
   | 'expedia'
   | 'ticketmaster'
-  | 'ticketnetwork';
+  | 'ticketnetwork'
+  // Streaming (2026-11-20). Its table, URL builder and on-site hop live in
+  // src/lib/affiliates/fubo.ts; the CTA links to /go/fubo/..., never fubo.tv.
+  | 'fubo';
 
 // ── Ticket vendor (historical sole-vendor switch) ────────────────────────
 // The ticket CTA now renders BOTH vendors stacked (Ticketmaster on top,
@@ -90,6 +93,10 @@ export function isPartnerActive(partner: AffiliatePartner): boolean {
       // into every TicketNetwork link (no env var) — the outbound link is always
       // commissionable, so tracking is always active (same model as Expedia).
       return true;
+    case 'fubo':
+      // irmp + per-league irad are hardcoded in src/lib/affiliates/fubo.ts
+      // and added by the /go/fubo hop: the outbound link is always tagged.
+      return true;
   }
 }
 
@@ -152,6 +159,10 @@ export function buildAffiliateUrl(
       // TicketNetwork links are fully assembled by `buildTicketNetworkLink`
       // at the call site — the Impact prefix, property IDs, and subId1 are
       // already baked in. Do NOT re-tag; pass the URL through unchanged.
+      return rawUrl;
+    case 'fubo':
+      // The href is our own /go/fubo hop; the route builds the tagged
+      // fubo.tv URL. Nothing to tag here.
       return rawUrl;
   }
 }
@@ -413,6 +424,9 @@ export function tnSubId(surface: TnSubIdSurface, slug: string): string {
 function tnSubIdToken(token: string): string {
   return subIdPart(token).slice(0, TN_SUBID_MAX).replace(/[-_]+$/, '');
 }
+/** The same cleaning, for the other Impact builders that take a complete
+ *  token (src/lib/affiliates/fubo.ts on away rows). */
+export const subIdToken = tnSubIdToken;
 
 // ── subId3: the page (ruling 2026-11-04) ─────────────────────────────────
 // The ONE helper that adds the page-level sub ID. Impact links have three
