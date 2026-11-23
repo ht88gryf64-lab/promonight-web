@@ -1,5 +1,5 @@
 // The Fubo builder (src/lib/affiliates/fubo.ts) and the /promos/today game id
-// join (applyGameDisplay withGameIds, src/lib/promo-game-join.ts).
+// join (applyGameDisplay gameIdLeagues, src/lib/promo-game-join.ts).
 //
 // Rules under test:
 //  - the URL is https://www.fubo.tv{path}?irmp=7236189&irad={irad}&sharedid=..&subId1=..
@@ -12,7 +12,8 @@
 //    Prime, Netflix or Amazon, no link; NBA and NHL unguarded;
 //  - the copy never says free and carries no price;
 //  - the join stamps gameId (and gameNetwork when stored) only with
-//    withGameIds and only for exactly one live home game.
+//    gameIdLeagues, only on rows of those leagues, and only for exactly one
+//    live home game.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -138,7 +139,7 @@ const game = (over: Partial<Game>): Game => ({ id: 'g', league: 'nfl', date: '20
 const promo = (t: Team, date: string, over: Partial<PromoWithTeam> = {}): PromoWithTeam =>
   ({ date, time: '1:00 PM', opponent: 'Bills', type: 'giveaway', title: 'Towel', description: '', highlight: false, icon: '', recurring: false, team: t, ...over }) as PromoWithTeam;
 
-test('join: withGameIds stamps gameId and gameNetwork from the one home game, even when both slots are stored', async () => {
+test('join: gameIdLeagues stamps gameId and gameNetwork from the one home game, even when both slots are stored', async () => {
   const { applyGameDisplay, buildGameIndex } = await import('../promo-game-join');
   const index = buildGameIndex([
     game({ id: 'nfl-2026-11-22-buffalo-bills-at-baltimore-ravens', broadcast: { network: 'CBS', isPrimetime: false } }),
@@ -151,7 +152,7 @@ test('join: withGameIds stamps gameId and gameNetwork from the one home game, ev
   const wild = promo(WILD, '2026-11-22', { time: '', opponent: '' });
   const dh = promo(WILD, '2026-11-23');
   const postponed = promo(WILD, '2026-11-24');
-  applyGameDisplay([ravens, wild, dh, postponed], index, TEAMS, { withGameIds: true });
+  applyGameDisplay([ravens, wild, dh, postponed], index, TEAMS, { gameIdLeagues: ['nfl', 'nba', 'nhl'] });
   assert.equal(ravens.gameId, 'nfl-2026-11-22-buffalo-bills-at-baltimore-ravens', 'stored slots do not skip the id');
   assert.equal(ravens.gameNetwork, 'CBS');
   assert.equal(ravens.displayTime, '1:00 PM', 'stored still wins');
@@ -162,7 +163,7 @@ test('join: withGameIds stamps gameId and gameNetwork from the one home game, ev
   assert.equal(postponed.gameId, undefined, 'a postponed game is no game');
 });
 
-test('join: without withGameIds nothing new is stamped (every other loader unchanged)', async () => {
+test('join: without gameIdLeagues nothing new is stamped (every other loader unchanged)', async () => {
   const { applyGameDisplay, buildGameIndex } = await import('../promo-game-join');
   const index = buildGameIndex([game({ id: 'nfl-x', broadcast: { network: 'CBS', isPrimetime: false } })]);
   const stored = promo(RAVENS, '2026-11-22');
@@ -183,8 +184,23 @@ test('played: the date before today in the game\'s zone, never status; today sti
   // 2026-11-21 06:30Z: Nov 21 in New York, still Nov 20 in Los Angeles.
   assert.equal(fuboGamePlayed({ date: '2026-11-20', gameTimeTz: 'America/New_York' }, at('2026-11-21T06:30:00Z')), true);
   assert.equal(fuboGamePlayed({ date: '2026-11-20', gameTimeTz: 'America/Los_Angeles' }, at('2026-11-21T06:30:00Z')), false);
-  // No zone (or the legacy 'UTC' sentinel): the site's zone.
-  assert.equal(fuboGamePlayed({ date: '2026-11-20', gameTimeTz: '' }, at('2026-11-21T03:30:00Z')), false);
-  assert.equal(fuboGamePlayed({ date: '2026-11-20', gameTimeTz: null }, at('2026-11-21T06:30:00Z')), true);
+  // No zone (every NBA doc; or the legacy 'UTC' sentinel): Pacific, so a West Coast game in progress is not played
+  // (adversarial review finding 2). 2026-11-21 05:05Z is 9:05 PM PT on Nov 20, mid-game for a 7:30 PM PT tip.
+  assert.equal(fuboGamePlayed({ date: '2026-11-20', gameTimeTz: '' }, at('2026-11-21T05:05:00Z')), false);
+  assert.equal(fuboGamePlayed({ date: '2026-11-20', gameTimeTz: null }, at('2026-11-21T06:30:00Z')), false);
+  assert.equal(fuboGamePlayed({ date: '2026-11-20', gameTimeTz: 'UTC' }, at('2026-11-21T07:30:00Z')), false);
+  // ...and from midnight Pacific it is played.
+  assert.equal(fuboGamePlayed({ date: '2026-11-20', gameTimeTz: '' }, at('2026-11-21T08:01:00Z')), true);
   assert.equal(fuboGamePlayed({ date: '2026-11-25' }, at('2026-11-20T12:00:00Z')), false);
+});
+
+test('join: a row outside gameIdLeagues (MLB) gains no key even when its game resolves (adversarial finding 3)', async () => {
+  const { applyGameDisplay, buildGameIndex } = await import('../promo-game-join');
+  const TWINS = team('minnesota-twins', 'Twins', 'MLB');
+  const SOX = team('chicago-white-sox', 'White Sox', 'MLB');
+  const index = buildGameIndex([game({ id: 'mlb-1', league: 'mlb', homeTeamSlug: TWINS.id, awayTeamSlug: SOX.id })]);
+  const row = promo(TWINS, '2026-11-22', { time: '', opponent: '' });
+  applyGameDisplay([row], index, new Map([[TWINS.id, TWINS], [SOX.id, SOX]]), { gameIdLeagues: ['nfl', 'nba', 'nhl'] });
+  assert.equal(row.displayOpponent, 'White Sox', 'the slots still fill');
+  assert.ok(!('gameId' in row) && !('gameNetwork' in row));
 });

@@ -103,9 +103,9 @@ export interface Promo {
   displayTime?: string;
   displayOpponent?: string;
   // The joined home game's id, and its stored broadcast network when there is
-  // one. Set ONLY by withGameDisplay's withGameIds option (getPromosForDate,
-  // i.e. /promos/today) and only when exactly one live home game sits on the
-  // date; absent everywhere else. Read by the Fubo CTA (src/lib/affiliates/fubo.ts).
+  // one. Set ONLY by withGameDisplay's gameIdLeagues option (getPromosForDate,
+  // i.e. /promos/today, for NFL, NBA and NHL rows) and only when exactly one
+  // live home game sits on the date; absent everywhere else. Read by the Fubo CTA (src/lib/affiliates/fubo.ts).
   gameId?: string;
   gameNetwork?: string;
   // Optional scoring + ingest-extended fields. Populated by the

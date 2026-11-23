@@ -6,8 +6,8 @@ import { ShareButton, formatShareDate, type ShareItem } from '@/components/share
 import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
-import { FuboCTA } from '@/components/affiliates/FuboCTA';
-import { fuboGamePlayed, isFuboSurface } from '@/lib/affiliates/fubo';
+import { FuboTrayCTA } from '@/components/affiliates/FuboTrayCTA';
+import { isFuboSurface } from '@/lib/affiliates/fubo';
 import { awayGameSubKey, ticketNetworkForGame } from '@/lib/affiliates';
 import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { formatGameTime } from '@/lib/format-game-time';
@@ -224,21 +224,20 @@ function GameExpandRow({
          *  played, directly under the ticket card and never above it. Played
          *  is the date against today in the game's zone (fuboGamePlayed), not
          *  status: NHL docs read 'scheduled' after the game (ux-review defect
-         *  1). This tray only ever renders on the client (lazy-mounted), so
-         *  the clock read cannot mismatch a server render. The sub ID is the
-         *  row's away token, derived by the /go/fubo hop from the game doc;
-         *  FuboCTA renders nothing outside NFL, NBA and NHL. */}
-        {!isHome && team && game.status === 'scheduled' && !fuboGamePlayed(game) && isFuboSurface(surface) && (
-          <FuboCTA
-            league={game.league}
-            gameId={game.id}
+         *  1). FuboTrayCTA renders only after mount: CalendarGrid server-
+         *  renders a hidden GameExpand for windowed dates, and neither the
+         *  link nor the clock read may reach a server render (adversarial
+         *  review finding 1). The sub ID is the row's away token, derived by
+         *  the /go/fubo hop from the game doc; nothing renders outside NFL,
+         *  NBA and NHL. */}
+        {!isHome && team && game.status === 'scheduled' && isFuboSurface(surface) && (
+          <FuboTrayCTA
+            game={game}
             surface={surface}
             teamId={team.id}
             sport={team.league}
             promoId={teamSlug ? `${teamSlug}:${game.date}:${game.id}` : null}
             placement={placement}
-            broadcastNetwork={game.broadcast?.network ?? null}
-            variant="tray"
           />
         )}
         {!isHome && opponentTeam && (

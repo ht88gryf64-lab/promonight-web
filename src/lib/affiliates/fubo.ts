@@ -83,10 +83,18 @@ export function fuboBlockedByBroadcast(league: string, network: string | null | 
 // PLAYED GAMES (ux-review 2026-11-20, defect 1). A game doc's status is not
 // a played signal: the NHL docs read 'scheduled' for every game, before and
 // after it is played. A game is played when its date is before today in its
-// own zone (the site's zone when the doc has none). The game's own day still
-// counts: it may be on now.
+// own zone. The game's own day still counts: it may be on now.
+//
+// NO ZONE (adversarial review 2026-11-22, finding 2): mapGameDoc blanks
+// gameTimeTz on every NBA doc. The site's zone (Eastern) there would call a
+// 7:30 PM PT tip-off played at 9:05 PM PT, mid-game. Without a zone the day
+// is read in Pacific time, the latest of the leagues' North American zones:
+// no game loses its link while it can still be on, and an Eastern game keeps
+// it at most three hours past its midnight.
+const FUBO_NO_ZONE_FALLBACK = 'America/Los_Angeles';
 export function fuboGamePlayed(game: { date: string; gameTimeTz?: string | null }, now: Date = new Date()): boolean {
-  return game.date < ymdInZone(now, game.gameTimeTz);
+  const zone = game.gameTimeTz && game.gameTimeTz.includes('/') ? game.gameTimeTz : FUBO_NO_ZONE_FALLBACK;
+  return game.date < ymdInZone(now, zone);
 }
 
 /** One club name as a sharedid part: accents stripped, whitespace as hyphens,

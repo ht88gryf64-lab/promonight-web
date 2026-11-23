@@ -139,36 +139,21 @@ async function renderRow(c: GameContext, team: Team, surface?: Parameters<typeof
   return amp(renderToStaticMarkup(<GameExpand dateStr={c.game.date} contexts={[c]} team={team} teamSlug={team.id} teamName={team.name} surface={surface} />));
 }
 
-test('team page: an away row gets Fubo under the ticket card and above parking', async () => {
-  const h = await renderRow(ctx(game(), false, RAVENS), BILLS);
-  assert.deepEqual(fuboLinks(h), ['/go/fubo/nfl/nfl-2026-11-22-buffalo-bills-at-baltimore-ravens?s=web_team_page&t=buffalo-bills']);
-  const tickets = h.indexOf('Get tickets on TicketNetwork');
-  const fubo = h.indexOf('data-fubo-cta');
-  const parking = h.search(/SpotHero|[Pp]arking/);
-  assert.ok(tickets > 0 && tickets < fubo, 'below the ticket card');
-  assert.ok(parking < 0 || fubo < parking, 'above parking');
-  assert.ok(h.includes('Availability varies by market.'));
-  assert.ok(h.slice(fubo, h.indexOf('Stream on Fubo', fubo)).includes('Stream the game'), 'the tray block has its own eyebrow (defect 4), above the link');
-  assertCopy(h);
-  const modal = await renderRow(ctx(game(), false, RAVENS), BILLS, 'web_team_page_promolist');
-  assert.deepEqual(fuboLinks(modal), ['/go/fubo/nfl/nfl-2026-11-22-buffalo-bills-at-baltimore-ravens?s=web_team_page_promolist&t=buffalo-bills']);
-});
-
-test('team page: no Fubo on a home row, off the team-page surfaces, on a played or Prime game, or on MLB', async () => {
-  assert.equal(fuboLinks(await renderRow(ctx(game(), true, BILLS), RAVENS)).length, 0, 'home row');
-  assert.equal(fuboLinks(await renderRow(ctx(game(), false, RAVENS), BILLS, 'web_home_tonight')).length, 0, 'homepage modal');
-  assert.equal(fuboLinks(await renderRow(ctx(game({ status: 'completed' }), false, RAVENS), BILLS)).length, 0, 'completed');
-  // ux-review defect 1: NHL docs keep status 'scheduled' after the game. The date decides.
-  const playedNhl = game({ id: '2026020200', league: 'nhl', date: '2026-11-12', gameTimeTz: 'America/Chicago', homeTeamSlug: HAWKS.id, awayTeamSlug: WILD.id, status: 'scheduled' });
-  assert.equal(fuboLinks(await renderRow(ctx(playedNhl, false, HAWKS), WILD)).length, 0, 'played, still "scheduled"');
-  const tonight = game({ id: '2026020201', league: 'nhl', date: '2026-11-20', gameTimeTz: 'America/Chicago', homeTeamSlug: HAWKS.id, awayTeamSlug: WILD.id });
-  assert.equal(fuboLinks(await renderRow(ctx(tonight, false, HAWKS), WILD)).length, 1, 'tonight still counts');
-  assert.equal(fuboLinks(await renderRow(ctx(game({ broadcast: { network: 'Prime Video', isPrimetime: true } }), false, RAVENS), BILLS)).length, 0, 'Prime');
-  const twinsAway = game({ id: 'mlb-x', league: 'mlb', homeTeamSlug: 'chicago-white-sox', awayTeamSlug: TWINS.id });
-  assert.equal(fuboLinks(await renderRow(ctx(twinsAway, false, mk('chicago-white-sox', 'MLB', 'Chicago', 'White Sox')), TWINS)).length, 0, 'MLB');
-  // NHL away rows are unguarded and live.
+test('team page: the served HTML never carries the tray Fubo link, for any away row (ruling 3; adversarial finding 1)', async () => {
+  // CalendarGrid server-renders hidden GameExpands for windowed dates; the
+  // Fubo block mounts on the client only (FuboTrayCTA). The mounted behaviour
+  // is in fubo-tray.test.tsx.
   const nhl = game({ id: '2026020300', league: 'nhl', homeTeamSlug: HAWKS.id, awayTeamSlug: WILD.id });
-  assert.deepEqual(fuboLinks(await renderRow(ctx(nhl, false, HAWKS), WILD)), ['/go/fubo/nhl/2026020300?s=web_team_page&t=minnesota-wild']);
+  for (const [c, team, surface] of [
+    [ctx(game(), false, RAVENS), BILLS, undefined],
+    [ctx(game(), false, RAVENS), BILLS, 'web_team_page_promolist'],
+    [ctx(nhl, false, HAWKS), WILD, undefined],
+  ] as const) {
+    const h = await renderRow(c, team, surface);
+    assert.equal(fuboLinks(h).length, 0);
+    assert.ok(!h.includes('data-fubo-cta'));
+    assert.ok(h.includes('Get tickets on TicketNetwork'), 'the tray itself did render');
+  }
 });
 
 // ── /promos/today ────────────────────────────────────────────────────────
