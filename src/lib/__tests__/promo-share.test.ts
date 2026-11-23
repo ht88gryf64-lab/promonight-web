@@ -146,3 +146,16 @@ test('the card: measured widths, the name fits width and height, the game line s
   assert.equal(separates('#000000'), false);
   assert.equal(separates('#006847'), true);
 });
+
+test('subId2=share on the Fubo hop (sub-ID parity, 2026-11-22): the /go/fubo href only, idempotent, subId3 kept', () => {
+  const hop = '/go/fubo/nhl/2026020245?s=web_promo_page&t=minnesota-wild&subId3=winter-beanie';
+  assert.equal(withShareSubId2(hop, 'fubo'), `${hop}&subId2=share`);
+  assert.equal(withShareSubId2(`${hop}&subId2=share`, 'fubo'), `${hop}&subId2=share`, 'idempotent');
+  const today = '/go/fubo/nba/nba-2026-11-22-x-at-y?s=web_today&t=y';
+  assert.equal(withShareSubId2(today, 'fubo'), `${today}&subId2=share`);
+  // Fubo only through its hop; the hop only for Fubo.
+  assert.equal(withShareSubId2('https://www.fubo.tv/stream/nhl/?irmp=7236189', 'fubo'), 'https://www.fubo.tv/stream/nhl/?irmp=7236189');
+  assert.equal(withShareSubId2('/go/fubo/nhl/x', 'fubo'), '/go/fubo/nhl/x', 'no query: not a hop link');
+  assert.equal(withShareSubId2(today, 'spothero'), today);
+  assert.equal(withShareSubId2(today, 'ticketnetwork'), today);
+});

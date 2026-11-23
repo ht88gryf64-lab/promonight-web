@@ -727,6 +727,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
                 placement="promo_page_fubo"
                 broadcastNetwork={ctx.game.broadcastNetwork}
                 variant="promo"
+                pageSlug={page.slug}
               />
             ) : null}
             <div className="flex flex-wrap gap-2">

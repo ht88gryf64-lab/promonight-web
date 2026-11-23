@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getGameById, getTeamBySlug } from '@/lib/data';
 import { tnSubId } from '@/lib/affiliates';
-import { buildFuboUrl, fuboBlockedByBroadcast, fuboGamePlayed, fuboLiveLeague, fuboSubId1, isFuboSurface } from '@/lib/affiliates/fubo';
+import { buildFuboUrl, fuboBlockedByBroadcast, fuboGamePlayed, fuboHopSubIds, fuboLiveLeague, fuboSubId1, isFuboSurface } from '@/lib/affiliates/fubo';
 import { teamDisplayName } from '@/lib/team-display-name';
 import { NOINDEX_HEADER } from '@/lib/social-bridge';
 
@@ -13,12 +13,23 @@ import { NOINDEX_HEADER } from '@/lib/social-bridge';
 // be on FUBO_SURFACES and the team must be one of the game's two clubs.
 // affiliate_click has already fired in the browser before this request.
 //
+// subId2 and subId3 (sub-ID parity, 2026-11-22): the link may carry
+// subId2=share (shared-link session, added on the client) and, on a promo
+// page, subId3={page slug}. subId2 is allowlisted to the one value 'share';
+// subId3 is format-checked (an already-clean [a-z0-9_-] slug, 64 at most, on
+// web_promo_page only), not matched against the team's real slugs: it cannot
+// inject anything, and anyone can build a fubo.tv URL by hand anyway
+// (fuboHopSubIds). Both ride to every fubo.tv answer below; a played game's
+// team-page answer carries none.
+//
 // Marked noindex and uncached like /p/[code]: it is a hop, not a page.
 //
 // Answers:
-//   valid link                -> fubo.tv with irad, sharedid, subId1
-//   game doc unreadable/gone  -> the league's fubo.tv landing, irad + subId1,
-//                                no sharedid (the click still lands tagged)
+//   valid link                -> fubo.tv with irad, sharedid, subId1, and
+//                                subId2/subId3 when the link carried them
+//   game doc unreadable/gone  -> the league's fubo.tv landing, irad, subId1
+//                                (and subId2/subId3), no sharedid (the click
+//                                still lands tagged)
 //   game already played       -> the link's team page on our domain, no
 //                                affiliate parameters (ruling 2026-11-22; a
 //                                played game is only reachable from a page
@@ -43,6 +54,7 @@ export async function GET(
   const surface = request.nextUrl.searchParams.get('s');
   const teamId = request.nextUrl.searchParams.get('t') ?? '';
   if (!league || !isFuboSurface(surface) || !teamId) return hop('/', request);
+  const { subId2, subId3 } = fuboHopSubIds(surface, request.nextUrl.searchParams.get('subId2'), request.nextUrl.searchParams.get('subId3'));
   let gameId: string;
   try {
     gameId = decodeURIComponent(rawGameId);
@@ -64,7 +76,7 @@ export async function GET(
     const team = await getTeamBySlug(teamId).catch(() => null);
     if (!team || team.sportSlug !== league) return hop('/', request);
     if (!readFailed) console.warn('[go/fubo] no game doc', { league, gameId });
-    return hop(buildFuboUrl({ league, subId1: tnSubId(surface, teamId), names: null }), request);
+    return hop(buildFuboUrl({ league, subId1: tnSubId(surface, teamId), names: null, subId2, subId3 }), request);
   }
 
   if (game.league !== league) return hop('/', request);
@@ -79,7 +91,7 @@ export async function GET(
 
   const [home, away] = await Promise.all([getTeamBySlug(game.homeTeamSlug), getTeamBySlug(game.awayTeamSlug)]);
   const names = home && away ? { home: teamDisplayName(home), away: teamDisplayName(away) } : null;
-  return hop(buildFuboUrl({ league, subId1: fuboSubId1(surface, teamId, game), names }), request);
+  return hop(buildFuboUrl({ league, subId1: fuboSubId1(surface, teamId, game), names, subId2, subId3 }), request);
 }
 
 export const HEAD = GET;

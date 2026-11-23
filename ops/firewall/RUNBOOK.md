@@ -2,8 +2,11 @@
 
 Firewall rules are Vercel project state, not code. This file records what is
 configured, why, when each rule is reviewed, and how to undo it. Raw configs,
-payloads, traffic data and the exclusion list live in `ops/firewall/private/`
-(gitignored; this repo is public).
+payloads, traffic data and the exclusion list are private (this repo is
+public). They lived in `ops/firewall/private/` (gitignored) until the firewall
+worktree was removed on 2026-11-05; since then they live outside the repo, in
+the operator's `~/promonight-coord/firewall-private/`. Every `private/` path
+below is relative to that folder.
 
 ## Ground rules
 
@@ -25,7 +28,8 @@ payloads, traffic data and the exclusion list live in `ops/firewall/private/`
 | Rule | Purpose | Action | Status |
 |---|---|---|---|
 | `subscribe-rate-limit` | Throttle `/api/subscribe` | Over 5/min/IP: Deny, 15 min | Live since 2026-08-29 |
-| `api-rate-limit` | Throttle `/api/*`, excluding the card image routes | Over 60/min/IP: **Deny**, 5 min | Log from 2026-11-02; Deny since 2026-11-05 16:45:49Z (owner's go after the gate re-run). See "`api-rate-limit` Deny" |
+| `api-rate-limit` | Throttle `/api/*`, excluding `/api/promo-card/` and `/api/share-card/` (not `/api/event-card/`; see the deferred note under "`api-rate-limit` Deny") | Over 60/min/IP: **Deny**, 5 min | Log from 2026-11-02; Deny since 2026-11-05 16:45:49Z (owner's go after the gate re-run). See "`api-rate-limit` Deny" |
+| `go-rate-limit` | Throttle `/go/*`, the affiliate out-redirects (`/go/fubo`) | Over 60/min/IP (the `api-rate-limit` threshold): **Log** | Log since 2026-11-22 (config v9, rule `rule_go_rate_limit_BNB1Ve`). Deny, 5 min, after the 48h review. See "`go-rate-limit`" |
 | `page-flood-guard` | Watch page-request floods | Over 300/min/IP: Log only | Live since 2026-08-31. Stays Log: our own tools trip it |
 | `cloud-crawler-watch-a` | Challenge an unidentified browser crawler on one cloud-hosting network | **Challenge** | Log from 2026-11-02 15:50:57Z; Challenge since 2026-11-04 16:12:09Z (owner's go after the 48h review) |
 | `cloud-crawler-watch-b` | Watch an unidentified browser on a second cloud network that may be ad verification | Log only, never Challenge | Live since 2026-11-02 15:50:57Z |
@@ -40,6 +44,7 @@ payloads, traffic data and the exclusion list live in `ops/firewall/private/`
 | Next burst after 2026-11-04 16:12Z, or 24h | `cloud-crawler-watch-a` matches before vs after Challenge | Done 2026-11-05: every match challenged, none passed; stays Challenge |
 | 2026-11-05 16:27Z | Gate re-run for the `api-rate-limit` Deny | Passed: ClaudeBot and PerplexityBot re-read robots.txt and requested no `/api/` path outside the two card routes. Deny published 16:45:49Z |
 | 2026-11-06 16:45Z | `api-rate-limit` denials by bot name and path, first 24h | Expect zero from allow-listed bots and zero on the two card routes |
+| 2026-11-24 or later (48h after v9) | `go-rate-limit` log: which clients pass 60/min/IP on `/go/` | Promote to Deny, 5 min, only if the matches are target traffic alone (owner's go) |
 
 A request carries one rule id in the metrics. Traffic that Bot Protection
 also logs shows as `managed_bot_filter`, so a watch rule's matches can read as
@@ -56,10 +61,27 @@ Live since 2026-11-05 16:45:49Z. Restores the Deny it had from 2026-08-29 to 202
 `/api/promo-card/` and `/api/share-card/` (CDN-cached card images), the middleware's own logging
 routes (`/api/log-request`, `/api/log-crawler-hit`), the always-allow list and
 the three public files. Payload: `private/proposed/item1-api-rate-limit-deny.apply.json`.
+Deferred (2026-11-22): it does not exclude `/api/event-card/`, the event stop
+pages' image route (robots.txt allows it), so a client outside the
+always-allow list fetching event card images can be denied for 5 minutes.
+Adding the exclusion is a rule change of its own.
 Its gate: the robots.txt change is live and the AI crawlers that were
 reading `/api/` have re-fetched robots.txt and request no `/api/` path outside
 the two card routes (passed 2026-11-05). The 2026-11-04 gate failed on `/api/share-card/` (the
 share card shipped 2026-11-03 while robots.txt allowed only the promo card).
+
+## `go-rate-limit`
+Added 2026-11-22 (config v8 to v9) with the Fubo hop's sub-ID parity
+branch. Same threshold as `api-rate-limit` (fixed window, 60 requests per
+60 s per IP) on path prefix `/go/`, excluding the same always-allow user
+agent list (the regex is copied from `api-rate-limit` byte for byte). It runs
+as Log, by the ground rule above: a `/go/` request is one click on an
+affiliate link, so a real user never reaches 60 a minute, and robots.txt
+disallows `/go/` since 2026-11-22. Payload:
+`private/proposed/item5-go-rate-limit-log.apply.json`; before and after:
+`private/2026-11-22-go-rate-limit-{before,after}.json` (all three in the
+operator's private folder, see the note at the top). The other five rules
+were byte-identical across the change, compared from those two files.
 
 ## Publishing a change
 
@@ -81,6 +103,11 @@ All rollbacks are staged, then published; check `vercel firewall diff` first.
 - `cloud-crawler-watch-a` back to Log: `vercel firewall rules edit cloud-crawler-watch-a --action log --yes`, publish.
   Remove it entirely: `vercel firewall rules remove cloud-crawler-watch-a --yes`, publish.
 - `cloud-crawler-watch-b`: `vercel firewall rules remove cloud-crawler-watch-b --yes`, publish.
+- `go-rate-limit`: `vercel firewall rules remove go-rate-limit --yes`, publish.
+  Promote it to Deny (after the review): `vercel firewall rules edit go-rate-limit`
+  with the rate limit action `deny` and action duration `5m`; confirm with
+  `vercel firewall rules inspect go-rate-limit --json`, since the diff does
+  not show the action change.
 - `api-rate-limit` back to Log:
   `vercel firewall rules edit api-rate-limit --json "$(jq -c .value private/proposed/item1-api-rate-limit-deny.rollback.json)" --yes`, publish.
 - A Deny with an action duration keeps blocking a client for that duration
@@ -91,8 +118,9 @@ All rollbacks are staged, then published; check `vercel firewall diff` first.
 ## Related code
 
 - `src/lib/robots-txt.ts`, served by `src/app/robots.txt/route.ts`: every group
-  reads `Allow: /api/promo-card/`, `Allow: /api/share-card/`, `Disallow: /api/`,
-  `Allow: /`, in that order. A new image route under `/api/` needs its own Allow.
+  reads `Allow: /api/promo-card/`, `Allow: /api/share-card/`, `Allow: /api/event-card/`,
+  `Disallow: /api/`, `Disallow: /go/`, `Allow: /`, in that order. A new image route
+  under `/api/` needs its own Allow.
 - `downloadLinkRel` in `src/lib/app-link.ts`: `rel="nofollow"` on every
   `/download?...` link.
 - `npm run test:live` guards 4 to 7: ads files answer every client, every

@@ -115,8 +115,16 @@ MLB and WNBA are not in the table.
   market." The page's existing AffiliateDisclosure covers it.
 - **Order.** Always below the ticket CTA it sits with, never above it.
 - **Analytics.** affiliate_click fires on mousedown in the browser, partner
-  `fubo`; destination_url is the `/go/fubo` hop. No subId2=share (the share
-  session tags Impact-hosted hrefs only).
+  `fubo`; destination_url is the `/go/fubo` hop.
+- **subId2 and subId3** (sub-ID parity, 2026-11-22), exactly as the other
+  Impact partners on the same surface: `subId2=share` is added on the client
+  to the `/go/fubo` href in a shared-link session (`withShareSubId2`, never in
+  served HTML), and on a promo page the href carries `subId3={page slug}`
+  (`withPageSubId3`). A self-open share session adds no subId2, as for the
+  other partners. The hop forwards `subId2` only as `share`, and `subId3` only
+  on `web_promo_page` and only in clean slug form (`fuboHopSubIds`: a format
+  check, not a lookup of the team's real slugs); anything else is dropped. The
+  played-game answer (our team page) carries neither.
 
 ## Promo page share attribution (2026-11-03)
 

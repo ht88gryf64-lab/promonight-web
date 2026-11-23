@@ -25,6 +25,7 @@ import {
   fuboBlockedByBroadcast,
   fuboCtaHref,
   fuboGamePlayed,
+  fuboHopSubIds,
   fuboNamePart,
   fuboSharedId,
   fuboSubId1,
@@ -203,4 +204,24 @@ test('join: a row outside gameIdLeagues (MLB) gains no key even when its game re
   applyGameDisplay([row], index, new Map([[TWINS.id, TWINS], [SOX.id, SOX]]), { gameIdLeagues: ['nfl', 'nba', 'nhl'] });
   assert.equal(row.displayOpponent, 'White Sox', 'the slots still fill');
   assert.ok(!('gameId' in row) && !('gameNetwork' in row));
+});
+
+test('sub-ID parity: the hop allowlists subId2 (share) and subId3 (clean slug, promo page only)', () => {
+  assert.deepEqual(fuboHopSubIds('web_promo_page', 'share', 'winter-beanie'), { subId2: 'share', subId3: 'winter-beanie' });
+  assert.deepEqual(fuboHopSubIds('web_today', 'share', 'winter-beanie'), { subId2: 'share', subId3: null }, 'subId3 is a promo-page slot');
+  assert.deepEqual(fuboHopSubIds('web_team_page', 'share', null), { subId2: 'share', subId3: null });
+  for (const bad of ['Share', 'share2', 'web_today', '', null, 'share&x=1']) assert.equal(fuboHopSubIds('web_promo_page', bad, null).subId2, null, String(bad));
+  for (const bad of ['Winter Beanie', 'winter-beanie-', 'x'.repeat(65), 'a/b', '', null, 'beanie&irad=1']) assert.equal(fuboHopSubIds('web_promo_page', null, bad).subId3, null, String(bad));
+  assert.equal(fuboHopSubIds('web_promo_page', null, 'x'.repeat(64)).subId3, 'x'.repeat(64));
+});
+
+test('sub-ID parity: the URL carries subId2 and subId3 after subId1; the promo href carries subId3 like every other Impact link there', () => {
+  assert.equal(
+    buildFuboUrl({ league: 'nhl', subId1: 'web_promo_page_minnesota-wild', names: { away: 'Chicago Blackhawks', home: 'Minnesota Wild' }, subId2: 'share', subId3: 'winter-beanie' }),
+    'https://www.fubo.tv/stream/nhl/?irmp=7236189&irad=409363&sharedid=USA_Hockey_NHL_Chicago-Blackhawks-at-Minnesota-Wild&subId1=web_promo_page_minnesota-wild&subId2=share&subId3=winter-beanie',
+  );
+  const base = { league: 'nhl', gameId: '2026020245', teamId: 'minnesota-wild' };
+  assert.equal(fuboCtaHref({ ...base, surface: 'web_promo_page', pageSlug: 'Winter Beanie!' }), '/go/fubo/nhl/2026020245?s=web_promo_page&t=minnesota-wild&subId3=winter-beanie', 'cleaned by withPageSubId3');
+  assert.equal(fuboCtaHref({ ...base, surface: 'web_today', pageSlug: 'winter-beanie' }), '/go/fubo/nhl/2026020245?s=web_today&t=minnesota-wild', 'no subId3 off the promo page');
+  assert.equal(fuboCtaHref({ ...base, surface: 'web_promo_page' }), '/go/fubo/nhl/2026020245?s=web_promo_page&t=minnesota-wild');
 });
