@@ -103,6 +103,9 @@ MLB and WNBA are not in the table.
   is not one of the game's clubs is sent to `/`.
 - **Fallback.** A game doc that cannot be read sends the league landing with
   irmp, irad and `{surface}_{team}` and no sharedid.
+- **Played game** (date before today in the game's zone, the check the rows
+  use; ruling 2026-11-22): 307 to the link team's page on our domain,
+  `/{sport}/{teamId}`, with no affiliate parameters.
 - **NFL guard** (ruling 8). A game whose `broadcast.network` contains Prime,
   Netflix or Amazon (any case) renders no Fubo link, and the hop refuses it.
   NBA and NHL game docs carry no broadcast, so they are unguarded.

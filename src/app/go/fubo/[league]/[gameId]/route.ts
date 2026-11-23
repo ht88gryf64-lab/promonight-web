@@ -17,10 +17,12 @@ import { NOINDEX_HEADER } from '@/lib/social-bridge';
 //
 // Answers:
 //   valid link                -> fubo.tv with irad, sharedid, subId1
-//   game doc unreadable/gone, -> the league's fubo.tv landing, irad + subId1,
-//   or the game already played   no sharedid (the click still lands tagged;
-//                                a played game is only reachable from a page
-//                                left open past its date)
+//   game doc unreadable/gone  -> the league's fubo.tv landing, irad + subId1,
+//                                no sharedid (the click still lands tagged)
+//   game already played       -> the link's team page on our domain, no
+//                                affiliate parameters (ruling 2026-11-22; a
+//                                played game is only reachable from a page
+//                                left open past its date, and is not on Fubo)
 //   anything else (bad league, surface or team; an NFL game on Prime,
 //   Netflix or Amazon)        -> the homepage
 
@@ -68,7 +70,12 @@ export async function GET(
   if (game.league !== league) return hop('/', request);
   if (teamId !== game.homeTeamSlug && teamId !== game.awayTeamSlug) return hop('/', request);
   if (fuboBlockedByBroadcast(league, game.broadcast?.network)) return hop('/', request);
-  if (fuboGamePlayed(game)) return hop(buildFuboUrl({ league, subId1: fuboSubId1(surface, teamId, game), names: null }), request);
+  if (fuboGamePlayed(game)) {
+    // The same check the rows use (fuboGamePlayed). teamId is one of the
+    // game's clubs (checked above), so its page exists in this league.
+    const team = await getTeamBySlug(teamId).catch(() => null);
+    return hop(`/${team?.sportSlug ?? league}/${encodeURIComponent(teamId)}`, request);
+  }
 
   const [home, away] = await Promise.all([getTeamBySlug(game.homeTeamSlug), getTeamBySlug(game.awayTeamSlug)]);
   const names = home && away ? { home: teamDisplayName(home), away: teamDisplayName(away) } : null;

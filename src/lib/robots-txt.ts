@@ -11,9 +11,12 @@
 //   Allow: /api/share-card/   the promo pages' og:image and twitter:image
 //   Allow: /api/event-card/   the event stop pages' image, og:image and JSON-LD image
 //   Disallow: /api/           everything else under /api/
+//   Disallow: /go/            the affiliate out-redirects (/go/fubo, 2026-11-22):
+//                             hops, not pages; a crawl costs a Firestore read
+//                             and registers a click at the partner
 //   Allow: /                  every page, /ads.txt and /app-ads.txt
 //
-// Every group carries the same three lines. A crawler obeys only its most
+// Every group carries the same lines. A crawler obeys only its most
 // specific group, so a named group with `Allow: /` alone let that crawler into
 // /api/ even though `*` disallowed it; ClaudeBot and PerplexityBot were
 // crawling /api/ for that reason.
@@ -28,6 +31,7 @@ export const ROBOTS_GROUP_LINES = [
   'Allow: /api/share-card/',
   'Allow: /api/event-card/',
   'Disallow: /api/',
+  'Disallow: /go/',
   'Allow: /',
 ] as const;
 
