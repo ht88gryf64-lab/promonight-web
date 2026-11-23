@@ -187,19 +187,24 @@ function decodeURIComponentSafe(s: string): string {
 // ── subId2 (Impact second slot) ─────────────────────────────────────────────
 
 /** The partners whose outbound links are Impact /c/ tracking links. SpotHero
- *  (HasOffers) and Expedia (in-house) are not Impact and are never touched. */
-const IMPACT_PARTNERS = new Set(['ticketnetwork', 'ticketmaster', 'fanatics']);
+ *  (HasOffers) and Expedia (in-house) are not Impact and are never touched.
+ *  Fubo is Impact too (irmp/irad), reached through our own hop. */
+const IMPACT_PARTNERS = new Set(['ticketnetwork', 'ticketmaster', 'fanatics', 'fubo']);
 /** An Impact tracking link: https://{vanity host}/c/{account}/{ad}/{campaign}.
  *  Ticketmaster without its env wrap is a bare ticketmaster.com URL, which
  *  this does not match, so it is left alone. */
 const IMPACT_LINK_RE = /^https:\/\/[a-z0-9.-]+\/c\/\d+\/\d+\/\d+(?:[/?#]|$)/i;
+/** Fubo's links are our /go/fubo hop (src/app/go/fubo/[league]/[gameId]),
+ *  which carries subId2 on to fubo.tv (sub-ID parity, 2026-11-22). */
+const FUBO_HOP_RE = /^\/go\/fubo\/[^?#]+\?/;
 export const SHARE_SUBID2 = 'share';
 
 /** The href with subId2=share appended when it is an Impact link of an Impact
  *  partner. subId1 (and Ticketmaster's sharedid) is never read or changed.
  *  Idempotent: a link that already carries a subId2 is returned as is. */
 export function withShareSubId2(href: string, partner: string): string {
-  if (!IMPACT_PARTNERS.has(partner) || !IMPACT_LINK_RE.test(href)) return href;
+  if (!IMPACT_PARTNERS.has(partner)) return href;
+  if (!(partner === 'fubo' ? FUBO_HOP_RE : IMPACT_LINK_RE).test(href)) return href;
   if (/[?&]subId2=/i.test(href)) return href;
   const hashAt = href.indexOf('#');
   const head = hashAt >= 0 ? href.slice(0, hashAt) : href;

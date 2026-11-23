@@ -26,7 +26,8 @@
 // trial" is the only free wording allowed). No price strings. NFL, NBA and NHL
 // carry "Availability varies by market."
 
-import { awayGameSubKey, subIdToken, tnSubId } from '../affiliates';
+import { awayGameSubKey, pageSubId3, subIdToken, tnSubId, withPageSubId3 } from '../affiliates';
+import { SHARE_SUBID2 } from '../promo-share';
 import { ymdInZone } from '../promo-date-tile';
 
 export const FUBO_ORIGIN = 'https://www.fubo.tv';
@@ -131,6 +132,10 @@ export function fuboSubId1(
 export type FuboUrlOpts = {
   league: FuboLeague;
   subId1: string;
+  /** 'share' in a shared-link session, else absent (fuboHopSubIds). */
+  subId2?: string | null;
+  /** The promo page's cleaned slug on web_promo_page, else absent. */
+  subId3?: string | null;
   /** Both club display names. Null only on the hop's fallback (the game doc
    *  could not be read): the league landing, still tagged, with no sharedid. */
   names: { away: string; home: string } | null;
@@ -140,7 +145,29 @@ export type FuboUrlOpts = {
 export function buildFuboUrl(opts: FuboUrlOpts): string {
   const e = FUBO_LEAGUES[opts.league];
   const shared = opts.names ? `&sharedid=${encodeURIComponent(fuboSharedId(opts.league, opts.names.away, opts.names.home))}` : '';
-  return `${FUBO_ORIGIN}${e.path}?irmp=${FUBO_PUBLISHER_ID}&irad=${e.irad}${shared}&subId1=${encodeURIComponent(opts.subId1)}`;
+  const sub2 = opts.subId2 ? `&subId2=${encodeURIComponent(opts.subId2)}` : '';
+  const sub3 = opts.subId3 ? `&subId3=${encodeURIComponent(opts.subId3)}` : '';
+  return `${FUBO_ORIGIN}${e.path}?irmp=${FUBO_PUBLISHER_ID}&irad=${e.irad}${shared}&subId1=${encodeURIComponent(opts.subId1)}${sub2}${sub3}`;
+}
+
+// SUB-ID PARITY (2026-11-22). Fubo carries subId2 and subId3 exactly as the
+// other Impact partners do on the same surface (src/lib/affiliates.ts, "subId3:
+// the page"; src/lib/promo-share.ts withShareSubId2):
+//   subId2  'share', added on the client to the /go href in a shared-link
+//           session (never in served HTML). The hop accepts that one value.
+//   subId3  the promo page's slug, server-rendered on the promo page's /go
+//           href by withPageSubId3. The hop accepts it on web_promo_page only,
+//           and only already clean ([a-z0-9_-], 64 at most).
+// Anything else on the hop is dropped, never forwarded.
+export function fuboHopSubIds(
+  surface: FuboSurface,
+  subId2: string | null | undefined,
+  subId3: string | null | undefined,
+): { subId2: string | null; subId3: string | null } {
+  return {
+    subId2: subId2 === SHARE_SUBID2 ? SHARE_SUBID2 : null,
+    subId3: surface === 'web_promo_page' && subId3 && pageSubId3(subId3) === subId3 ? subId3 : null,
+  };
 }
 
 /** The on-site hop every Fubo CTA links to. */
@@ -159,9 +186,13 @@ export function fuboCtaHref(opts: {
   surface: FuboSurface;
   teamId: string;
   broadcastNetwork?: string | null;
+  /** Promo pages only: page.slug, carried as subId3 (withPageSubId3), as on
+   *  every other Impact link of the page. */
+  pageSlug?: string | null;
 }): string | null {
   const league = fuboLiveLeague(opts.league);
   if (!league || !opts.gameId || !opts.teamId) return null;
   if (fuboBlockedByBroadcast(league, opts.broadcastNetwork)) return null;
-  return fuboGoPath({ league, gameId: opts.gameId, surface: opts.surface, teamId: opts.teamId });
+  const path = fuboGoPath({ league, gameId: opts.gameId, surface: opts.surface, teamId: opts.teamId });
+  return opts.surface === 'web_promo_page' ? withPageSubId3(path, opts.pageSlug) : path;
 }

@@ -80,7 +80,10 @@ async function renderPromo(c: PromoPageContext, r = row(), team: Team = WILD, to
 
 test('promo page: under "Also on Ticketmaster", above Parking, inside the CTA section; the hop carries surface and team', async () => {
   const h = await renderPromo(pctx());
-  assert.deepEqual(fuboLinks(h), ['/go/fubo/nhl/2026020245?s=web_promo_page&t=minnesota-wild']);
+  assert.deepEqual(fuboLinks(h), ['/go/fubo/nhl/2026020245?s=web_promo_page&t=minnesota-wild&subId3=winter-beanie']);
+  // Sub-ID parity: the same subId3 as the page's TicketNetwork link.
+  const tnHref = h.match(/href="(https:\/\/ticketnetwork\.lusg\.net\/[^"]+)"/)![1];
+  assert.equal(new URL(tnHref).searchParams.get('subId3'), 'winter-beanie');
   const tn = h.indexOf('>Get tickets<');
   const tm = h.indexOf('Also on Ticketmaster');
   const fubo = h.indexOf('data-fubo-cta');
@@ -125,7 +128,7 @@ test('promo page: no Fubo on MLB, without a single game id, on a played date, or
   const nfl = pctx({ game: pgGame({ gameId: 'nfl-2026-11-12-buffalo-bills-at-baltimore-ravens', broadcastNetwork: 'Prime Video' }) });
   assert.equal(fuboLinks(await renderPromo(nfl, row(), RAVENS)).length, 0, 'NFL on Prime');
   const cbs = pctx({ game: pgGame({ gameId: 'nfl-2026-11-12-buffalo-bills-at-baltimore-ravens', broadcastNetwork: 'CBS' }) });
-  assert.deepEqual(fuboLinks(await renderPromo(cbs, row(), RAVENS)), ['/go/fubo/nfl/nfl-2026-11-12-buffalo-bills-at-baltimore-ravens?s=web_promo_page&t=baltimore-ravens']);
+  assert.deepEqual(fuboLinks(await renderPromo(cbs, row(), RAVENS)), ['/go/fubo/nfl/nfl-2026-11-12-buffalo-bills-at-baltimore-ravens?s=web_promo_page&t=baltimore-ravens&subId3=winter-beanie']);
 });
 
 // ── team-page rows ───────────────────────────────────────────────────────

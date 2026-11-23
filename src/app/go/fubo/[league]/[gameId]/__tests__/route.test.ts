@@ -119,3 +119,23 @@ test('a played game (status still "scheduled", date before today in its zone) la
     assert.equal(res.headers.get('cache-control'), 'private, no-store');
   }
 });
+
+test('sub-ID parity: subId2=share and the promo page subId3 ride to fubo.tv; anything else is dropped', async () => {
+  const ok = await get('/go/fubo/nfl/nfl-2026-11-22-buffalo-bills-at-baltimore-ravens?s=web_promo_page&t=baltimore-ravens&subId3=rally-towel&subId2=share');
+  assert.equal(
+    loc(ok),
+    'https://www.fubo.tv/welcome/leagues/191277?irmp=7236189&irad=356362&sharedid=USA_Football_NFL_Buffalo-Bills-at-Baltimore-Ravens&subId1=web_promo_page_baltimore-ravens&subId2=share&subId3=rally-towel',
+  );
+  const away = await get('/go/fubo/nhl/2025020345?s=web_team_page&t=st-louis-blues&subId2=share');
+  assert.ok(loc(away).endsWith('&subId1=web_away_game_st-louis-blues_at_montreal-canadiens&subId2=share'), loc(away));
+  // subId3 is a promo-page slot; junk values never reach Fubo.
+  const today = await get('/go/fubo/nhl/2025020345?s=web_today&t=montreal-canadiens&subId3=rally-towel&subId2=evil');
+  assert.ok(!/subId2|subId3/.test(loc(today)), loc(today));
+  const junk = await get('/go/fubo/nhl/2025020345?s=web_promo_page&t=montreal-canadiens&subId3=Rally%20Towel%26irad%3D1&subId2=share%26x');
+  assert.ok(!/subId2|subId3|irad=1&/.test(loc(junk).replace('irad=409363&', '')), loc(junk));
+  // The league-landing fallback keeps them; the played answer (our team page) carries none.
+  const gone = await get('/go/fubo/nhl/2025029999?s=web_promo_page&t=montreal-canadiens&subId3=rally-towel&subId2=share');
+  assert.equal(loc(gone), 'https://www.fubo.tv/stream/nhl/?irmp=7236189&irad=409363&subId1=web_promo_page_montreal-canadiens&subId2=share&subId3=rally-towel');
+  const played = await get('/go/fubo/nhl/nhl-2026-11-19-st-louis-blues-at-montreal-canadiens?s=web_promo_page&t=montreal-canadiens&subId3=rally-towel&subId2=share');
+  assert.equal(loc(played), `${ORIGIN}/nhl/montreal-canadiens`);
+});

@@ -30,6 +30,8 @@ type Props = {
    *  The link red composites to 3.22:1 and the faint line to 2.64:1 there
    *  (ux-review round 2, N1); rd-ink composites to 5.89:1, so both use it. */
   dimmed?: boolean;
+  /** Promo pages only: page.slug, the subId3 every Impact link there carries. */
+  pageSlug?: string | null;
 };
 
 const LINK_CLASS: Record<Props['variant'], string> = {
@@ -48,8 +50,8 @@ const WRAP_CLASS: Record<Props['variant'], string> = {
   today: 'mt-1 flex flex-wrap items-center gap-x-2',
 };
 
-export function FuboCTA({ league, gameId, surface, teamId, sport, promoId = null, placement, broadcastNetwork, variant, dimmed = false }: Props) {
-  const href = fuboCtaHref({ league, gameId, surface, teamId, broadcastNetwork });
+export function FuboCTA({ league, gameId, surface, teamId, sport, promoId = null, placement, broadcastNetwork, variant, dimmed = false, pageSlug = null }: Props) {
+  const href = fuboCtaHref({ league, gameId, surface, teamId, broadcastNetwork, pageSlug });
   if (!href) return null;
   const availability = fuboAvailabilityLine(league);
   return (
