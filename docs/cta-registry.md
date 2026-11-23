@@ -120,9 +120,11 @@ MLB and WNBA are not in the table.
   Impact partners on the same surface: `subId2=share` is added on the client
   to the `/go/fubo` href in a shared-link session (`withShareSubId2`, never in
   served HTML), and on a promo page the href carries `subId3={page slug}`
-  (`withPageSubId3`). The hop forwards `subId2` only as `share` and `subId3`
-  only on `web_promo_page` and only already clean (`fuboHopSubIds`); anything
-  else is dropped. The played-game answer (our team page) carries neither.
+  (`withPageSubId3`). A self-open share session adds no subId2, as for the
+  other partners. The hop forwards `subId2` only as `share`, and `subId3` only
+  on `web_promo_page` and only in clean slug form (`fuboHopSubIds`: a format
+  check, not a lookup of the team's real slugs); anything else is dropped. The
+  played-game answer (our team page) carries neither.
 
 ## Promo page share attribution (2026-11-03)
 

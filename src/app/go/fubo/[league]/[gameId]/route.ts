@@ -15,15 +15,21 @@ import { NOINDEX_HEADER } from '@/lib/social-bridge';
 //
 // subId2 and subId3 (sub-ID parity, 2026-11-22): the link may carry
 // subId2=share (shared-link session, added on the client) and, on a promo
-// page, subId3={page slug}; both are allowlisted (fuboHopSubIds) and carried
-// to every fubo.tv answer below. A played game's team-page answer carries none.
+// page, subId3={page slug}. subId2 is allowlisted to the one value 'share';
+// subId3 is format-checked (an already-clean [a-z0-9_-] slug, 64 at most, on
+// web_promo_page only), not matched against the team's real slugs: it cannot
+// inject anything, and anyone can build a fubo.tv URL by hand anyway
+// (fuboHopSubIds). Both ride to every fubo.tv answer below; a played game's
+// team-page answer carries none.
 //
 // Marked noindex and uncached like /p/[code]: it is a hop, not a page.
 //
 // Answers:
-//   valid link                -> fubo.tv with irad, sharedid, subId1
-//   game doc unreadable/gone  -> the league's fubo.tv landing, irad + subId1,
-//                                no sharedid (the click still lands tagged)
+//   valid link                -> fubo.tv with irad, sharedid, subId1, and
+//                                subId2/subId3 when the link carried them
+//   game doc unreadable/gone  -> the league's fubo.tv landing, irad, subId1
+//                                (and subId2/subId3), no sharedid (the click
+//                                still lands tagged)
 //   game already played       -> the link's team page on our domain, no
 //                                affiliate parameters (ruling 2026-11-22; a
 //                                played game is only reachable from a page

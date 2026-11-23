@@ -157,8 +157,11 @@ export function buildFuboUrl(opts: FuboUrlOpts): string {
 //           session (never in served HTML). The hop accepts that one value.
 //   subId3  the promo page's slug, server-rendered on the promo page's /go
 //           href by withPageSubId3. The hop accepts it on web_promo_page only,
-//           and only already clean ([a-z0-9_-], 64 at most).
-// Anything else on the hop is dropped, never forwarded.
+//           and only already clean ([a-z0-9_-], 64 at most): a format check,
+//           not a lookup of the team's real slugs (adversarial review
+//           2026-11-22: such a value can inject nothing).
+// Anything else on the hop is dropped, never forwarded. A repeated key reads
+// its first value (URLSearchParams.get).
 export function fuboHopSubIds(
   surface: FuboSurface,
   subId2: string | null | undefined,

@@ -1,8 +1,10 @@
 // GET /go/fubo/{league}/{gameId}?s={surface}&t={teamId}: the Fubo hop, with
 // the game and team loaders mocked so the REAL route and the REAL builder run.
 //
-// Run with:
-//   node --import tsx --experimental-test-module-mocks --test <this file>
+// Run with (a glob: node --test reads the brackets in this file's literal
+// path as a character class and silently runs 0 tests):
+//   TSX_TSCONFIG_PATH=tsconfig.test.json node --import tsx \
+//     --experimental-test-module-mocks --test 'src/app/go/**/*.test.ts'
 
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
