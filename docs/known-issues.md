@@ -4473,3 +4473,8 @@ One line each.
 - **Rivalry JSON-LD names.** The breadcrumb and SportsEvent names stay "{name} {season}" while the title and H1 lead with the schools; og:title and twitter:title are the heading plus the brand with no 60-character cap, as before.
 - **Bobblehead rows typed theme or kids.** The bobblehead page's upcoming list holds giveaways only. In the 2026 record 31 of 280 bobblehead rows are typed theme or kids, so next spring's upcoming list will be about a tenth shorter than the old rule would have made it.
 - **Hub ticket block id.** A hub card's ticket block carries the first promo's id even when the card lists several.
+- **Played rivalry game sold as upcoming (ux-review D1).** `/cfb/rivalries/florida-georgia` was played on 2026-10-31 and still reads "is Saturday, October 31, 2026", with ticket, hotel and parking links and no played state. The rivalry pages have no played state at all; the same will be true of every rivalry page after its game.
+- **Canonical promo links on hubs (ux-review D4).** Two rows for one game share a promo page, so "76ers Cup Games" links to the Rally Towel page and a hub card can hold two links to one URL.
+- **Bobblehead page layout shift (ux-review D7f).** CLS at 390 is 0.0593 on the upcoming list against 0.0294 on production's record.
+- **Bobblehead FAQ, MLB answers (ux-review D8).** "Which MLB team gives away the most bobbleheads?" and the weekend-timing answer describe MLB while the winter list is NBA and NHL; their claims about the Diamondbacks, Cubs and Braves are not derived from data.
+
