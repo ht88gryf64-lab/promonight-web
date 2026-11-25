@@ -20,7 +20,6 @@
 
 import type { DigestContext, DigestPromo, DigestTeam, DigestUpcoming } from './digest';
 import { buildTicketNetworkLink, ticketNetworkForGame, type EmailTnSubIdSurface } from './affiliates';
-import { TICKETNETWORK_CTA_LABEL, TICKETNETWORK_RESALE_NOTE } from './ticket-labels';
 import { shareCardPath, themeLabel } from './promo-page-copy';
 import { MLS_SHORT_NAMES } from './team-display-name';
 import type { CascadeLevel } from './geo/local-promos';
@@ -374,7 +373,7 @@ function heroHtml(input: DigestEmailInput, entry: DigestEntry): string {
   const img = cardUrl(input, hero)!;
   const alt = `${hero.title}, ${hero.teamName}, ${weekdayMonthDay(hero.date)}`;
   const ticketUrl = heroTicketUrl(input, hero, team);
-  const button = ticketUrl ? solidButton(ticketUrl, TICKETNETWORK_CTA_LABEL) : solidButton(page, 'See this game');
+  const button = ticketUrl ? solidButton(ticketUrl, 'Get tickets') : solidButton(page, 'See this game');
   const sideLink = (label: string) => `<a href="${esc(page)}" style="color:${DIGEST_MUTED};text-decoration:underline;">${label}</a>`;
   // The title block sits below the image on EVERY hero (ruling 2026-11-05):
   // with images off, the card's drawn text is gone and the email must still
@@ -391,9 +390,7 @@ function heroHtml(input: DigestEmailInput, entry: DigestEntry): string {
     row(cell('padding:18px 24px 22px;', table(row(
       cell('', button, DIGEST_WHITE, ' align="left" valign="middle"') +
       cell(`font-size:13px;font-weight:500;line-height:18px;color:${DIGEST_MUTED};white-space:nowrap;`, `${sideLink('Parking')}&nbsp;&nbsp;&nbsp;&nbsp;${sideLink('Remind me')}`, DIGEST_WHITE, ' align="right" valign="middle"'),
-    )))) +
-    // Under a TicketNetwork button, the line saying it is a resale marketplace.
-    (ticketUrl ? row(cell(`padding:0 24px 20px;font-size:12px;line-height:17px;color:${DIGEST_MUTED};`, esc(TICKETNETWORK_RESALE_NOTE))) : ''),
+    )))),
     `border:1px solid ${DIGEST_RULE};border-collapse:separate;border-radius:12px;overflow:hidden;`,
     ` bgcolor="${DIGEST_WHITE}"`,
   );

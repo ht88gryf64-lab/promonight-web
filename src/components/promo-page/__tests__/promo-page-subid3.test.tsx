@@ -81,15 +81,6 @@ function anchor(html: string, text: string): string {
   assert.ok(at >= 0, `an anchor reading "${text}"`);
   return /href="([^"]+)"/.exec(html.slice(html.lastIndexOf('<a ', at), at))?.[1] as string;
 }
-/** The page's primary ticket button (the 52px one). Per-date links read the same words
- *  and can come first in the document, so the label alone no longer finds it. */
-function primaryHref(html: string): string {
-  const m = [...html.matchAll(/<a ([^>]*)>Resale tickets<\/a>/g)].find((x) => x[1].includes('h-[52px]'));
-  assert.ok(m, 'a primary Resale tickets button');
-  return /href="([^"]+)"/.exec(m![1])![1];
-}
-const perDateRaw = (html: string): string[] =>
-  [...html.matchAll(/<a ([^>]*)>Resale tickets<\/a>/g)].filter((m) => m[1].includes('ml-1 font-rd text-[13px]')).map((m) => /href="([^"]+)"/.exec(m[1])![1]);
 const hrefsOn = (html: string, host: string) => [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]).filter((h) => new URL(h, 'https://x').hostname === host);
 const sp = (u: string) => new URL(u).searchParams;
 
@@ -99,12 +90,12 @@ test('served HTML: every Impact link carries subId1 and subId3=slug; the Ticketm
   assert.ok(!/subId2/i.test(html), 'no subId2 in served HTML');
 
   const tn = hrefsOn(html, 'ticketnetwork.lusg.net');
-  assert.equal(tn.length, 3, 'the primary + two per-date links, all reading Resale tickets');
+  assert.equal(tn.length, 3, 'Get tickets + two per-date Tickets links');
   for (const h of tn) {
     assert.match(sp(h).get('subId1') as string, /^web_promo_(page|date)_detroit-red-wings$/, h);
     assert.equal(sp(h).get('subId3'), SLUG, h);
   }
-  assert.equal(sp(primaryHref(html)).get('subId1'), 'web_promo_page_detroit-red-wings');
+  assert.equal(sp(anchor(html, 'Get tickets')).get('subId1'), 'web_promo_page_detroit-red-wings');
   // The JSON-LD offers name the page, never the anchors' links.
   for (const m of html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
     const d = JSON.parse(m[1]);
@@ -132,12 +123,11 @@ test('share-session click on a promo page: the opened href and affiliate_click d
   try {
     const html = render();
     const cases: [string, string][] = [
-      ['primary', 'web_promo_page_detroit-red-wings'],
-      ['per-date', 'web_promo_date_detroit-red-wings'],
+      ['Get tickets', 'web_promo_page_detroit-red-wings'],
+      ['Tickets', 'web_promo_date_detroit-red-wings'],
     ];
     for (const [text, sub1] of cases) {
-      // Both read "Resale tickets" (2026-11-25): the primary is the first, the per-date link the small one.
-      const h = text === 'primary' ? primaryHref(html) : perDateRaw(html)[0];
+      const h = anchor(html, text);
       assert.equal(sp(h).get('subId1'), sub1, h);
       assert.equal(sp(h).get('subId2'), 'share', h);
       assert.equal(sp(h).get('subId3'), SLUG, h);
@@ -157,7 +147,7 @@ test('share-session click on a promo page: the opened href and affiliate_click d
     // (tracked-affiliate-link.tsx), so the href carries both answers.
     const built = aff.buildTicketNetworkLink({ team: TEAM, surface: view.PROMO_PAGE_SURFACE, eventUrl: BRUINS, pageSlug: SLUG })!;
     assert.ok(!built.includes('subId2'), 'the server-built href has no subId2');
-    const el = link.TrackedAffiliateLink({ href: built, partner: 'ticketnetwork', teamId: TEAM.id, sport: 'NHL', promoId: 'w1', surface: view.PROMO_PAGE_SURFACE, children: 'Resale tickets' }) as ReactElement<{ href: string; onMouseDown: () => void }>;
+    const el = link.TrackedAffiliateLink({ href: built, partner: 'ticketnetwork', teamId: TEAM.id, sport: 'NHL', promoId: 'w1', surface: view.PROMO_PAGE_SURFACE, children: 'Get tickets' }) as ReactElement<{ href: string; onMouseDown: () => void }>;
     el.props.onMouseDown();
     const clicked = el.props.href;
     assert.equal(sp(clicked).get('subId1'), 'web_promo_page_detroit-red-wings');
@@ -172,7 +162,7 @@ test('share-session click on a promo page: the opened href and affiliate_click d
 test('a self-open share session adds no subId2; subId3 stays', () => {
   session = { shareId: 'ab12cd34', channel: 'copy', promoId: 'w1', selfOpen: true, at: Date.now(), sid: '' };
   try {
-    const h = primaryHref(render());
+    const h = anchor(render(), 'Get tickets');
     assert.equal(sp(h).get('subId2'), null);
     assert.equal(sp(h).get('subId3'), SLUG);
   } finally {

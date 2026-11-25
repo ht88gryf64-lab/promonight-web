@@ -1,5 +1,3 @@
-import { TICKETNETWORK_CTA_LABEL, ticketNetworkAriaLabel } from '@/lib/ticket-labels';
-import { ResaleNote } from '@/components/affiliates/AffiliateDisclosure';
 import Link from 'next/link';
 import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
@@ -346,9 +344,6 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
   const ticketsPartner = ticketNetwork ? 'ticketnetwork' : 'ticketmaster';
   const ticketsLevel = ticketNetwork ? ticketNetworkLinkLevel(primaryEventUrl) : 'team';
   const ticketsBrand = ticketNetwork ? 'TicketNetwork' : 'Ticketmaster';
-  // The button says what it leads to (src/lib/ticket-labels.ts): resale on
-  // TicketNetwork, "Get tickets" on the Ticketmaster fallback.
-  const ticketsLabel = ticketNetwork ? TICKETNETWORK_CTA_LABEL : 'Get tickets';
   const parking = buildSpotHeroUrl({ latitude: ctx.coords?.lat, longitude: ctx.coords?.lng, subKey: `${PROMO_PAGE_SURFACE}_${team.id}` });
   const hotels = resolveHotelLink({ team, venue: ctx.venue, surface: PROMO_PAGE_SURFACE, gameDate: multi ? null : primary.date || null });
 
@@ -456,10 +451,10 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
               ticketLinkLevel={ticketNetworkLinkLevel(row.tnEventUrl)}
               target="_blank"
               rel="noopener noreferrer sponsored"
-              ariaLabel={ticketNetworkAriaLabel(`for ${formatLongDate(date)}${row.displayOpponent ? ` vs ${row.displayOpponent}` : ''}`)}
+              ariaLabel={`Tickets for ${formatLongDate(date)}${row.displayOpponent ? ` vs ${row.displayOpponent}` : ''} on TicketNetwork`}
               className="ml-1 font-rd text-[13px] font-semibold text-rd-link no-underline hover:underline"
             >
-              {TICKETNETWORK_CTA_LABEL}
+              Tickets
             </TrackedAffiliateLink>
           </>
         ) : null}
@@ -680,15 +675,13 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
                 ticketLinkLevel={ticketsLevel}
                 target="_blank"
                 rel="noopener noreferrer sponsored"
-                ariaLabel={`${ticketsLabel} for ${teamName}${(ticketsLevel === 'event' || !multi) && primary.displayOpponent ? ` vs ${primary.displayOpponent}` : ''} on ${ticketsBrand}`}
+                ariaLabel={ticketsLevel === 'event' || !multi ? `Get tickets for ${teamName}${primary.displayOpponent ? ` vs ${primary.displayOpponent}` : ''} on ${ticketsBrand}` : `Get ${teamName} tickets on ${ticketsBrand}`}
                 className="flex h-[52px] min-w-0 flex-1 items-center justify-center rounded-[14px] bg-[var(--pp-accent)] font-rd text-[16px] font-semibold text-[var(--pp-accent-ink)] no-underline hover:brightness-95"
               >
-                {ticketsLabel}
+                Get tickets
               </TrackedAffiliateLink>
               <PromoShareRowButton {...shareProps} />
             </div>
-            {/* One line under a TicketNetwork primary: it is a resale marketplace. */}
-            {ticketNetwork ? <ResaleNote /> : null}
             {packagePage ? (
               <div data-package-disclosure="" className="flex flex-col gap-1">
                 <p className="m-0 font-rd text-[14px] leading-[1.45] text-rd-ink-soft">{PACKAGE_CTA_DISCLOSURE}</p>

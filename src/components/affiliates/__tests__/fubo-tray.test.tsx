@@ -83,7 +83,7 @@ test('server render has no Fubo; hydration adds it with no mismatch (CalendarGri
 test('mounted: under the ticket card, above parking, with its eyebrow and availability line', async () => {
   const el = await mount(await row(ctx(game(), false, RAVENS), BILLS));
   const html = el.innerHTML;
-  const tickets = html.indexOf('TicketNetwork Resale tickets');
+  const tickets = html.indexOf('Get tickets on TicketNetwork');
   const fubo = html.indexOf('data-fubo-cta');
   assert.ok(tickets > 0 && tickets < fubo, 'below the ticket card');
   const parking = html.search(/SpotHero|[Pp]arking/);

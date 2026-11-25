@@ -5,8 +5,7 @@ import { promoPageHref } from '@/lib/promo-page-href';
 import { RedesignPromoRow, type PromoRowShare } from '@/components/redesign/RedesignPromoRow';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
-import { buildTicketNetworkLink, ticketNetworkForGame } from '@/lib/affiliates';
-import { ResaleNote } from '@/components/affiliates/AffiliateDisclosure';
+import { ticketNetworkForGame } from '@/lib/affiliates';
 import { FuboCTA } from '@/components/affiliates/FuboCTA';
 import { isFuboSurface } from '@/lib/affiliates/fubo';
 
@@ -43,8 +42,6 @@ export function TodayPromoCard({
     venueName: venue?.name ?? null,
   };
 
-  // Whether the row will carry a TicketNetwork tile: the same two calls TicketmasterCTA makes.
-  const tnHref = ticketNetworkForGame(null, p.team) ? buildTicketNetworkLink({ team: p.team, surface }) : null;
   return (
     <div className={dimmed ? 'opacity-70' : undefined}>
       {/* Full team-page row visual, deep-linked to the team promo anchor. */}
@@ -72,9 +69,6 @@ export function TodayPromoCard({
           layout="inline"
         />
       </div>
-      {/* The resale note for the row's TicketNetwork tile, under the whole row
-          (an inline tile has no room under itself). Same condition as the tile. */}
-      {tnHref ? <ResaleNote className="mt-1.5" /> : null}
 
       {/* Stream on Fubo (2026-11-20): its own line UNDER the ticket row, never
           in it or above it. NFL, NBA and NHL cards whose date joined exactly

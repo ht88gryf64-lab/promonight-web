@@ -222,14 +222,14 @@ test('ROUTE /playoffs/[league]: a home games row carries ONE ticket button, the 
   assert.ok(rows.length > 8, 'the short list and the rest of the week');
   for (const row of rows) {
     assert.equal(count(row, 'rel="noopener noreferrer sponsored"'), 1, 'one ticket link to a row');
-    assert.equal(count(row, 'aria-label="Ticketmaster Get Tickets"'), 1);
-    assert.equal(count(row, 'aria-label="TicketNetwork Resale tickets"'), 0);
+    assert.equal(count(row, 'aria-label="Get tickets on Ticketmaster"'), 1);
+    assert.equal(count(row, 'aria-label="Get tickets on TicketNetwork"'), 0);
   }
   // The series detail keeps the full block: both partners, for one host.
   const panel = /<section id="wild_card-1"[\s\S]*?<\/section>/.exec(html)?.[0] ?? '';
-  assert.equal(count(panel, 'aria-label="Ticketmaster Get Tickets"'), 1);
-  assert.equal(count(panel, 'aria-label="TicketNetwork Resale tickets"'), 1);
-  assert.ok(panel.indexOf('Ticketmaster Get Tickets') < panel.indexOf('TicketNetwork Resale tickets'), 'Ticketmaster above TicketNetwork');
+  assert.equal(count(panel, 'aria-label="Get tickets on Ticketmaster"'), 1);
+  assert.equal(count(panel, 'aria-label="Get tickets on TicketNetwork"'), 1);
+  assert.ok(panel.indexOf('Get tickets on Ticketmaster') < panel.indexOf('Get tickets on TicketNetwork'), 'Ticketmaster above TicketNetwork');
   assert.ok(panel.includes('web_playoffs_league_houston-astros'));
 });
 

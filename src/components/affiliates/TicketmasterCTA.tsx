@@ -3,16 +3,13 @@ import type { Team } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
 import { buildTicketmasterUrl, buildTicketNetworkLink, ticketNetworkLinkLevel } from '@/lib/affiliates';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
-import { TICKETMASTER_CTA_LABEL, TICKETNETWORK_CTA_LABEL } from '@/lib/ticket-labels';
-import { ResaleNote } from './AffiliateDisclosure';
 
 // Two-button ticket CTA — Ticketmaster + TicketNetwork. Each button is an
 // independent branded white-card link that visually breaks from PromoNight's
 // red/dark theme to signal "external destination". Visual spec mirrors the
 // CTACluster.jsx mockup hero: white card, 1.5px navy (#003C71) border, brand mark
 // (Ticketmaster italic Outfit wordmark in brand navy / TicketNetwork logo), a
-// descriptor ("Get Tickets" on Ticketmaster, "Resale tickets" on TicketNetwork;
-// src/lib/ticket-labels.ts), and a navy tap arrow — matching the SpotHero /
+// "Get Tickets" descriptor, and a navy tap arrow — matching the SpotHero /
 // Fanatics card pattern (brand mark + descriptor + arrow).
 //
 // TicketNetwork is always commissionable (hardcoded Impact prefix + property
@@ -158,14 +155,6 @@ export function TicketmasterCTA({
   const descriptorClass = inline
     ? `hidden font-outfit font-bold text-[#0a0a0a] @[26rem]/cta:inline ${ctaSize}`
     : `font-outfit font-bold text-[#0a0a0a] ${ctaSize}`;
-  // The TicketNetwork descriptor is never container-gated: inline it is a small
-  // caption that always shows, so the tile says "Resale tickets" at every width.
-  const resaleDescriptorClass = inline
-    ? 'whitespace-nowrap font-outfit text-[11px] font-bold leading-none text-[#0a0a0a]'
-    : descriptorClass;
-  // Inline, the TicketNetwork tile stacks its logo over the caption: side by
-  // side the two do not fit a third of a 360px row.
-  const tnCardClass = inline ? `${cardClass.replace('gap-1.5', 'gap-[3px]')} flex-col` : cardClass;
   const wordmarkClass = inline
     ? 'font-outfit font-extrabold italic lowercase text-[#003C71] text-[13px]'
     : `font-outfit font-extrabold italic lowercase text-[#003C71] ${wordmarkSize}`;
@@ -181,15 +170,14 @@ export function TicketmasterCTA({
       placement={placement}
       target="_blank"
       rel="noopener noreferrer sponsored"
-      // The accessible name is the visible text: wordmark, then the descriptor.
-      ariaLabel={`Ticketmaster ${TICKETMASTER_CTA_LABEL}`}
+      ariaLabel="Get tickets on Ticketmaster"
       ticketLinkLevel="team"
       className={cardClass}
     >
       <span className={wordmarkClass} style={{ letterSpacing: '-0.3px' }}>
         ticketmaster
       </span>
-      <span className={descriptorClass}>{TICKETMASTER_CTA_LABEL}</span>
+      <span className={descriptorClass}>Get Tickets</span>
       <span aria-hidden="true" className={arrowClass}>
         →
       </span>
@@ -207,9 +195,9 @@ export function TicketmasterCTA({
       placement={placement}
       target="_blank"
       rel="noopener noreferrer sponsored"
-      ariaLabel={`TicketNetwork ${TICKETNETWORK_CTA_LABEL}`}
+      ariaLabel="Get tickets on TicketNetwork"
       ticketLinkLevel={tnLevel}
-      className={tnCardClass}
+      className={cardClass}
     >
       <Image
         src="/affiliates/ticketnetwork-logo.png"
@@ -218,10 +206,8 @@ export function TicketmasterCTA({
         height={logoHeight}
         className="shrink-0"
       />
-      {/* Always visible, inline tiles included: a resale button never reads as
-          a bare logo (src/lib/ticket-labels.ts). */}
-      <span className={resaleDescriptorClass}>{TICKETNETWORK_CTA_LABEL}</span>
-      <span aria-hidden="true" className={inline ? 'hidden' : arrowClass}>
+      <span className={descriptorClass}>Get Tickets</span>
+      <span aria-hidden="true" className={arrowClass}>
         →
       </span>
     </TrackedAffiliateLink>
@@ -230,24 +216,13 @@ export function TicketmasterCTA({
   // Ticketmaster leads on every surface (stacked = top, inline = leftmost).
   if (primaryOnly) {
     // The same order as the pair: whichever button would have been first.
-    return (
-      <div className={wrapperClass}>
-        {ticketmasterButton ?? ticketNetworkButton}
-        {!ticketmasterButton && ticketNetworkButton && !inline ? <ResaleNote className="px-1" /> : null}
-      </div>
-    );
+    return <div className={wrapperClass}>{ticketmasterButton ?? ticketNetworkButton}</div>;
   }
-
-  // The resale note, one line under the TicketNetwork button. Stacked only: an
-  // inline row has no room under one tile, so its parent prints the note under
-  // the whole row (TodayPromoCard).
-  const resaleNote = ticketNetworkButton && !inline ? <ResaleNote className="px-1" /> : null;
 
   return (
     <div className={wrapperClass}>
       {ticketmasterButton}
       {ticketNetworkButton}
-      {resaleNote}
     </div>
   );
 }
