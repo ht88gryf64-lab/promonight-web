@@ -4,7 +4,7 @@ import { getScoredPromosByItemType, getScoredPromosInDateRange } from '../data';
 import { addDaysYmd, siteYmd } from '../site-today';
 import type { ScoredPromoWithTeam } from '../types';
 import { BEST_PROMO_MIN_ROWS, isBestPromoRow } from '../scoring-weights';
-import { PROMO_SCORED_LEAGUES } from '../types';
+import { PROMO_SCORED_LEAGUES, PROMO_SCORED_LEAGUE_LIST } from '../types';
 import { getCurrentSeasonPredicate, getSeasonFinals } from './finals';
 import { effectiveEnd, leadInStart, leagueWindows, mostRecentlyEndedWindow, seasonName } from './season-window';
 
@@ -32,7 +32,9 @@ import { effectiveEnd, leadInStart, leagueWindows, mostRecentlyEndedWindow, seas
 // RANKED_MIN_UPCOMING_ROWS of them. Before this, any one forward row flipped
 // the mode: that day the page served three MLS playoff fixtures, typed
 // `theme` and scoring 15 to 18, as the best promo nights of 2026.
-// /best-promos/bobbleheads is unchanged: every forward row, and one is enough.
+// /best-promos/bobbleheads reads the same five leagues in upcoming mode and
+// lists giveaways only; one forward row is still enough for it, and its
+// retrospective is the ended season or nothing (known-issues 126).
 
 // The leagues whose SEASON WINDOWS decide the retrospective, and whose rows
 // it lists: the three with a finished season on file. The upcoming list on
@@ -112,6 +114,16 @@ export function retrospectiveRange(today: string, finals: ReadonlyMap<string, st
   return offSeasonRange(today, finals) ?? inPlayRange(today, finals);
 }
 
+/** The leagues a mode's list draws on, as copy: the upcoming list ranks every
+ *  league whose promos are scored (PROMO_SCORED_LEAGUE_LIST), the
+ *  retrospective the three with a finished season on file (RANKED_LEAGUES).
+ *  One helper for both ranked pages, so the head, the capsules and the
+ *  JSON-LD cannot name different sets. */
+export function rankedLeaguesText(retrospective: boolean): string {
+  const list: readonly string[] = retrospective ? RANKED_LEAGUES : PROMO_SCORED_LEAGUE_LIST;
+  return `${list.slice(0, -1).join(', ')}, and ${list[list.length - 1]}`;
+}
+
 export const loadRankedRows = cache(async (itemType: string | null): Promise<RankedRows> => {
   const now = new Date();
   const todayYMD = siteYmd(now);
@@ -119,8 +131,11 @@ export const loadRankedRows = cache(async (itemType: string | null): Promise<Ran
   const gate = await getCurrentSeasonPredicate(now);
   // /best-promos reads the whole gated window and cuts AFTER the floor, so a
   // theme night never takes a qualifying giveaway's slot under the cap.
+  // The bobblehead page reads the same five leagues and lists giveaways only
+  // (a bobblehead named in a theme night's description is not a bobblehead
+  // giveaway); it has no score floor and no row minimum of its own.
   const forward = itemType
-    ? await getScoredPromosByItemType(todayYMD, endYMD, itemType, BOBBLEHEAD_FETCH_CAP, gate)
+    ? (await getScoredPromosByItemType(todayYMD, endYMD, itemType, Number.MAX_SAFE_INTEGER, gate, PROMO_SCORED_LEAGUES)).filter((p) => p.type === 'giveaway').slice(0, BOBBLEHEAD_FETCH_CAP)
     : (await getScoredPromosInDateRange(todayYMD, endYMD, Number.MAX_SAFE_INTEGER, gate, PROMO_SCORED_LEAGUES)).filter(isBestPromoRow).slice(0, SERVER_FETCH_CAP);
   if (rankedMode(forward.length, itemType ? 1 : RANKED_MIN_UPCOMING_ROWS) === 'upcoming') {
     return { promos: forward, retrospective: false, label: upcomingLabel(forward.map((p) => p.date)), todayYMD };

@@ -32,8 +32,8 @@ mock.module(new URL('../data.ts', import.meta.url).href, {
       calls.push({ start, end, limit, gated: !!eligible, leagues });
       return (eligible ? forwardRows : pastRows).slice(0, limit ?? 300);
     },
-    getScoredPromosByItemType: async (start: string, end: string, itemType: string, limit?: number, eligible?: unknown) => {
-      calls.push({ start, end, limit, gated: !!eligible, itemType });
+    getScoredPromosByItemType: async (start: string, end: string, itemType: string, limit?: number, eligible?: unknown, leagues?: ReadonlySet<string>) => {
+      calls.push({ start, end, limit, gated: !!eligible, itemType, leagues });
       return (eligible ? forwardRows : pastRows).slice(0, limit ?? 500);
     },
   },
@@ -206,23 +206,31 @@ test('/best-promos: upcoming rows that cross New Year are labelled like a season
   const page = readFileSync(new URL('../../app/best-promos/page.tsx', import.meta.url), 'utf-8');
   assert.match(page, /title: `Best Sports Promo Nights of \$\{label\}: Score-Ranked Giveaways`/);
   assert.match(page, /title: `Best Sports Promo Nights of \$\{label\}`/);
-  assert.ok((page.match(/BEST SPORTS PROMO NIGHTS OF \{label\}/g)?.length ?? 0) >= 1);
+  // In the H1 the label does not break at its hyphen ("2026-" over "27" at 390).
+  assert.equal(page.match(/BEST SPORTS PROMO NIGHTS OF <span className="whitespace-nowrap">\{label\}<\/span>/g)?.length, 2);
   assert.doesNotMatch(page, /Number\(label\)|label \+ 1/);
 });
 
 test('/best-promos: the league copy follows the mode, and the stamp reads the rows', () => {
   const page = readFileSync(new URL('../../app/best-promos/page.tsx', import.meta.url), 'utf-8');
   // No league list is typed into a sentence that upcoming mode prints.
-  const typed = page.match(/MLB, MLS, and WNBA/g)?.length ?? 0;
-  assert.equal(typed, 1, 'the only typed list left is the bobblehead page pointer, which is about that page');
-  assert.match(page, /across MLB, MLS, and WNBA, with its own ranked list/);
+  assert.equal(page.match(/MLB, MLS, and WNBA/g), null, 'no typed league list is left on the page');
+  assert.match(page, /across the same leagues, with its own ranked list/);
   assert.doesNotMatch(page, /MLB rescored weekly|MLB year-round, WNBA and MLS in season/);
   // The upcoming list does not promise a 100 at the top (on 2026-11-25 its best row was 98),
   // and its meta description does not promise theme nights, which it cannot list.
   assert.equal(page.match(/ranked below, highest score first/g)?.length, 2);
   assert.doesNotMatch(page, /ranked below from 100 down/);
   assert.match(page, /retrospective \? 'Bobbleheads, jerseys, and theme nights' : 'Bobbleheads, jerseys, and other giveaways'/);
-  assert.match(page, /retrospective \? RANKED_LEAGUES : PROMO_SCORED_LEAGUE_LIST/);
+  // One helper names the leagues for both ranked pages.
+  const loader = readFileSync(new URL('../seasons/ranked-rows.ts', import.meta.url), 'utf-8');
+  assert.match(loader, /retrospective \? RANKED_LEAGUES : PROMO_SCORED_LEAGUE_LIST/);
+  const bobble = readFileSync(new URL('../../app/best-promos/bobbleheads/page.tsx', import.meta.url), 'utf-8');
+  for (const src of [page, bobble]) assert.match(src, /rankedLeaguesText\(retrospective\)/);
+  assert.equal(bobble.match(/MLB, MLS, and WNBA/g)?.length, 1, 'the one typed list left is about the team rankings page, which does cover those three');
+  assert.match(bobble, /which covers MLB, MLS, and WNBA teams/);
+  assert.doesNotMatch(bobble, /MLB rescored weekly|the three leagues/);
+  assert.match(bobble, /const latestComputedAt = latestRowScoredAt \|\| latestTeamComputedAt;/);
   // "Scores last computed" comes from the listed rows' scoredAt before any team-score stamp.
   assert.match(page, /const latestComputedAt = latestRowScoredAt \|\| latestTeamComputedAt;/);
   assert.match(page, /promos\.reduce\(\(acc, p\) => \(p\.scoredAt && p\.scoredAt > acc \? p\.scoredAt : acc\), ''\)/);
@@ -298,20 +306,33 @@ test('fallback: too few rows and NO ended season, the season in play to date', a
   assert.deepEqual([past.start, past.end], ['2026-01-07', '2026-10-18'], 'lead-in to today');
 });
 
-test('/best-promos/bobbleheads is unchanged: one forward row is enough, and no floor is applied', async () => {
+test('/best-promos/bobbleheads: five leagues and giveaways only in upcoming mode, one row is enough, its retrospective as before', async () => {
+  const { PROMO_SCORED_LEAGUES } = await import('../types');
   finals = new Map([['MLB_2026', '2026-10-28'], ['WNBA_2026', '2026-10-31']]);
   pastRows = [row('giveaway', 98, '2026-07-04')];
-  forwardRows = [row('theme', 45, '2027-04-01')];
-  const one = await loadAt('2027-02-10', 'bobblehead');
+  // One qualifying row is enough (no ten-row minimum on this page), and it
+  // may score under the main page's floor: a 60-point bobblehead giveaway lists.
+  const lowGiveaway = row('giveaway', 60, '2027-01-15', 'NHL');
+  forwardRows = [row('theme', 70, '2027-01-10', 'NHL'), lowGiveaway, row('kids', 90, '2027-01-12', 'NBA')];
+  const one = await loadAt('2026-11-25', 'bobblehead');
   assert.equal(one.retrospective, false);
-  assert.deepEqual(one.promos, forwardRows, 'the row is passed through as before');
+  assert.deepEqual(one.promos, [lowGiveaway], 'a bobblehead named on a theme or kids night is not a bobblehead giveaway');
   assert.equal(calls[0].itemType, 'bobblehead');
-  assert.equal(calls[0].limit, 500);
-  forwardRows = [];
-  assert.equal((await loadAt('2027-02-10', 'bobblehead')).retrospective, true);
+  assert.equal(calls[0].leagues, PROMO_SCORED_LEAGUES, 'the forward read names the five promo-scored leagues');
+  assert.equal(calls[0].limit, Number.MAX_SAFE_INTEGER, 'cut after the giveaway filter');
+  // The label rule is the shared one: rows crossing New Year read "2026-27".
+  forwardRows = [row('giveaway', 98, '2026-12-01', 'NBA'), row('giveaway', 95, '2027-02-12', 'NHL')];
+  assert.equal((await loadAt('2026-11-25', 'bobblehead')).label, '2026-27');
+  // Only non-giveaway rows ahead: nothing to list, so the retrospective.
+  forwardRows = [row('theme', 70, '2027-01-10', 'NHL')];
+  const none = await loadAt('2026-11-25', 'bobblehead');
+  assert.equal(none.retrospective, true);
+  assert.deepEqual(none.promos, pastRows);
+  assert.equal(calls.find((c) => !c.gated)!.leagues, undefined, 'the retrospective read stays on the default three leagues');
   // Its retrospective range is the ended season or nothing, as before: with
   // no ended season it does NOT take the in-play fallback /best-promos has.
   finals = new Map();
+  forwardRows = [];
   pastRows = [row('giveaway', 98, '2026-05-18')];
   const early = await loadAt('2026-10-18', 'bobblehead');
   assert.deepEqual([early.retrospective, early.promos.length, early.label], [true, 0, '']);

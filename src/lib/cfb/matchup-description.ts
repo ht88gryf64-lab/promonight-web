@@ -54,6 +54,20 @@ export function prettySchoolId(id: string): string {
     .join(' ');
 }
 
+/** Whether a rivalry's display name already names the pairing ("Florida vs
+ *  Georgia", "A vs. B", "A versus B", "A v. B"). The one rule the title, the
+ *  H1 and the description phrase all read. */
+export function namesThePairing(displayName: string): boolean {
+  return /\b(?:vs\.?|versus|v\.)(?=\s)/i.test(displayName);
+}
+
+/** A side's name as the rivalry page prints it: the tracked school's short
+ *  name, else its name, else a readable form of its id. The H1, the title and
+ *  the matchup line all use this, so they cannot name a school two ways. */
+export function matchupSideName(school: { shortName?: string | null; name?: string | null } | null | undefined, id: string): string {
+  return school?.shortName || school?.name || prettySchoolId(id);
+}
+
 function longDate(iso: string): string {
   // Noon avoids the UTC rollover that would shift the weekday a day west.
   return new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', {

@@ -48,7 +48,7 @@ export const eventHubPath = (show: string) => `/events/${show}`;
 export const eventStopPath = (show: string, venue: string) => `/events/${show}/${venue}`;
 
 /** Where a link INTO /events sits. Every inbound anchor names one. */
-export const EVENT_LINK_SURFACES = ['venue_events_module', 'team_also_at', 'footer_events', 'events_hub_list'] as const;
+export const EVENT_LINK_SURFACES = ['venue_events_module', 'team_also_at', 'footer_events', 'nav_events', 'events_hub_list'] as const;
 export type EventLinkSurface = (typeof EVENT_LINK_SURFACES)[number];
 /** Where a link OUT of /events to the rest of the site sits. */
 export const EVENT_OUT_SURFACES = ['event_to_venue', 'event_to_team'] as const;

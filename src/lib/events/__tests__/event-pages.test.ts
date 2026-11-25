@@ -119,6 +119,18 @@ test('every surface uses the helper: no file builds an /events href by hand, and
   assert.ok(named.get('venue_events_module')!.includes('components/venue-hub/HubUpcomingEvents.tsx'));
   assert.ok(named.get('team_also_at')!.includes('components/redesign/AffiliateRail.tsx'));
   assert.ok(named.get('footer_events')!.includes('components/redesign/Footer.tsx') && named.get('footer_events')!.includes('components/footer.tsx'));
+  // The top nav (2026-11 fix round): resolved once, on the server, in the bar;
+  // the client menu is handed the href and names the same surface on its anchor.
+  assert.deepEqual(named.get('nav_events'), ['components/redesign/BrandBar.tsx']);
+  const menu = readFileSync(join(SRC, 'components/redesign/BrandBarMobileMenu.tsx'), 'utf8');
+  assert.match(menu, /<EventPageLink href=\{eventsHref\} linkSurface="nav_events"/);
+  assert.doesNotMatch(menu, /eventPageHref|isEventsPagesLive/, 'the client menu never reads the flag');
+  assert.equal(eventPageHref({ kind: 'index' }, 'nav_events', true)?.href, '/events');
+  assert.equal(eventPageHref({ kind: 'index' }, 'nav_events', false), null);
+  // The bar shows Events only from the width it fits at, wider when Playoffs or World Cup is in the bar too.
+  const bar = readFileSync(join(SRC, 'components/redesign/BrandBar.tsx'), 'utf8');
+  assert.match(bar, /\['hidden min-\[860px\]:inline', 'hidden min-\[980px\]:inline', 'hidden min-\[1100px\]:inline'\]\[extras\]/);
+  assert.match(bar, /className=\{`\$\{LINK_CLASS\} \$\{EVENTS_SHOW\}`\}/);
   // Links out carry their own two surfaces through EventPageLink.
   const out = files.map((f) => readFileSync(f, 'utf8')).join('\n');
   for (const s of EVENT_OUT_SURFACES) assert.ok(out.includes(`linkSurface="${s}"`), `no link out of /events carries ${s}`);

@@ -9,10 +9,9 @@ import { BestPromosBrowser } from '@/components/scoring/best-promos-browser';
 import { ScoredJsonLd } from '@/components/scoring/scored-jsonld';
 import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-tracker';
 import { isRedesignEnabled } from '@/lib/redesign';
-import { PROMO_SCORED_LEAGUE_LIST } from '@/lib/types';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { addDaysYmd, siteYmd } from '@/lib/site-today';
-import { loadRankedRows, RANKED_LEAGUES, RANKED_MIN_UPCOMING_ROWS } from '@/lib/seasons/ranked-rows';
+import { loadRankedRows, rankedLeaguesText, RANKED_MIN_UPCOMING_ROWS } from '@/lib/seasons/ranked-rows';
 import { LEAD_IN_DAYS } from '@/lib/seasons/season-window';
 import { BEST_PROMO_SCORE_FLOOR, ITEM_WEIGHTS_ANSWER, PERFECT_SCORE_ANSWER, PERFECT_SCORE_SHORT_ANSWER, RANKED_LEAGUES_ANSWER, SCORE_COMPONENTS_ANSWER } from '@/lib/scoring-weights';
 
@@ -43,15 +42,6 @@ function addDaysYMD(base: Date, days: number): string {
 // generateMetadata, not a static object: the year in the title is the one
 // the rows on the page carry (loadRankedRows, src/lib/seasons/ranked-rows.ts),
 // read from the same cached fetch as the page body.
-// The leagues a mode's list draws on, as copy: the upcoming list ranks every
-// league whose promos are scored (PROMO_SCORED_LEAGUE_LIST), the retrospective
-// the three with a finished season on file (RANKED_LEAGUES). One helper, so
-// the head, the capsules and the JSON-LD cannot name different sets.
-function rankedLeaguesText(retrospective: boolean): string {
-  const list: readonly string[] = retrospective ? RANKED_LEAGUES : PROMO_SCORED_LEAGUE_LIST;
-  return `${list.slice(0, -1).join(', ')}, and ${list[list.length - 1]}`;
-}
-
 export async function generateMetadata(): Promise<Metadata> {
   const { label, retrospective } = await loadRankedRows(null);
   const leagues = rankedLeaguesText(retrospective);
@@ -110,7 +100,7 @@ const FAQS = [
   {
     question: 'Can I see only bobblehead nights?',
     answer:
-      `Yes. Visit /best-promos/bobbleheads for a ranking of bobblehead nights only, across MLB, MLS, and WNBA, with its own ranked list.`,
+      'Yes. Visit /best-promos/bobbleheads for a ranking of bobblehead nights only, across the same leagues, with its own ranked list.',
   },
 ];
 
@@ -247,7 +237,7 @@ export default async function BestPromosPage() {
                 <span className="text-white/60">Best promos</span>
               </div>
               <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: '#ff5a78' }}>Best of {label}</p>
-              <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST SPORTS PROMO NIGHTS OF {label}</h1>
+              <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST SPORTS PROMO NIGHTS OF <span className="whitespace-nowrap">{label}</span></h1>
               <p className="mt-3 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">{stampLine ?? <>{lastUpdatedDisplay ? <>Last updated {lastUpdatedDisplay} · </> : null}{promos.length} promos ranked</>}</p>
             </div>
           </section>
@@ -318,7 +308,7 @@ export default async function BestPromosPage() {
             Best of {label}
           </span>
           <h1 className="font-display text-4xl md:text-6xl tracking-[1px] mt-2">
-            BEST SPORTS PROMO NIGHTS OF {label}
+            BEST SPORTS PROMO NIGHTS OF <span className="whitespace-nowrap">{label}</span>
           </h1>
           <p className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mt-3">
             {stampLine ?? <>{lastUpdatedDisplay ? <>Last updated {lastUpdatedDisplay} · </> : null}{promos.length} promos ranked</>}

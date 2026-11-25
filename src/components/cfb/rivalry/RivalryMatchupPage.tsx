@@ -4,7 +4,7 @@ import type { MatchupPage } from '@/lib/cfb/matchups';
 import type { TripStepKey } from '@/lib/cfb/trip-steps';
 import { planTripSteps } from '@/lib/cfb/trip-steps';
 import { resolveCfbTheme } from '@/lib/cfb/theme';
-import { buildMatchupDescription } from '@/lib/cfb/matchup-description';
+import { buildMatchupDescription, matchupSideName, namesThePairing, prettySchoolId } from '@/lib/cfb/matchup-description';
 import { renderedKickoff } from '@/lib/cfb/metadata';
 import { toAffiliateTeam } from '@/lib/cfb/page-extras';
 import { buildTicketNetworkLink, buildSpotHeroUrl } from '@/lib/affiliates';
@@ -50,7 +50,7 @@ function SchoolName({ school, fallback }: { school: CfbSchool & { id: string } |
   if (!school) return <span className="text-white/70">{fallback}</span>;
   return (
     <Link href={`/cfb/${school.id}`} className="underline-offset-4 hover:underline" style={{ color: schoolAccent(school)! }}>
-      {school.shortName || school.name}
+      {matchupSideName(school, school.id)}
     </Link>
   );
 }
@@ -76,7 +76,7 @@ function SchoolCard({ school, fallback }: { school: CfbSchool & { id: string } |
       style={{ borderLeft: `4px solid ${theme.primary}` }}
     >
       <div className="text-sm font-semibold" style={{ color: theme.accent }}>
-        {school.shortName || school.name}
+        {matchupSideName(school, school.id)}
       </div>
       <div className="mt-0.5 text-xs text-white/50">{school.mascot}</div>
     </Link>
@@ -96,8 +96,14 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
   const { rivalry, game, schools, resolvedVenue, siblings } = data;
   const [a, b] = schools;
   const [aId, bId] = rivalry.schoolIds;
-  const aFallback = prettyId(aId);
-  const bFallback = prettyId(bId);
+  // prettySchoolId, the one the title and description use (it knows "uab" is
+  // "UAB"), so an untracked side reads the same in the head and on the page.
+  const aFallback = prettySchoolId(aId);
+  const bFallback = prettySchoolId(bId);
+
+  // Same rule as matchupHeading (src/lib/cfb/metadata.ts): a display name that
+  // already reads "A vs B" is the whole heading.
+  const pairingInName = namesThePairing(data.displayName);
 
   const date = game?.date ? formatDayMonth(game.date) : null;
   // "Kickoff TBA" verbatim, no embellishment. renderedKickoff is the ONE gate
@@ -208,20 +214,48 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
             cfbRivalries.name holds the trophy or historical name, which is not
             always what anyone searches. The trophy block below still shows
             rivalry.trophy, so nothing is lost. Condensed all-caps is styling
-            only; the H1 STRING is unchanged. */}
-        <h1
-          className="mt-3 font-extrabold uppercase leading-[0.98] tracking-[0.01em]"
-          style={{ fontFamily: CONDENSED, fontSize: 'clamp(34px, 8vw, 48px)' }}
-        >
-          {data.displayName} {Number(cfbSeasonLabel())}
-        </h1>
+            only.
 
-        {/* 3. matchup line */}
-        <p className="mt-2 text-lg font-semibold">
-          <SchoolName school={a} fallback={aFallback} />
-          <span className="px-2 text-white/40">vs</span>
-          <SchoolName school={b} fallback={bFallback} />
-        </p>
+            THE H1 STRING IS THE TITLE'S HEADING (src/lib/cfb/metadata.ts
+            matchupHeading): "Minnesota vs Wisconsin: Paul Bunyan's Axe 2026".
+            When the display name is not itself the pairing, the matchup line
+            is PART of the H1 and comes first in the document; column-reverse
+            keeps it where it always sat on screen, under the name. A display
+            name that already reads "A vs B" keeps the H1 it had, and the
+            matchup line stays a paragraph beneath it. */}
+        {pairingInName ? (
+          <>
+            <h1
+              className="mt-3 font-extrabold uppercase leading-[0.98] tracking-[0.01em]"
+              style={{ fontFamily: CONDENSED, fontSize: 'clamp(34px, 8vw, 48px)' }}
+            >
+              {data.displayName} {Number(cfbSeasonLabel())}
+            </h1>
+
+            {/* 3. matchup line */}
+            <p className="mt-2 text-lg font-semibold">
+              <SchoolName school={a} fallback={aFallback} />
+              <span className="px-2 text-white/40">vs</span>
+              <SchoolName school={b} fallback={bFallback} />
+            </p>
+          </>
+        ) : (
+          <h1 className="mt-3 flex flex-col-reverse">
+            {/* 3. matchup line, first in the H1's text, second on screen */}
+            <span className="mt-2 block text-lg font-semibold" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+              <SchoolName school={a} fallback={aFallback} />
+              <span className="px-1 text-white/40"> vs </span>
+              <SchoolName school={b} fallback={bFallback} />
+              <span className="sr-only">: </span>
+            </span>
+            <span
+              className="block font-extrabold uppercase leading-[0.98] tracking-[0.01em]"
+              style={{ fontFamily: CONDENSED, fontSize: 'clamp(34px, 8vw, 48px)' }}
+            >
+              {data.displayName} {Number(cfbSeasonLabel())}
+            </span>
+          </h1>
+        )}
 
         {/* 3b. lede: the hand-written matchup description, surfaced as body
             copy (identical string to the meta description by construction). */}
@@ -361,6 +395,3 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
   );
 }
 
-function prettyId(id: string): string {
-  return id.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-}

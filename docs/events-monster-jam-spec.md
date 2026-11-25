@@ -133,7 +133,7 @@ A RULED EXCEPTION to the never-stock rule, for decorative show heroes only. It d
 
 ## Navigation and internal linking
 - NOTHING FROM THE TOUR OPERATOR (ruling 2026-11-17): nothing is ingested, hand-entered or quoted from monsterjam.com or feldentertainment.com, and no page links to them. Every /events page carries the line "PromoNight is not affiliated with Monster Jam or Feld Entertainment."
-- No "Events" in the top nav at launch.
+- No "Events" in the top nav at launch. ADDED 2026-11-25 (fix round, ruling on audit item 5): the top bar and the mobile menu sheet link to `/events` with the surface `nav_events`; in the bar it shows only from the width it fits at.
 - Venue pages: "Upcoming events at [venue]" module (the main bridge).
 - Home-team pages for that building: "Also at [venue]" link when a stop is upcoming.
 - Footer: sitewide "Events" link to `/events`.
@@ -216,7 +216,7 @@ Design target: `docs/events-monster-jam-mockup-v2.html`. It supersedes the first
 - **Launch instant, the measurement boundary:** 2026-11-19T00:10:10Z, which is Nov 18, 2026, 6:10:10 PM CST (America/Chicago). Everything measured for this family (Search Console, GA4, PostHog, affiliate clicks) is read from this instant forward. The six-week success read counts from it.
 - **Deploy:** `dpl_62gDudZPUGcHoPjSGe7RGxESGYdK`, production, main at `ff00987`, with `EVENTS_PAGES_LIVE=true` set for Production. The flag is no longer set for any Preview branch.
 - **Prior exposure, not the launch:** the flag was on in Production from 2026-11-18T23:54:12Z for about seven minutes (deploy `dpl_EmJn2hQHzfmJTbvromC8vmno64kd`) and was rolled back at about 2026-11-19T00:01Z (deploy `dpl_FWYCYruiMmCnT9T5t2zwMa7TU7vj`). The rollback followed a check that expected a nav link, which was an error in the check, not in the build. In that window the sitemap listed the /events URLs; nothing was submitted to IndexNow.
-- **Navigation is a footer link only.** The sitewide entry point is the footer "Events" link (surface `footer_events`). There is no Events link in the header nav and none is in scope. The other entry points are the events module on a venue page (`venue_events_module`) and the "also at" block on a team page (`team_also_at`).
+- **Navigation is a footer link only.** The sitewide entry point is the footer "Events" link (surface `footer_events`). There is no Events link in the header nav and none is in scope. (True at launch. A header link was added on 2026-11-25, surface `nav_events`.) The other entry points are the events module on a venue page (`venue_events_module`) and the "also at" block on a team page (`team_also_at`).
 - **Search Console baseline:** queries containing "monster jam" returned zero for Oct 19 to Nov 17, 2026. The baseline was pulled by Claude through the Search Console connector, not read by Matt (corrected 2026-11-19). Any impression or click on such a query after the launch instant is new.
 - **Launch set:** 20 stops, including moda-center (written in Phase 3B). This is the stored set at the launch instant, recorded once as history; page copy and checks still read their counts at run time.
 - **At launch, as read from production:** the sitemap listed the index, the one show hub and one URL per stored live stop, and Firestore held the same set of live stops with none tombstoned. The counts are read at run time by the live battery; none is recorded here as a fixed number.
