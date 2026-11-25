@@ -1,0 +1,93 @@
+// THE TITLE A PROMO CARD PRINTS. Pure and client-safe: strings in, a string out.
+//
+// Some clubs publish a giveaway before they name it. The Kraken's page lists
+// "Giveaway: Bobblehead, Presented by Symetra, First 5,000 fans" for
+// 2027-01-31, with no player, and the stored title is a faithful "Bobblehead".
+// On a card beside "Fred VanVleet Bobblehead" and "Evgeni Malkin Talking
+// Bobblehead" that reads as a broken row. On 2026-11-25 nine of the 192
+// upcoming NBA and NHL giveaways at 65 or higher were in that state.
+//
+// So a BARE ITEM TITLE, one made only of generic item words, is DISPLAYED with
+// the club's short name in front: "Kraken Bobblehead", "Canadiens Bobblehead
+// Night", "Kings Rally Towel", "Ducks T-Shirt Giveaway". Nothing is written:
+// the stored title, the page slug, the score and the scorer are untouched
+// (ruling 2026-11-25). The rule heals itself: when the club names the player,
+// the weekly scan stores the new title, it is no longer bare, and it prints as
+// stored.
+//
+// NOT THE SCORER'S GENERIC-TITLE RULE. That rule (promo-pipeline,
+// lib/scoring/derived-signals.js, isGenericTitle) decides a penalty and
+// exempts any title that names an item; changing it is a separate piece of
+// work (docs/known-issues.md entry 127, "Bare item titles"). This file only
+// decides what a card prints.
+//
+// ONE NAME PER PAGE. Cross-team surfaces (homepage rails, rankings, hubs, the
+// daily board, the /promos lists) and the promo page print the display title
+// wherever they name the promo: on the promo page that is the H1, the
+// breadcrumb, the FAQ, the timeline, the share text and the JSON-LD name. A
+// club's own team page prints the stored title everywhere (the ownTeamPage
+// flag). NOT changed anywhere: the promo page's <title> and og:title, which
+// already carry the team.
+
+/** Words that name an item or a giveaway and nothing else. A title made only
+ *  of these (and of the club's own name) says what is handed out but not whose
+ *  or which. Deliberately short: a word is added only when a real bare title
+ *  needs it, because every word here can turn a named title bare. */
+const GENERIC_WORDS: ReadonlySet<string> = new Set([
+  'a', 'an', 'the', 'and',
+  'giveaway', 'giveaways', 'night', 'item', 'free', 'fan', 'mini', 'replica',
+  'bobblehead', 'bobbleheads',
+  'hat', 'hats', 'cap', 'caps', 'beanie', 'beanies', 'toque',
+  'jersey', 'jerseys', 't', 'tee', 'tees', 'shirt', 'shirts', 'tshirt',
+  'rally', 'towel', 'towels', 'scarf', 'scarves',
+  'poster', 'posters', 'magnet', 'magnets', 'schedule', 'calendar',
+  'pin', 'pins', 'bag', 'tote', 'blanket', 'socks', 'puck', 'pucks', 'flag', 'pennant',
+]);
+
+const words = (s: string): string[] => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
+
+/** True when the title is made only of generic item words: no player, no
+ *  theme, no sponsor, nothing that says which giveaway this is. An empty title
+ *  is not bare; it is missing. */
+export function isBareItemTitle(title: string | null | undefined): boolean {
+  const w = words(title ?? '');
+  return w.length > 0 && w.every((x) => GENERIC_WORDS.has(x));
+}
+
+/**
+ * The title to DISPLAY for a promo, given the team it belongs to.
+ *
+ * - A bare item title gets the club's short name in front ("Kraken Bobblehead").
+ * - A title that already carries the club's name is returned as stored
+ *   ("Wizards T-shirt"), bare or not.
+ * - Every other title is returned as stored, byte for byte.
+ * - With no team (a caller that does not have one), the stored title.
+ * - On the club's own team page (`context.ownTeamPage`), the stored title.
+ */
+export interface PromoTitleContext {
+  /** The surface is the promo's own club's team page: no prefix there. Every
+   *  other surface (homepage rails, rankings, hubs, the daily board, the
+   *  /promos lists, the promo page) leaves this unset. */
+  ownTeamPage?: boolean;
+}
+
+export function promoDisplayTitle(
+  title: string,
+  team: { name?: string | null } | null | undefined,
+  context: PromoTitleContext = {},
+): string {
+  // THE ONE CONTEXT FLAG. On a club's own team page every row is that club's,
+  // and the page's prose, FAQ answers and share labels use the stored title;
+  // a prefix there is redundant and gives one giveaway two names on one page
+  // (ux-review 2026-11-25). So the own-team page prints the stored title
+  // everywhere, and every other surface prints the display title everywhere.
+  if (context.ownTeamPage) return title;
+  const club = (team?.name ?? '').trim();
+  if (!club || !title) return title;
+  const clubWords = words(club);
+  const t = words(title);
+  // Already names the club: every word of the short name appears, in order.
+  const namesClub = clubWords.length > 0 && t.join(' ').split(clubWords.join(' ')).length > 1;
+  if (namesClub) return title;
+  return isBareItemTitle(title) ? `${club} ${title.trim()}` : title;
+}

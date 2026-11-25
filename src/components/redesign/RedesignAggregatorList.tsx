@@ -1,5 +1,6 @@
 'use client';
 
+import { promoDisplayTitle } from '@/lib/promo-display-title';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { PromoWithTeam } from '@/lib/types';
@@ -180,7 +181,7 @@ export function RedesignAggregatorList({
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-sm font-semibold text-rd-ink transition-colors group-hover:text-rd-red md:text-base">
-                            {p.title}
+                            {promoDisplayTitle(p.title, p.team)}
                           </div>
                           <div className="mt-1 flex min-w-0 items-center gap-1.5 truncate font-rd text-xs text-rd-ink-soft">
                             <span
