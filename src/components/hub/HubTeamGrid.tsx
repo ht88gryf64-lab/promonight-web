@@ -14,7 +14,8 @@ function TeamCard({ team, subtitle }: { team: Team; subtitle?: string }) {
   return (
     <a
       href={`/${team.sportSlug}/${team.id}`}
-      aria-label={`${name} promotional schedule`}
+      // The accessible name contains the visible text: with a subtitle, that subtitle.
+      aria-label={subtitle ? `${name} ${subtitle}` : `${name} promotional schedule`}
       className="group flex items-center gap-3 rounded-xl border border-rd-line bg-rd-card p-3 transition-all hover:-translate-y-px hover:border-rd-line-strong hover:shadow-[0_2px_12px_rgba(33,29,24,0.08)]"
     >
       <span

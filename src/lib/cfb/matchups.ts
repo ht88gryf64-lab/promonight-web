@@ -127,7 +127,7 @@ function daysApart(a: string, b: string): number {
 
 /** Slug, name and date for every registry matchup. Cheap enough to build once
  *  and reuse for the sibling rail and the /cfb/rivalries index. */
-export const getMatchupIndex = cache(async (): Promise<Array<{ slug: string; name: string; date: string | null; conference: string | null; schoolIds: string[]; colors: [string | null, string | null] }>> => {
+export const getMatchupIndex = cache(async (): Promise<Array<{ slug: string; name: string; date: string | null; canceled: boolean; conference: string | null; schoolIds: string[]; colors: [string | null, string | null] }>> => {
   const { schools, rivalries, games } = await getCfbCorpus();
   const schoolById = new Map(schools.map((s) => [s.id, s]));
   const out = [];
@@ -146,6 +146,7 @@ export const getMatchupIndex = cache(async (): Promise<Array<{ slug: string; nam
       // the same string the destination page leads with.
       name: resolveMatchupDisplayName(e, rivalry.name),
       date: game?.data.date ?? null,
+      canceled: game?.data.status === 'canceled',
       conference: conferenceForNamedSeason(first?.conferenceBySeason) ?? null,
       schoolIds: rivalry.schoolIds,
       colors: [colorA ?? null, colorB ?? null] as [string | null, string | null],
@@ -185,6 +186,7 @@ export const getMatchupIndexRows = cache(async (): Promise<RivalryIndexRow[]> =>
       slug: r.slug,
       name: r.name,
       date: r.date,
+      canceled: r.canceled,
       matchup: r.schoolIds
         .map((id) => byId.get(id)?.shortName || byId.get(id)?.name || id.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '))
         .join(' vs '),

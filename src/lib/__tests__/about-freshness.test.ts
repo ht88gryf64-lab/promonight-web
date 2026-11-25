@@ -115,3 +115,45 @@ test('the sitemap binds /about lastmod to the same constant', () => {
     `The /about sitemap entry is back on the build clock (lastModified: now).`,
   );
 });
+
+// ── the scanner club counts, against the pipeline's own config ──────────────
+//
+// about-copy.ts states how many NHL clubs and NBA teams the weekly scan checks.
+// The figures live in the pipeline (team-configs/nhl.js, team-configs/nba.js:
+// every entry that is not `active: false`). Typed into copy they went stale
+// (27 of 32 and 20 of 30 on the page, 29 and 28 in the config, 2026-11-25).
+// Absent the pipeline checkout this skips in red; it never passes by default.
+test('the scanner club counts on /about match the pipeline team configs', async (t) => {
+  const { existsSync } = await import('node:fs');
+  const { createRequire } = await import('node:module');
+  const { resolve } = await import('node:path');
+  const { SCANNER_CLUBS } = await import('../about-copy');
+  const dir = process.env.PROMO_PIPELINE_DIR || '../promonight/promo-pipeline';
+  const file = (lg: string) => resolve(join(dir, 'team-configs', `${lg}.js`));
+  if (!existsSync(file('nhl')) || !existsSync(file('nba'))) {
+    process.stderr.write(`\x1b[31mSKIPPED /about scanner-count test: ${file('nhl')} is absent; set PROMO_PIPELINE_DIR to the promo-pipeline checkout (CLAUDE.md, worktrees)\x1b[0m\n`);
+    t.skip(`PROMO_PIPELINE_DIR absent (${dir})`);
+    return;
+  }
+  const req = createRequire(import.meta.url);
+  for (const [league, lg] of [['NHL', 'nhl'], ['NBA', 'nba']] as const) {
+    const mod = req(file(lg)) as unknown;
+    const raw = Array.isArray(mod) ? mod : Object.values(mod as Record<string, unknown>).find(Array.isArray) ?? Object.values(mod as Record<string, unknown>);
+    const clubs = (raw as Array<{ active?: boolean; teamSlug?: string }>).filter((c) => c && typeof c === 'object' && typeof c.teamSlug === 'string');
+    assert.ok(clubs.length >= 30, `${league}: the config read as ${clubs.length} clubs`);
+    assert.deepEqual(
+      { checked: clubs.filter((c) => c.active !== false).length, total: clubs.length },
+      { ...SCANNER_CLUBS[league] },
+      `${league}: update SCANNER_CLUBS in src/lib/about-copy.ts (and the review date) to the pipeline's team-configs/${lg}.js`,
+    );
+  }
+});
+
+test('the copy prints the scanner counts from the constant and no league state of its own', () => {
+  // Code only: the file's history comments quote the retired sentences.
+  const src = readFileSync(COPY_PATH, 'utf8').split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+  assert.match(src, /\$\{SCANNER_CLUBS\.NHL\.checked\} of the \$\{SCANNER_CLUBS\.NHL\.total\} NHL clubs and \$\{SCANNER_CLUBS\.NBA\.checked\} of the \$\{SCANNER_CLUBS\.NBA\.total\} NBA teams/);
+  assert.doesNotMatch(src, /27 of the 32|20 of the 30|posting theirs now|still waiting on team announcements/);
+  assert.match(src, /\$\{leagueState \? `\$\{leagueState\} ` : ''\}\[Browse every team\]/);
+});
+

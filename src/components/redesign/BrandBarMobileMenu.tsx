@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { EventPageLink } from '@/components/events/EventPageLink';
 import { IconMenu2 } from '@tabler/icons-react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/redesign/Button';
@@ -28,9 +29,15 @@ const ROW_WC = `${ROW_BASE} text-rd-red hover:text-rd-red-dark`;
 export function BrandBarMobileMenu({
   playoffsActive = false,
   worldCupActive = false,
+  eventsHref = null,
 }: {
   playoffsActive?: boolean;
   worldCupActive?: boolean;
+  /** The events index href, resolved on the server by BrandBar through the
+   *  one events link helper (surface nav_events); null while the events
+   *  pages are off. This is a client component and the flag is not a public
+   *  env var, so the href is handed in instead of being resolved here. */
+  eventsHref?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -94,6 +101,11 @@ export function BrandBarMobileMenu({
                 {l.label}
               </Link>
             ))}
+            {eventsHref ? (
+              <EventPageLink href={eventsHref} linkSurface="nav_events" className={ROW_LINK}>
+                Events
+              </EventPageLink>
+            ) : null}
             {worldCupActive ? <WorldCupNavLink className={ROW_WC} /> : null}
             <Link href="/about" className={ROW_LINK}>
               About

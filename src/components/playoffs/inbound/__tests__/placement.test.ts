@@ -74,9 +74,10 @@ test('every module is fed by the one gated read', () => {
 
 test('TEAM: the module rides inside the first weave item and adds no item of its own', () => {
   const c = code(TEAM);
+  // Third arm (2026-11-25): no season block at all on a page naming next season early with no game dates, and then no empty weave item.
   assert.match(
     c,
-    /\{postseason \? \(\s*<div className=\{`rd-weave-item \$\{showSchedule \? 'order-\[11\]' : 'order-\[10\]'\}`\}>\s*\{postseason\}\s*\{seasonBlock\}\s*<\/div>\s*\) : \(\s*<div className=\{`rd-weave-item \$\{showSchedule \? 'order-\[11\]' : 'order-\[10\]'\}`\}>\{seasonBlock\}<\/div>\s*\)\}/,
+    /\{postseason \? \(\s*<div className=\{`rd-weave-item \$\{showSchedule \? 'order-\[11\]' : 'order-\[10\]'\}`\}>\s*\{postseason\}\s*\{seasonBlock\}\s*<\/div>\s*\) : seasonBlock \? \(\s*<div className=\{`rd-weave-item \$\{showSchedule \? 'order-\[11\]' : 'order-\[10\]'\}`\}>\{seasonBlock\}<\/div>\s*\) : null\}/,
   );
   assert.equal((c.match(/\{postseason\}/g) ?? []).length, 1, 'mounted in one place');
   // The lowest order in the weave is still the season slot's.
@@ -133,7 +134,9 @@ for (const [league, lower, page] of HUBS) {
     const c = code(page);
     assert.match(c, new RegExp(`const heroLine = leagueHeroLine\\(inbound, '${league}'\\);`));
     const hero = c.slice(c.indexOf('<HubHero'), c.indexOf('</HubHero>'));
-    assert.match(hero, new RegExp(`notice=\\{heroLine \\? <LeaguePlayoffsHeroLine line=\\{heroLine\\} surface="web_${lower}_hub" /> : undefined\\}`));
+    // The playoffs line comes first; with none, the slot may carry the early-season note
+    // (2026-11 fix round). The two cannot coincide: the note needs the season to have ended.
+    assert.match(hero, new RegExp(`notice=\\{heroLine \\? <LeaguePlayoffsHeroLine line=\\{heroLine\\} surface="web_${lower}_hub" /> : hubSeason\\.note \\? <HubSeasonNote text=\\{hubSeason\\.note\\} /> : undefined\\}`));
     assert.ok(c.indexOf('</HubHero>') < c.indexOf('page-content'), 'the hero closes before page-content opens');
     assert.equal((c.match(/<LeaguePlayoffsHeroLine/g) ?? []).length, 1);
   });

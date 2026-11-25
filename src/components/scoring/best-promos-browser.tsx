@@ -6,7 +6,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import type { ScoredPromoWithTeam } from '@/lib/types';
 import { track, type AnalyticsSurface, type ScoringPageSurface } from '@/lib/analytics';
 import { ScoredPromoCard } from './scored-promo-card';
-import { LeagueFilter, LEAGUE_FILTER_VALUES, type LeagueFilterValue } from './league-filter';
+import { LeagueFilter, leagueFilterOptions, type LeagueFilterValue } from './league-filter';
 import { DateRangeFilter, DATE_RANGE_FILTER_VALUES, type DateRangeFilterValue } from './date-range-filter';
 import type { TicketsBlockPlacement } from '../affiliates/TicketsBlock';
 import { AffiliateDisclosure } from '../affiliates/AffiliateDisclosure';
@@ -43,7 +43,8 @@ type BestPromosBrowserProps = {
   // 'dark' (default) byte-identical when the gate is off; 'light' is the
   // cream-house. All filters, events, scoring, and capsules are unchanged.
   variant?: 'dark' | 'light';
-  /** Retrospective mode: the forward window yielded nothing, so initialPromos
+  /** Retrospective mode: the forward window yielded too few rows (none, on
+   *  /best-promos/bobbleheads; under ten qualifying, on /best-promos), so initialPromos
    *  carry a COMPLETED season instead of upcoming dates. Skips the
    *  today-forward date filter that would discard every one of them, and hides
    *  the date-range chips, which are meaningless once the season is over.
@@ -111,11 +112,16 @@ export function BestPromosBrowser({
   // valid URL param flips the chips right after via ScoreParamsReader.
   const [league, setLeague] = useState<LeagueFilterValue>('All');
   const [range, setRange] = useState<DateRangeFilterValue>('90d');
+  // The NBA and NHL chips appear when the server's rows hold those leagues:
+  // the upcoming list on /best-promos does, the retrospective and the
+  // bobblehead page do not. Derived from the prop, so server and client agree.
+  const leaguesPresent = useMemo(() => new Set(initialPromos.map((p) => p.team.league)), [initialPromos]);
+  const leagueValues = useMemo(() => leagueFilterOptions(leaguesPresent).map((o) => o.value as string), [leaguesPresent]);
 
   const syncFromParams = useCallback(
     (leagueParam: string | null, rangeParam: string | null) => {
       setLeague(
-        leagueParam && (LEAGUE_FILTER_VALUES as readonly string[]).includes(leagueParam)
+        leagueParam && leagueValues.includes(leagueParam)
           ? (leagueParam as LeagueFilterValue)
           : 'All',
       );
@@ -125,7 +131,7 @@ export function BestPromosBrowser({
           : '90d',
       );
     },
-    [],
+    [leagueValues],
   );
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -231,7 +237,7 @@ export function BestPromosBrowser({
 
       <div className="mb-6">
         <div className={labelClass}>Filter by league</div>
-        <LeagueFilter value={league} onSelect={handleLeagueSelect} variant={variant} />
+        <LeagueFilter value={league} onSelect={handleLeagueSelect} variant={variant} leagues={leaguesPresent} />
       </div>
 
       {!retrospective && (
@@ -253,7 +259,10 @@ export function BestPromosBrowser({
             <div key={`${promo.team.id}-${promo.promoId}`}>
               <ScoredPromoCard
                 promo={promo}
-                showTickets
+                // A retrospective row is a game already played: no ticket
+                // links for it (ux-review 2026-11-25, D1), as on the promo
+                // page's played state.
+                showTickets={!retrospective}
                 ticketsPlacement={ticketsPlacement}
                 trackingSurface={trackingSurface}
                 ticketsSurface={ticketsSurface}
@@ -306,7 +315,8 @@ export function BestPromosBrowser({
           Gated on the same `visible` list the CTAs come from: filtering down to
           an empty result set removes the links and the claim together. */}
       {visible.length > 0 && (
-        <AffiliateDisclosure className="mt-10 text-center" tone={light ? 'light' : 'dark'} />
+        // Retrospective cards carry no ticket links (showTickets), so no TicketNetwork sentence.
+        <AffiliateDisclosure className="mt-10 text-center" tone={light ? 'light' : 'dark'} resale={!retrospective} />
       )}
     </div>
   );

@@ -4422,3 +4422,124 @@ The Tomorrow section's cards render at `opacity-70` (TodayPromoCard `dimmed`) so
 ## 125. Promo pages: a game played earlier today still reads as upcoming that night (logged 2026-11-22, ux-review of feature/fubo-subid-parity, D1)
 
 At 21:31 ET on 2026-11-22, six hours after the Hawks-Pistons 3:30 PM tip, `/nba/atlanta-hawks/promos/kids-game` still treated the Nov 22 game as to come, on production and the branch alike: the date tile read "TONIGHT", "Next game" listed Pistons on Nov 22, the Nov 22 row kept its Tickets link, the primary "Get tickets" went to that game's TicketNetwork listing, and "Stream on Fubo" went through the hop to fubo.tv for it. The page's played state (ruling 2026-11-08, Branch A) starts only when the date is before the site's today, so the whole evening after a day game is covered. Fubo for a game in progress is right; tickets after the final whistle are not. A fix needs the start time plus a game-length allowance per league (or the spine's completed status where a league writes it; NHL docs never do, see entry 119), and the page's ISR window bounds how soon any change shows. Report: `docs/ux-review/2026-11-22-feature-fubo-subid-parity.md`.
+
+## 126. /best-promos/bobbleheads has no score floor or minimum row count (logged 2026-11-25, feature/best-promos-stopgap, deferred; updated in feature/discovery-links)
+
+`/best-promos` lists upcoming rows only when 10 or more giveaways score 65 or above (`RANKED_MIN_UPCOMING_ROWS` in `src/lib/seasons/ranked-rows.ts`, `BEST_PROMO_SCORE_FLOOR` in `src/lib/scoring-weights.ts`). `/best-promos/bobbleheads` reads through the same loader. Since `feature/discovery-links` its upcoming list draws on the five promo-scored leagues and holds giveaways only, with the shared label rule and league copy. Two things were left as they were by ruling: any one forward bobblehead giveaway takes it out of the retrospective, and it has no score floor. Its retrospective is the ended MLB, MLS and WNBA season or nothing.
+
+## 127. Deferred from the 2026-11 fix round, scoring branches (logged 2026-11-25)
+
+One line each. None blocks the release; each needs its own change or ruling.
+
+- **Threshold window.** `/best-promos` counts its 10 qualifying rows over 180 days, while the default view shows 90. Ten rows all dated 91 to 180 days out would leave the retrospective and show an empty default list.
+- **Rail window.** The homepage rail counts its 10 over the whole in-season future, not 180 days. The two counts can differ only when qualifying rows sit more than 180 days ahead.
+- **Pre-existing ux items.** Ten low-severity contrast and hit-size items on `/`, `/best-promos` and `/team-rankings` are listed as P1 to P10 in `docs/ux-review/2026-11-25-feature-best-promos-stopgap.md`.
+- **MLB package rows.** 537 visible MLB rows carry `ticketPackageRequired: true` and are scored and ranked; the flag is ignored on MLB by rule. NHL and NBA package rows are never scored.
+- **Thunder.** `oklahoma-city-thunder` has a `null` source URL in the pipeline's `nba-urls.js` and no promo rows.
+- **Jazz G League rows.** `utah-jazz` holds two "West Valley City Night" rows about the Salt Lake City Stars' jersey (first 500 fans), each scoring 100.
+- **NHL theme rows that are giveaways.** Rows such as the Blackhawks centennial nights (a bobblehead for the first 8,000 fans) are typed `theme`, score 70 and are excluded from the best list by the giveaway filter.
+- **No-item giveaways.** 61 upcoming NBA and NHL giveaways reach 65 to 73 with no recognized item, through highlight plus limited quantity. Some are real items the scorer has no word for; some are labels ("90s Night").
+- **Item vocabulary gap.** Real items lost points when `signed` gained its word boundary because the scorer has no word for them: hoodie, puffer vest, mug, belt bag, tote bag, scarf, bobblecard, tribute card, cobija. Follow-up scorer change with its own all-league diff.
+- **Scorer fix 4.** Beanie and toque are not hats to the scorer (13 of 17 NBA and NHL beanie titles earn no item points).
+- **Scorer fix 5.** An item named in the description outranks nothing in the title; a title-first rule would stop description-only matches (41 of 51 NHL jersey matches).
+- **Scorer fix 6, sponsor capture.** The text fallback stores trailing words with the sponsor ("RONA First 8", "Modelo with TBA giveaway for first 2").
+- **Bare item titles.** The generic-title check exempts any title that names an item, so the Kraken row titled only "Bobblehead" takes no penalty and scores 98.
+- **Video selection, packages.** Unconfirmed whether `promo-video` `src/select.ts` filters NHL and NBA ticket-package rows.
+- **Video selection, playoff fixture.** The Whitecaps "Audi 2026 MLS Cup Playoffs" theme row sits at the 100th percentile of a two-row MLS week. Entity-model release.
+- **Homepage after a scoring run.** `/api/revalidate` rejects the bare root by design, so the rail picks up new scores on the homepage's six-hour window, not when the scan finishes.
+- **NBA and NHL retrospective.** `/best-promos` has no season record for NBA or NHL: its retrospective covers MLB, MLS and WNBA. In July, with no NBA or NHL rows ahead, the page shows the three-league record.
+- **JSON-LD location on NBA rows.** `getSchemaLocationsForTeams` finds no address for six NBA clubs (Celtics, Bulls, Pistons, Lakers, Raptors, Wizards), so their `SportsEvent` entries on `/best-promos` carry no `location` (15 of the first 50 in the dry-run preview). The renderer omits the field; it does not invent one.
+- **Jersey and signed false positives that remain.** Still typed jersey: "Jersey Mike's", "Jersey City", "Jersey Shore", "jersey retirement", "jersey no. 30". Still typed premium: "re-signed", "co-signed", "newly signed free agent". Fixes 1 to 3 covered only the named cases.
+- **Unflagged package twin.** Nashville, 2027-02-18: "Billy Strings Bobblehead" (95, "Ticket package includes a guaranteed Billy Strings bobblehead") is not flagged `ticketPackageRequired` and lists beside "Music City Billy Strings Bobblehead" (98).
+- **Copy between the web deploy and the score write.** For that interval `/team-rankings` says NBA and NHL promos are scored while their rows carry no score yet. The final-gate sequence keeps the interval short.
+- **Rail card titles (ux-review D1).** FIXED in `feature/discovery-links`: a long title steps down in size until it fits, on Archivo's measured character widths (`src/lib/stub-title.ts`). A title no size fits (one word wider than the 180px column at 16px) still falls to the clamp.
+- **Rail at 1280 (ux-review D5).** With eight cards the rail overflows at 1280 with no arrows and no scrollbar; wheel and keyboard scroll work. The Tonight rail has the same build.
+- **NBA game times (ux-review D7).** The NBA rows on the rail show a date and no game time; their promo pages have none either.
+- **Empty league chips (ux-review D8).** On `/best-promos` the MLB, MLS and WNBA chips return no rows while those leagues have nothing ahead, and the empty state suggests a wider date range even at "Rest of season".
+- **Team coverage.** NBA and NHL clubs with no scored rows on 2026-11-25: Knicks, Thunder, Utah (NHL). Withheld clubs are `active:false` in the pipeline's `team-configs/nba.js` and `team-configs/nhl.js`. If NBA and NHL teams are ever ranked, a club with no rows is listed as not ranked, never last.
+
+## 128. Deferred from feature/discovery-links (logged 2026-11-25)
+
+One line each.
+
+- **Venue hub sources map.** The `t-mobile-park` venueHubs doc has 2 of its 15 `sources` keys written as URLs (the Mariners ballpark guide and disability-access guide), so a field lookup can never match them. The reader logs `[venue-hub] sources map is partially inverted` on every read.
+- **Hub rail plain links.** On the league hubs' this-week cards the promo titles fire `this_week_card_tap` (and `promo_link_click` when they go to a promo page); the team name and the "more promo days this week" link are plain links and fire nothing, where the whole card used to count as one tap.
+- **Legacy nav.** The gate-off dark nav (`src/components/nav.tsx`) has no Events link; the footer still carries one there.
+- **Rivalry registry count.** The registry holds 32 matchup pages; the 33rd URL of the family is the index, whose title was already set from stored game days.
+- **Rivalry title, date and network.** The title carries neither. Both would come from the verified game fields, and neither fits 60 characters beside two school names; the description carries the verified date and kickoff.
+- **Hub rail, later days.** A team with promos on several days that week gets one card for its soonest day and a link reading "N more promo days this week" to its team page; the later days' promos are not listed on the hub.
+- **Events link between 768 and 859px.** The top bar has no room for a sixth item there ("My Teams" and "League hubs" wrap to two lines), so the Events link shows from 860px, from 980px while Playoffs or World Cup is in the bar, and from 1100px with both. Below 768 it is in the menu sheet; in between it is in the footer only.
+- **Hub JSON-LD.** A hub's ItemList still lists every slate row with its team-page URL (28 on /nba, 39 on /nhl on 2026-11-25) while the rail shows one card per team with promo-page links.
+- **Rivalry JSON-LD names.** The breadcrumb and SportsEvent names stay "{name} {season}" while the title and H1 lead with the schools; og:title and twitter:title are the heading plus the brand with no 60-character cap, as before.
+- **Bobblehead rows typed theme or kids.** The bobblehead page's upcoming list holds giveaways only. In the 2026 record 31 of 280 bobblehead rows are typed theme or kids, so next spring's upcoming list will be about a tenth shorter than the old rule would have made it.
+- **Hub ticket block id.** A hub card's ticket block carries the first promo's id even when the card lists several.
+- **Played rivalry game sold as upcoming (ux-review D1).** `/cfb/rivalries/florida-georgia` was played on 2026-10-31 and still reads "is Saturday, October 31, 2026", with ticket, hotel and parking links and no played state. The rivalry pages have no played state at all; the same will be true of every rivalry page after its game.
+- **Canonical promo links on hubs (ux-review D4).** Two rows for one game share a promo page, so "76ers Cup Games" links to the Rally Towel page and a hub card can hold two links to one URL.
+- **Bobblehead page layout shift (ux-review D7f).** CLS at 390 is 0.0593 on the upcoming list against 0.0294 on production's record.
+- **Bobblehead FAQ, MLB answers (ux-review D8).** "Which MLB team gives away the most bobbleheads?" and the weekend-timing answer describe MLB while the winter list is NBA and NHL; their claims about the Diamondbacks, Cubs and Braves are not derived from data.
+
+
+## 129. Deferred from feature/season-state (logged 2026-11-25)
+
+One line each.
+
+- **Events link with Playoffs or World Cup in the bar.** The top bar shows Events from 860px, from 980px while Playoffs or World Cup is also in the bar, and from 1100px with both. Between 768px and that width the link is in the footer only (ruling: keep as built).
+- **Schedule block on a page that names next season early.** A team page that has flipped to 2027 still shows the 2026 game schedule under its own 2026 heading; the games spine has no 2027 games yet. It moves on the day the lead-in opens.
+- **A club flips while its league is still playing.** The team rule is row-based: the Galaxy name 2027 although MLS 2026 runs to Dec 18. The hub rule is league-based, so /mls stays on 2026 until Dec 19.
+- **Venue page titles.** Per-venue titles still carry the hardcoded season ("Bag Policy 2026", `SEASON_YEAR` in `src/lib/venue-hub.ts`), including NBA and NHL arenas in 2026-27. Only the /venues index was reworded.
+- **Monster Jam stop past state.** Covered by a render test on a fixture; the first live case is Anaheim on Dec 19 and 20, 2026.
+- **Head and body gate the early label differently.** The head computes the label day for every league; the body only where the season scope is live. They agree today (every scope gate is open) and would differ if a gate were closed again.
+- **Postseason rows and the early label.** Rows flagged `isPostseason` are dropped before the team rule reads them, so a club still in a postseason whose only other upcoming rows are next season's would name next season.
+- **Rivalry index day.** The index tags "Played" on the site's Eastern day; the rivalry page flips on the venue's day, so a Pacific game can be tagged up to three hours before its page changes.
+- **Events hub lag.** /events/monster-jam revalidates daily and stop pages hourly, so the hub can keep "2026-27" for up to a day after the last December show.
+- **MLS home games constant.** `HOME_GAMES_BY_LEAGUE` says 17 for MLS, which will be wrong for the 2027 Sprint Season; the ratio sentence is suppressed on an early page and must be checked before MLS 2027 opens.
+- **Early page repeats its counts and mixes certainty.** With nothing completed, sentences read "11 giveaway nights, 11 still to come", and the three question blocks and one FAQ still read as season totals beside "announced so far" (D5, D6).
+- **"Still to come" label spacing on an early page.** The label sits flush against the hero's bottom edge at 390 and 768 (D8).
+- **Division rivals intro says "this season"** on a page naming next season (D9).
+- **Past promos count mismatch.** The team page says "All 114 past promos" and the archive page says "102 promotions already played" (D10, on production too).
+- **Played rivalry page has no result** and says played three times in the first screen; the sibling list on a rivalry page shows a played game with no mark (D11, D12).
+- **Hub FAQ names a this-week rail** that does not exist in the offseason (D14, on production too).
+
+## 130. Deferred from feature/counts-and-cta (logged 2026-11-25)
+
+One line each.
+
+- **"Verified" elsewhere.** /venues no longer says "verified" (43 of the 203 listed buildings meet the pipeline's current verification rule; the rest carry the flag from earlier seed passes). /about still says "the buildings we have verified", and per-venue pages and descriptions still use the word.
+- **Homepage venue total moved.** The hero's "Venue guides" stat and the `venue_count` analytics property now count the 203 listed buildings, not the 213 flagged ones; dashboards reading `venue_count` will see the step.
+- **Today tile and /promos/today.** The tile now prints the Tonight rail's pool, which includes postseason rows; the /promos/today board it links to builds its own list and can differ when postseason rows exist.
+- **Hub card mark is text only.** On a hub naming next season early, a published club's card reads "2027 promotions published"; the selector cannot filter to those clubs.
+- **Disclosure sentence is on by default.** The disclosure's TicketNetwork sentence is switched off for Ticketmaster-only clubs, eBay-only blocks, the event stop and promo or rivalry pages without a TicketNetwork link; the homepage, /best-promos and /playoffs keep it because their ticket cards load on interaction or sit in a panel.
+- **Daily board tiles at phone width.** On /promos/today below about 416px of row width the inline tiles show brand marks only, so neither reads "Get Tickets"; the resale line prints once under the page lede (ruling 2026-11-25).
+- **Per-date links share the primary's line.** On a promo page the small per-date "Get Tickets" links have no line of their own.
+- **The app is not covered.** The Flutter app's ticket buttons are outside this repo.
+- **/promos/today lede.** It says "15 games today have promotions" where there are 15 promos at 9 games (ux-review 2026-11-25; on production too).
+- **A canceled rivalry row has no marker.** It is never tagged "Played", and it shows its date with nothing saying it was canceled.
+- **Transit tile predicate.** The homepage transit tile counts raw transit data less suppressed buildings; the /venues index uses the page's own render rule. They agree today (103) by data, not by code.
+- **Team-page bytes in season.** The resale line adds about 170 bytes per prerendered game block; at the 35-block cap that is about 6 KB against the 950,000-byte cap. The live battery is the check.
+- **Event stop at 360px.** "12:00 PM" wraps on 12 rows at 8 stops with the "Get Tickets" button; by geometry production wraps the same rows.
+- **Two identical ticket cards.** On team pages the Ticketmaster and TicketNetwork cards both read "Get Tickets" and differ by logo and the line under the pair (ux-review 2026-11-25, D5; by ruling).
+- **Hub card name and subtitle run together for axe.** The two spans have no whitespace between them, so the cards still fail label-content-name-mismatch on every hub (on production too).
+- **No calendar on an early team page.** A page naming next season early shows no calendar until the schedule holds a game dated today or later (ruling 2026-11-25); the category chips go with it.
+
+## 131. Deferred from the final-gate sweep (logged 2026-11-25)
+
+One line each. From `docs/ux-review/2026-11-25-release-final.md` and the whole-release review.
+
+- **Daily board cards do not name the home team.** A card reads "Kitchen Apron, First 7,500 fans, VS FLAMES"; the homepage ticket sheet has the same gap.
+- **"TICKETS" pill.** The small pill on homepage promo cards and team-page rows reads "TICKETS", not "Get Tickets"; it opens the ticket pair and is not itself a ticket link.
+- **Tap targets under 44px added by the round.** "Stadium guide" (98x36), "Also on Ticketmaster" (133x21), and the TicketNetwork button in a stacked pair (43px tall).
+- **/best-promos retrospective disclosure.** The page prints the commission disclosure while its cards carry no outbound link.
+- **Past SportsEvent JSON-LD on /best-promos.** 50 entries, all past, all EventScheduled.
+- **Hub copy slips.** /mlb FAQ typo ("open any club full promotional schedule") and "Oakland Athletics" beside "Sutter Health Park, West Sacramento"; /nba FAQ says "card below" for cards above.
+- **Monster Jam Houston venue name.** Listed as "Reliant Stadium" (NRG Stadium since 2014).
+- **Rivalry copy.** "known as Okefenokee Oar" names the trophy as the rivalry; "Stadium guide" lands on a page whose H1 is the bag policy.
+- **Homepage hero stats at 390.** The four stats wrap two and two with mismatched columns.
+- **Contrast.** The "NIGHT" wordmark is 4.33:1 on every page; league chips on the homepage fall to 1.65:1.
+- **Promo page fan guide.** "usually 10,000 to 25,000" sits under "FIRST 8,000 FANS".
+- **Daily board time format.** One card prints "07:00 PM"; no time zone on board or homepage times.
+- **Team-scoped scan dispatch rescores the league.** The NHL and NBA workflows pass `--league` only to the scoring step.
+- **Legacy scorer.** `lib/scoring/score-team-from-firestore.js` has neither the package rule nor the NBA and NHL team-score withhold; its cron is disabled.
+- **/about is not in the nightly refresh list,** so its derived league sentence relies on its 24-hour window plus a visit.
+- **NFL, NHL and NBA hubs** do not carry the early copy or the published-club marks (first reachable for NFL after 2027-02-14).
+- **Scoring test skips without the pipeline checkout.** `scoring-weights.test.ts` proves nothing without `PROMO_PIPELINE_DIR`.
+

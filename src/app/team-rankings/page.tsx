@@ -13,6 +13,7 @@ import { teamDisplayName } from '@/lib/promo-helpers';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { siteYmd } from '@/lib/site-today';
+import { TEAM_RANKINGS_NBA_NHL_ANSWER } from '@/lib/scoring-weights';
 
 export const revalidate = 86400;
 
@@ -116,7 +117,7 @@ const FAQS = [
   {
     question: 'Why are NBA and NHL not on this ranking?',
     answer:
-      'The scoring layer rolled out for MLB, MLS, and WNBA first. NBA and NHL promo data exists in PromoNight but has not yet been processed through the structured-extraction pipeline this ranking depends on. Those leagues will join in a future release.',
+      TEAM_RANKINGS_NBA_NHL_ANSWER,
   },
   {
     question: 'What does variety bonus mean?',

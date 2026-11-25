@@ -49,6 +49,11 @@ function plusDays(ymd: string, n: number): string {
 export function buildHomeCategoryTiles(
   allFuture: PromoWithTeam[],
   todayYMD: string,
+  /** The Tonight rail's pool (HeroBuckets.tonightTotal). When given, the Today
+   *  tile prints it, so the tile and the rail's lede count one row set. The
+   *  tile used to count regular-season rows only while the rail also read
+   *  postseason rows, and the two could print different totals for one day. */
+  todayCount?: number,
 ): HomeCategoryTile[] {
   // /promos/this-week lists HIGHLIGHTED promos in getPromosInDateRange(today,
   // today+7), end-inclusive (this-week/page.tsx:38-40, data.ts:312).
@@ -125,6 +130,9 @@ export function buildHomeCategoryTiles(
   ];
 
   return defs
-    .map(({ match, ...tile }) => ({ ...tile, count: allFuture.filter(match).length }))
+    .map(({ match, ...tile }) => ({
+      ...tile,
+      count: tile.key === 'today' && typeof todayCount === 'number' ? todayCount : allFuture.filter(match).length,
+    }))
     .filter((t) => t.count > 0);
 }

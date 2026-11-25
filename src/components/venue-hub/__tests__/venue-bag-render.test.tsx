@@ -11,6 +11,7 @@
 //   3. Placement: the answer block is the first child of page-content and sits
 //      above the fact band and Next giveaways.
 //   4. A no-bag building publishes no "MAX BAG" chip and no size headline.
+import { withoutResaleNote } from './pre-resale-note';
 import { test, mock } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
@@ -41,8 +42,8 @@ test('BYTE IDENTITY: every ineligible building renders exactly what main rendere
     const b = BASELINE[h.slug];
     assert.ok(b, `${h.slug} has a baseline`);
     const html = await render(h);
-    assert.equal(Buffer.byteLength(html), b.htmlBytes, `${h.slug}: markup length moved`);
-    assert.equal(createHash('sha256').update(html).digest('hex'), b.htmlSha256, `${h.slug}: markup moved`);
+    assert.equal(Buffer.byteLength(withoutResaleNote(html)), b.htmlBytes, `${h.slug}: markup length moved`);
+    assert.equal(createHash('sha256').update(withoutResaleNote(html)).digest('hex'), b.htmlSha256, `${h.slug}: markup moved`);
     assert.equal(venueHubTitle(h, { hasVendors: false }), b.title, `${h.slug}: title moved`);
     assert.equal(venueHubDescription(h), b.description, `${h.slug}: description moved`);
   }

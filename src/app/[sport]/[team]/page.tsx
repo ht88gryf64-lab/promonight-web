@@ -47,6 +47,7 @@ import { isTitleTreatmentTeam, teamMetaTitle } from '@/lib/title-treatment';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { isSeasonScopeLive, resolveClaimMode } from '@/lib/season-scope';
 import { currentSeasonLabel } from '@/lib/season-label';
+import { teamLabelDay } from '@/lib/seasons/season-window';
 import { partitionTicketPackages, upcomingTicketPackages } from '@/lib/ticket-packages';
 import { RedesignTeamPage } from '@/components/redesign/RedesignTeamPage';
 import { ticketNetworkForGame } from '@/lib/affiliates';
@@ -94,7 +95,13 @@ export async function generateMetadata({
   // clock's year, which would flip every title at midnight on Jan 1 before the
   // new season's data exists; the label moves on the first day of the next
   // season's lead-in instead, by data, with no deploy.
-  const seasonWord = currentSeasonLabel(team.league);
+  //
+  // A club that has published next season's promotions and has nothing else
+  // ahead names THAT season here, early (teamLabelDay, ruling 2026-11-25): the
+  // title, the description's season word and the social titles all follow the
+  // one label day, the same day resolveClaimMode gives the page body.
+  const labelDay = teamLabelDay(team.league, todayYmd(), promos.filter((p) => isUpcomingPromo(p, todayYmd())).map((p) => p.date));
+  const seasonWord = currentSeasonLabel(team.league, labelDay);
   const displayName = teamDisplayName(team);
 
   // The promotional-schedule title (serp-targeting, ruling 2026-11-05), for all
@@ -104,7 +111,7 @@ export async function generateMetadata({
   // src/lib/title-treatment.ts. It retires the two title experiments for the
   // <title>; the hero subtitle (teamTitleSubtitle) and the theme-night lead of
   // the description below are unchanged by the same ruling.
-  const title = teamMetaTitle(team, displayName);
+  const title = teamMetaTitle(team, displayName, labelDay);
 
   // OG/Twitter titles match the rendered <title> byte for byte. The title no
   // longer carries the brand suffix, so neither do they.
@@ -476,6 +483,7 @@ export default async function TeamPage({
         venue={venue}
         promoCount={claimMode.kind === 'season' ? claimMode.scope.total : upcomingPromos.length}
         promoCounts={claimMode.kind === 'season' ? claimMode.scope.counts : upcomingCounts}
+        labelDay={claimMode.labelDay}
       />
 
       <section className="px-6 py-4">
@@ -652,7 +660,7 @@ export default async function TeamPage({
 
       <section className="py-6 px-6 border-t border-border-subtle">
         <div className="max-w-3xl mx-auto">
-          <AffiliateDisclosure />
+          <AffiliateDisclosure resale={ticketNetworkForGame(null, team)} />
         </div>
       </section>
 

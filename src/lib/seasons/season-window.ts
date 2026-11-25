@@ -172,6 +172,66 @@ export function labeledSeason(league: string, today: string = siteTodayYmd(), ta
   return ended.length > 0 ? ended[ended.length - 1] : ws[0];
 }
 
+// ── a season named early, by data (2026-11 fix round, ruling on item 2) ──────
+//
+// Between seasons a page names the season just played (labeledSeason). A club
+// may publish next season's promotions before that season's lead-in opens: on
+// 2026-11-25 the Giants page was titled 2026 over a body that said "42
+// promotional events still to come in 2027". So a page whose every upcoming
+// row is a row of the NEXT season names that season now, and the season just
+// played keeps its own "Completed 2026 promos" heading.
+//
+// It is expressed as a DAY, the day the page labels by: today for every page
+// that does not flip, and the first day of the next season's lead-in for one
+// that does. Every label function here already takes a day, so a flipped page
+// reads exactly as it will on the day the lead-in opens, and nothing else
+// about the clock moves: what is upcoming and what is past still turns on
+// the real today.
+
+const YMD = /^\d{4}-\d{2}-\d{2}$/;
+
+/** The next season's window on `today`: the first one that starts after
+ *  today and whose lead-in has not opened. Null when there is none in the
+ *  table, or when today already sits in a lead-in (the page has flipped). */
+function seasonNotYetOpen(league: string, today: string, table: SeasonTable): SeasonWindow | null {
+  return leagueWindows(league, table).find((w) => leadInStart(w) > today) ?? null;
+}
+
+/**
+ * The day a TEAM page labels its season by. `upcomingDates` are the dates of
+ * the team's upcoming promotions (visible rows dated today or later).
+ * It is the next season's lead-in day when the team has upcoming rows and
+ * every one of them belongs to the next season; otherwise today. A team with
+ * no upcoming rows, or with any upcoming row of the season in play, does not
+ * flip (the Twins, with nothing ahead, stay on 2026).
+ */
+export function teamLabelDay(league: string, today: string, upcomingDates: readonly string[], table: SeasonTable = SEASON_TABLE): string {
+  const next = seasonNotYetOpen(league, today, table);
+  if (!next) return today;
+  const ahead = upcomingDates.filter((d) => typeof d === 'string' && YMD.test(d) && d >= today);
+  if (ahead.length === 0) return today;
+  if (!ahead.every((d) => seasonOfDate(league, d, table)?.season === next.season)) return today;
+  return leadInStart(next);
+}
+
+/**
+ * The day a LEAGUE HUB labels its season by. League level: it flips only once
+ * the season the hub names has ENDED (no window is in play or in its lead-in)
+ * and at least one club has published a next-season promotion.
+ */
+export function hubLabelDay(league: string, today: string, clubsWithNextSeasonRows: number, table: SeasonTable = SEASON_TABLE): string {
+  const ws = leagueWindows(league, table);
+  if (ws.some((w) => leadInStart(w) <= today && today <= w.end)) return today;
+  const next = seasonNotYetOpen(league, today, table);
+  return next && clubsWithNextSeasonRows > 0 ? leadInStart(next) : today;
+}
+
+/** The season a hub or team page would flip TO on `today`, or null. For
+ *  counting which rows are "next season's". */
+export function nextSeasonNotYetOpen(league: string, today: string = siteTodayYmd(), table: SeasonTable = SEASON_TABLE): SeasonWindow | null {
+  return seasonNotYetOpen(league, today, table);
+}
+
 /** The printed name of a season: its key, except "2026" on NHL and NBA reads
  *  "2026-27". A key already written as a span ("2027-28") prints as is. */
 export function seasonName(w: Pick<SeasonWindow, 'league' | 'season'>): string {

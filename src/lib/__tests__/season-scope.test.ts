@@ -236,9 +236,40 @@ describe('generateTeamFAQs scope labelling', () => {
 describe('the named season must hold every upcoming row (review 2026-11-05)', () => {
   // The Giants shape: a finished 2026 season and published 2027 giveaways.
   const giants = [promo('2026-05-01'), promo('2026-09-20'), promo('2027-03-27'), promo('2027-04-11', { type: 'kids' })];
-  it('between seasons, with next season already listed: no season claim', () => {
+  it('between seasons, with next season already listed: the scope by TODAY\'s label is still nothing', () => {
+    // Labelled by today (2026), the page would pair "the 2026 season" with a
+    // list of 2027 rows still to come. That reading stays refused.
     assert.equal(resolveSeasonScope(giants, 'MLB', '2026-11-05'), null);
-    assert.deepEqual(resolveClaimMode(giants, 'MLB', '2026-11-05'), { kind: 'remaining' });
+  });
+  it('and the claim names the NEXT season instead (ruling 2026-11-25): every upcoming row is a 2027 row', () => {
+    const claim = resolveClaimMode(giants, 'MLB', '2026-11-05');
+    assert.equal(claim.kind, 'season');
+    assert.equal(claim.labelDay, '2027-02-07', 'the first day of the MLB 2027 lead-in (2027-03-24 less 45 days)');
+    if (claim.kind !== 'season') return;
+    assert.equal(claim.scope.label, '2027');
+    assert.equal(claim.scope.year, 2027);
+    assert.deepEqual(claim.scope.promos.map((p) => p.date), ['2027-03-27', '2027-04-11'], 'the 2027 rows only; 2026 stays in the archive');
+    assert.deepEqual([claim.scope.total, claim.scope.upcomingCount, claim.scope.completedCount], [2, 2, 0]);
+    assert.equal(seasonClaimSentence(claim.scope), '2 promotions in the 2027 season, all still to come');
+    // It is the very scope the page will have on the day the lead-in opens.
+    assert.deepEqual(claim.scope.promos, resolveSeasonScope(giants, 'MLB', '2027-02-07')!.promos);
+  });
+  it('a club with nothing ahead does not flip: the Twins keep 2026 and carry no labelDay', () => {
+    const twins = [promo('2026-05-01'), promo('2026-09-20')];
+    const claim = resolveClaimMode(twins, 'MLB', '2026-11-05');
+    assert.equal(claim.kind, 'season');
+    assert.equal('labelDay' in claim, false, 'absent, not undefined: the serialized claim is what it always was');
+    if (claim.kind === 'season') assert.equal(claim.scope.label, '2026');
+  });
+  it('a club with ANY upcoming row of the season in play does not flip', () => {
+    // MLS 2026 runs to 2026-12-18: a playoff-dated row keeps the page on 2026.
+    const fire = [promo('2026-06-01'), promo('2026-12-02'), promo('2027-03-06')];
+    assert.equal('labelDay' in resolveClaimMode(fire, 'MLS', '2026-11-25'), false);
+    // The Galaxy: nothing left in 2026, ten rows in 2027. It flips although MLS 2026 is still being played.
+    const galaxy = [promo('2026-06-01'), promo('2027-02-20'), promo('2027-03-06')];
+    const g = resolveClaimMode(galaxy, 'MLS', '2026-11-25');
+    assert.equal(g.labelDay, '2027-01-05');
+    assert.equal(g.kind === 'season' && g.scope.label, '2027');
   });
   it('from the first day of the lead-in the listed rows ARE the named season', () => {
     const scope = resolveSeasonScope(giants, 'MLB', '2027-02-07')!;

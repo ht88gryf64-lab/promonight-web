@@ -136,7 +136,7 @@ export function PastBobbleheadsSection({ promos }: { promos: PromoWithTeam[] }) 
           and renders nothing when NEXT_PUBLIC_EBAY_CAMPID is unset, which is
           every environment except production. Without that conjunct the preview
           build shows a commission disclosure over zero commission links. */}
-      {lifted.length > 0 && isEbayResaleActive() && <AffiliateDisclosure className="mt-8" />}
+      {lifted.length > 0 && isEbayResaleActive() && <AffiliateDisclosure className="mt-8" resale={false} />}
     </section>
   );
 }

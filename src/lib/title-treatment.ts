@@ -77,10 +77,13 @@ export function isTitleTreatmentTeam(team: Pick<Team, 'id'>): boolean {
  * hero already prints the team name as its <h1>, so repeating it in the
  * subtitle would read as a stutter.
  */
-export function teamTitleSubtitle(team: Pick<Team, 'id' | 'league'>): string {
+// `labelDay`, on every function below that prints the season: the day the
+// page labels by when it has flipped early to the next season (ClaimMode
+// .labelDay, src/lib/season-scope.ts). Absent, the season is today's.
+export function teamTitleSubtitle(team: Pick<Team, 'id' | 'league'>, labelDay?: string): string {
   return isTitleTreatmentTeam(team)
-    ? `Giveaways & Theme Nights ${currentSeasonLabel(team.league)}`
-    : `Promos & Giveaways ${titleSeasonWord(team)}`;
+    ? `Giveaways & Theme Nights ${currentSeasonLabel(team.league, labelDay)}`
+    : `Promos & Giveaways ${titleSeasonWord(team, labelDay)}`;
 }
 
 /**
@@ -88,8 +91,8 @@ export function teamTitleSubtitle(team: Pick<Team, 'id' | 'league'>): string {
  * calendar years, and "2026" everywhere else, both from the windows. The title
  * experiments never touch NHL or NBA: both arms are MLB and NFL clubs.
  */
-function titleSeasonWord(team: Pick<Team, 'league'>): string {
-  return currentSeasonLabel(team.league);
+function titleSeasonWord(team: Pick<Team, 'league'>, labelDay?: string): string {
+  return currentSeasonLabel(team.league, labelDay);
 }
 
 /**
@@ -223,8 +226,8 @@ export const TEAM_TITLE_MAX = 60;
 
 /** The four candidates, in cascade order. `name` is the stored nickname
  *  ("Capitals"); a team with none skips the nickname tiers. */
-export function teamTitleCandidates(team: Pick<Team, 'league' | 'name'>, displayName: string): string[] {
-  const season = currentSeasonLabel(team.league);
+export function teamTitleCandidates(team: Pick<Team, 'league' | 'name'>, displayName: string, labelDay?: string): string[] {
+  const season = currentSeasonLabel(team.league, labelDay);
   const nick = team.name?.trim() ?? '';
   const out: string[] = [];
   out.push(`${displayName} Promotional Schedule & Giveaways ${season}`);
@@ -239,8 +242,8 @@ export function teamTitleCandidates(team: Pick<Team, 'league' | 'name'>, display
  * the og:title, twitter:title and the JSON-LD WebPage name, which follow it
  * by the same ruling.
  */
-export function teamMetaTitle(team: Pick<Team, 'id' | 'league' | 'name'>, displayName: string): string {
-  const c = teamTitleCandidates(team, displayName);
+export function teamMetaTitle(team: Pick<Team, 'id' | 'league' | 'name'>, displayName: string, labelDay?: string): string {
+  const c = teamTitleCandidates(team, displayName, labelDay);
   return c.find((t) => t.length <= TEAM_TITLE_MAX) ?? c[c.length - 1];
 }
 

@@ -67,6 +67,9 @@ export function AuthorityStats({
   // denominator with it. Sentences 2 and 3 describe the shape of whatever
   // population is in hand, so they are rephrased rather than dropped.
   const season = claim.kind === 'season' ? claim.scope : null;
+  // A season named early is a partial announcement: no per-game ratio and no
+  // share of home dates, which would divide a few clubs' early rows by a full season.
+  const early = !!claim.labelDay;
   const held = claim.kind === 'held';
   const stats = season ? season.promos : promos;
   const counts = season ? season.counts : promoCounts;
@@ -82,12 +85,12 @@ export function AuthorityStats({
   // 1. Promos per home game ratio. Season populations only, except under the
   //    hold, which reproduces the mixed-scope original on purpose.
   const ratio =
-    (season || held) && homeGames > 0 ? (stats.length / homeGames).toFixed(1) : null;
+    !early && (season || held) && homeGames > 0 ? (stats.length / homeGames).toFixed(1) : null;
 
   // 2. Percent of distinct home dates with at least one promo. Same rule.
   const distinctPromoDates = new Set(stats.map((p) => p.date)).size;
   const pctHomeGames =
-    (season || held) && homeGames > 0
+    !early && (season || held) && homeGames > 0
       ? Math.min(Math.round((distinctPromoDates / homeGames) * 100), 100)
       : null;
 
@@ -146,6 +149,10 @@ export function AuthorityStats({
         `${season.upcomingCount} of those ${season.total} events ${season.upcomingCount === 1 ? 'is' : 'are'} still to come.`,
       );
     }
+  } else if (early && season) {
+    sentences.push(
+      `The ${teamName} have announced ${stats.length} promotional events so far for the ${season.label} season.`,
+    );
   } else if (season || held) {
     sentences.push(
       `The ${teamName} have ${stats.length} promotional events scheduled ${period}.`,

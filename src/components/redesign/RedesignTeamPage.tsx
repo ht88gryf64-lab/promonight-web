@@ -1,3 +1,4 @@
+import { ticketNetworkForGame } from '@/lib/affiliates';
 import type { Team, Venue, Promo, PromoType, PlayoffPromo } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 import type { PlayoffFAQContext, TeamFaqCoverage } from '@/lib/promo-helpers';
@@ -247,7 +248,13 @@ export function RedesignTeamPage({
   // The season slot's one block: the schedule where it supersedes the
   // calendar, the calendar everywhere else. Built here so the two branches of
   // the wrapper below can hold the same element.
-  const seasonBlock =
+  // A PAGE NAMING NEXT SEASON EARLY WITH NO GAME DATES YET HAS NO CALENDAR
+  // (ruling 2026-11-25). The calendar's days come from the game schedule; with
+  // none ahead it is a month of disabled days over a list of real promos. The
+  // promo list below stays. The calendar returns by itself on the first render
+  // after the schedule holds a game dated today or later.
+  const hideCalendar = !!claim.labelDay && !(gameContexts ?? []).some((c) => c.game.date >= today);
+  const seasonBlock = hideCalendar ? null :
     showSchedule && gameContexts ? (
       // A server component: its props are not serialized, so a null statusLine
       // leaves MLB and NFL output exactly as it was.
@@ -258,6 +265,10 @@ export function RedesignTeamPage({
         promoCounts={upcomingCounts}
         seasonScoped={!!seasonScope}
         homeOnlyPrerender={scopeLive}
+        // Next season named early: open the calendar on the first upcoming promo's month.
+        {...(claim.labelDay && upcomingPromos.length > 0
+          ? { openOn: upcomingPromos.map((p) => p.date).sort()[0] }
+          : {})}
         teamName={displayName}
         teamSlug={team.id}
         sport={team.league}
@@ -296,6 +307,7 @@ export function RedesignTeamPage({
         <PromoList
           league={team.league}
           today={today}
+          labelDay={claim.labelDay}
           promos={promos}
           teamSlug={team.id}
           teamName={displayName}
@@ -368,7 +380,7 @@ export function RedesignTeamPage({
         tint={team.primaryColor}
         eyebrow={eyebrow}
         title={displayName.toUpperCase()}
-        subtitle={teamTitleSubtitle(team)}
+        subtitle={teamTitleSubtitle(team, claim.labelDay)}
         venueLine={venue?.name ?? undefined}
         scoreboard={
           <StatScoreboard
@@ -377,9 +389,11 @@ export function RedesignTeamPage({
             // schedule list prints, from the same helper, so the tile and the
             // list cannot disagree. Was the raw doc count, which read 168 on
             // the Braves (3 Wild Card games, 3 postponed originals).
-            gamesCount={regularGames?.length}
+            // Not on a page naming next season early: these are this season's
+            // games, and the tile would sit under next season's label.
+            gamesCount={claim.labelDay ? undefined : regularGames?.length}
             {...(isSplitSeasonLeague(team.league) ? { gamesLabel: 'Scheduled games' } : {})}
-            note={seasonScope ? seasonClaimSentence(seasonScope) : undefined}
+            note={seasonScope ? seasonClaimSentence(seasonScope, !!claim.labelDay) : undefined}
           />
         }
       />
@@ -542,9 +556,9 @@ export function RedesignTeamPage({
                 {postseason}
                 {seasonBlock}
               </div>
-            ) : (
+            ) : seasonBlock ? (
               <div className={`rd-weave-item ${showSchedule ? 'order-[11]' : 'order-[10]'}`}>{seasonBlock}</div>
-            )}
+            ) : null}
 
             {/* Rivals, zero-promo mount: directly under the schedule. */}
             {hasNoUpcoming ? rivalsBlock : null}
@@ -665,7 +679,8 @@ export function RedesignTeamPage({
 
       {/* Fine print — minimal treatment in the cream flow (reads fine at #444). */}
       <div className="mx-auto max-w-6xl px-6 pb-8">
-        <AffiliateDisclosure className="text-center" />
+        {/* No TicketNetwork sentence for a club TicketNetwork lists no home events for. */}
+        <AffiliateDisclosure className="text-center" resale={ticketNetworkForGame(null, team)} />
       </div>
 
       <div className="mx-auto max-w-6xl px-6 py-4">

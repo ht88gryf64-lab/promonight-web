@@ -9,6 +9,7 @@
 // to it, exactly as toVenueHub does to the raw doc. That is faithful for these
 // fields: publishedView only nulls unsourced values, and a hold nulls the value
 // and drops its provenance, so the order of the two does not matter.
+import { withoutResaleNote } from './pre-resale-note';
 import { test, mock } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
@@ -159,8 +160,8 @@ test('UNCHANGED: every building without a hold renders byte-identically to main 
     assert.equal(withBagHolds(h.slug, h as unknown as Record<string, unknown>), h as unknown, `${h.slug}: no hold, same object`);
     const html = await render(h);
     const b = MAIN[h.slug];
-    assert.equal(Buffer.byteLength(html), b.htmlBytes, `${h.slug}: markup length moved`);
-    assert.equal(createHash('sha256').update(html).digest('hex'), b.htmlSha256, `${h.slug}: markup moved`);
+    assert.equal(Buffer.byteLength(withoutResaleNote(html)), b.htmlBytes, `${h.slug}: markup length moved`);
+    assert.equal(createHash('sha256').update(withoutResaleNote(html)).digest('hex'), b.htmlSha256, `${h.slug}: markup moved`);
     n++;
   }
   assert.equal(n, 216, '223 buildings less the 7 held buildings (8 holds)');

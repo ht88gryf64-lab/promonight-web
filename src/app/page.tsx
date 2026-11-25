@@ -319,7 +319,7 @@ export default async function HomePage() {
         heroBuckets={heroBuckets}
         weekPromos={weekPromos}
         bestPromos={pickBestStubPromos(allFuture, 8, inCurrentSeason)}
-        categoryTiles={buildHomeCategoryTiles(allFuture, today)}
+        categoryTiles={buildHomeCategoryTiles(allFuture, today, heroBuckets.tonightTotal)}
         teamsForGrid={teamsForGrid}
         teamPromoCounts={teamPromoCounts}
         leagueOrder={deriveLeagueOrder(allFuture)}
@@ -331,7 +331,7 @@ export default async function HomePage() {
           { value: promoCount.toLocaleString(), label: 'Promos tracked' },
           { value: String(allTeams.length), label: 'Teams' },
           { value: String(homepageCounts.leagueCount), label: 'Leagues' },
-          { value: String(venueCounts.verifiedTotal), label: 'Venue guides' },
+          { value: String(venueCounts.guideTotal), label: 'Venue guides' },
         ]}
         counts={homepageCounts}
         resolvedContexts={resolvedContexts}

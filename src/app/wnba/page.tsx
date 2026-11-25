@@ -17,7 +17,8 @@ import { getVenueLinksForTeams } from '@/lib/venue-hub';
 import { getPlayoffsInboundOrNone } from '@/lib/postseason/data';
 import { leagueCard, leagueFinalCard, leagueHeroLine } from '@/lib/postseason/inbound';
 import { LeagueFinalBracketCard, LeaguePlayoffsCard, LeaguePlayoffsHeroLine } from '@/components/playoffs/inbound/LeaguePlayoffsCard';
-import { seasonLabel } from '@/lib/seasons/season-window';
+import { getLeagueHubSeason } from '@/lib/data';
+import { HubSeasonNote } from '@/components/hub/HubSeasonNote';
 
 // League hub accent (house palette, mirrors LEAGUE_HUB_REGISTRY WNBA entry).
 const ACCENT = '#c9581f';
@@ -41,17 +42,22 @@ const HUB_URL = 'https://www.getpromonight.com/wnba';
 // it moves on the first day of the next season's lead-in without a deploy.
 // Never new Date().getFullYear(), which would flip the copy at midnight on
 // Jan 1, before the new season's data exists.
-function hubCopy() {
-  const YEAR = seasonLabel('WNBA');
+// `early`: the hub names next season before it opens, while only some clubs
+// have published. The copy then promises no full schedule.
+function hubCopy(YEAR: string, early = false) {
   return {
     YEAR,
     TITLE: `WNBA Promotions & Giveaways ${YEAR}`,
-    DESCRIPTION: `Every WNBA team's ${YEAR} promo schedule in one place: theme nights, jersey giveaways, bobblehead nights, and more across all 15 teams, grouped by conference and refreshed through the season.`,
+    DESCRIPTION: early
+      ? `WNBA ${YEAR} promo schedules as teams announce them: theme nights, jersey giveaways, bobblehead nights, and more, with all 15 teams grouped by conference.`
+      : `Every WNBA team's ${YEAR} promo schedule in one place: theme nights, jersey giveaways, bobblehead nights, and more across all 15 teams, grouped by conference and refreshed through the season.`,
   };
 }
 
-export function generateMetadata(): Metadata {
-  const { TITLE, DESCRIPTION } = hubCopy();
+export async function generateMetadata(): Promise<Metadata> {
+  // The season the hub names: the labelled one, or the next one early once
+  // this season has ended and a club has published (getLeagueHubSeason).
+  const { TITLE, DESCRIPTION } = hubCopy(...(await getLeagueHubSeason('WNBA').then((x) => [x.label, x.early] as const)));
   return {
     title: TITLE,
     description: DESCRIPTION,
@@ -90,7 +96,8 @@ const FAQS: HubFaqItem[] = [
 
 
 export default async function WnbaHubPage() {
-  const { YEAR, TITLE, DESCRIPTION } = hubCopy();
+  const hubSeason = await getLeagueHubSeason('WNBA');
+  const { YEAR, TITLE, DESCRIPTION } = hubCopy(hubSeason.label, hubSeason.early);
   const [slate, stats, conferences, today] = await Promise.all([
     getLeagueSlate('WNBA'),
     getLeagueHubStats('WNBA'),
@@ -137,7 +144,7 @@ export default async function WnbaHubPage() {
         subtitle="Theme nights, jersey giveaways and bobbleheads across the 15 WNBA teams, grouped by conference."
         freshness="Rechecked weekly in season and updated as clubs announce promotions."
         accent={ACCENT}
-        notice={heroLine ? <LeaguePlayoffsHeroLine line={heroLine} surface="web_wnba_hub" /> : undefined}
+        notice={heroLine ? <LeaguePlayoffsHeroLine line={heroLine} surface="web_wnba_hub" /> : hubSeason.note ? <HubSeasonNote text={hubSeason.note} /> : undefined}
       >
         <HubStatBar stats={stats} leagueLabel="WNBA" />
       </HubHero>
@@ -184,7 +191,12 @@ export default async function WnbaHubPage() {
           sectionId="wnba-browse-team"
           surface="web_wnba_hub_team_card"
           collection="wnba_hub"
-          intro={`All 15 WNBA teams by conference. Open any team for its full ${YEAR} promotional schedule.`}
+          // On a hub naming next season early, the cards of the clubs that
+          // have published say so; the rest keep the default line.
+          {...(hubSeason.early
+            ? { subtitleByTeamId: Object.fromEntries(hubSeason.publishedTeamIds.map((id) => [id, `${hubSeason.label} promotions published`])) }
+            : {})}
+          intro={hubSeason.early ? 'All 15 WNBA teams by conference. Open any team for its promotional schedule.' : `All 15 WNBA teams by conference. Open any team for its full ${YEAR} promotional schedule.`}
           selectorLabel="Filter teams by conference"
           allLabel="All teams"
         />

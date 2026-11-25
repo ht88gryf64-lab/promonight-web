@@ -15,6 +15,10 @@ export interface HeroBuckets {
   // True when Tonight has 5+ promos and other buckets are intentionally hidden
   // in favor of a "More upcoming" link to the dedicated this-week page.
   collapsedToTonight: boolean;
+  /** Every promo dated today in the window, before the cap: the pool `tonight`
+   *  is drawn from. The Tonight lede states it whenever the rail shows fewer
+   *  ("8 of 15"), and the homepage Today tile prints the same number. */
+  tonightTotal: number;
 }
 
 const TOTAL_CAP = 8;
@@ -92,6 +96,13 @@ function orderByVariety(
 // the upcoming weekend (excluding today). Coming Up = next 7 days minus
 // tonight + weekend. If Tonight has 5+ promos, only Tonight is rendered and a
 // "More upcoming" link directs traffic to /promos/this-week.
+/** The Tonight rail's lede. States the pool whenever the rail is capped, so
+ *  "8 promos" is never printed over a day that has 15. */
+export function tonightLede(shown: number, total: number): string {
+  if (total > shown) return `${shown} of ${total} promos at games starting today.`;
+  return `${shown} promo${shown === 1 ? '' : 's'} at games starting today.`;
+}
+
 export function pickHeroBuckets(
   windowPromos: PromoWithTeam[],
   todayYMD: string,
@@ -120,6 +131,7 @@ export function pickHeroBuckets(
       weekend: [],
       comingUp: [],
       collapsedToTonight: true,
+      tonightTotal: tonightPool.length,
     };
   }
 
@@ -129,7 +141,7 @@ export function pickHeroBuckets(
   remaining -= weekend.length;
   const comingUp = orderByVariety(comingUpPool, Math.max(0, remaining));
 
-  return { tonight, weekend, comingUp, collapsedToTonight: false };
+  return { tonight, weekend, comingUp, collapsedToTonight: false, tonightTotal: tonightPool.length };
 }
 
 function formatDateParts(dateStr: string) {

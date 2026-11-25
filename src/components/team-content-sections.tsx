@@ -88,10 +88,10 @@ export function TeamContentSections({
   const year: string | number = isSplitSeasonLeague(team.league)
     ? season
       ? season.label
-      : currentSeasonLabel(team.league)
+      : currentSeasonLabel(team.league, claim.labelDay)
     : season
       ? season.year
-      : seasonStartYear(team.league);
+      : seasonStartYear(team.league, claim.labelDay);
   const fullName = teamDisplayName(team);
   const venueName = venue?.name || 'their home stadium';
 

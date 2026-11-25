@@ -5,15 +5,17 @@ import { normalizeSport } from '@/lib/analytics';
 import { categoryForPromo } from '@/components/redesign/categories';
 import { teamDisplayName, synthPromoId, promoAnchorId, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { formatClock } from '@/components/promos-today/helpers';
-import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
+import { HubPromoLink } from './HubPromoLink';
+import { promoPageHref } from '@/lib/promo-page-href';
 
 // Persistent per-league "today's promos" module for a league hub. Data-driven off
 // getLeagueTodayPromos(league) — the SAME "promos dated today for league X" query
 // the /promos/today page uses — so a future league's hub inherits it with no new
 // query logic. Unlike HubThisWeek it NEVER returns null: it renders that league's
 // today promos, or a compact "no promos today" line that still points at
-// /promos/today. Cards deep-link to the team page promo anchor, matching the
-// today board.
+// /promos/today. Each card links to the promo's own page (promoPageHref), or,
+// for a promo without one, to its row on the team page, the same fallback the
+// today board's cards use (TodayPromoCard).
 //
 // Tap tracking reuses `this_week_card_tap` (a hub promo-card tap) with the hub's
 // BASE surface (e.g. web_mlb_hub) so it stays distinguishable from the this-week
@@ -79,12 +81,13 @@ export function HubTodayPromos({
         {slate.map((p) => {
           const cat = categoryForPromo(p);
           const clock = formatClock(promoDisplayTime(p));
+          const pageHref = promoPageHref(p);
           return (
-            <TrackedTapLink
+            <HubPromoLink
               key={`${p.team.id}-${p.date}-${p.title}`}
-              href={`/${p.team.sportSlug}/${p.team.id}#promo-${promoAnchorId(p)}`}
-              trackEvent="this_week_card_tap"
-              trackProps={{
+              href={pageHref ?? `/${p.team.sportSlug}/${p.team.id}#promo-${promoAnchorId(p)}`}
+              toPromoPage={pageHref !== null}
+              tap={{
                 surface,
                 team_id: p.team.id,
                 sport: normalizeSport(p.team.league),
@@ -110,7 +113,7 @@ export function HubTodayPromos({
                 {teamDisplayName(p.team)}
                 {clock ? <span className="text-rd-ink-faint"> · {clock}</span> : null}
               </div>
-            </TrackedTapLink>
+            </HubPromoLink>
           );
         })}
       </div>

@@ -59,7 +59,7 @@ const offersUrl = (html: string) => eventOffers(html)[0]?.[1] ?? null;
 
 /** The CTA block: the <section> that holds "Get tickets". */
 function ctaBlock(html: string): string {
-  const at = html.indexOf('>Get tickets</a>');
+  const at = html.indexOf('>Get Tickets</a>');
   assert.ok(at >= 0, 'a Get tickets anchor');
   const open = html.lastIndexOf('<section', at);
   return html.slice(open, html.indexOf('</section>', at) + '</section>'.length);
@@ -71,13 +71,13 @@ test('package page: the disclosure and the team site link sit inside the CTA blo
   const html = render([row({ tnEventUrl: BRUINS, ticketPackageRequired: true, ticketPackageName: 'Original Six Package', sourceUrl: TEAM_SITE })]);
   const cta = ctaBlock(html);
   assert.ok(cta.includes(PACKAGE_CTA_DISCLOSURE), 'disclosure in the CTA block');
-  assert.ok(cta.indexOf(PACKAGE_CTA_DISCLOSURE) > cta.indexOf('>Get tickets</a>'), 'under the CTA');
+  assert.ok(cta.indexOf(PACKAGE_CTA_DISCLOSURE) > cta.indexOf('>Get Tickets</a>'), 'under the CTA');
   assert.ok(cta.indexOf(PACKAGE_CTA_DISCLOSURE) < cta.indexOf('>Also on Ticketmaster</a>'), 'before the secondary link');
   assert.equal(anchor(html, PACKAGE_SOURCE_LINK_LABEL), TEAM_SITE, 'the stored URL exactly, no affiliate parameters');
   assert.match(cta, new RegExp(`<a href="${TEAM_SITE.replace(/[./]/g, '\\$&')}" target="_blank" rel="noopener nofollow"`));
   // Get tickets is unchanged: TicketNetwork, subId1 and subId3 exactly as before, no subId2.
-  assert.equal(anchor(html, 'Get tickets'), tn(BRUINS));
-  assert.equal(new URL(anchor(html, 'Get tickets')).searchParams.get('subId2'), null);
+  assert.equal(anchor(html, 'Get Tickets'), tn(BRUINS));
+  assert.equal(new URL(anchor(html, 'Get Tickets')).searchParams.get('subId2'), null);
   // The card line still says it, and the disclosure says the same thing.
   assert.ok(html.includes(TICKET_PACKAGE_ROW_NOTE));
 });
@@ -96,7 +96,7 @@ test('non-package page: no disclosure, and the CTA block is exactly the package 
   assert.ok(!plain.includes(PACKAGE_CTA_DISCLOSURE));
   assert.ok(!plain.includes('data-package-disclosure'));
   assert.equal(anchors(plain, PACKAGE_SOURCE_LINK_LABEL), 0);
-  assert.equal(anchor(plain, 'Get tickets'), tn(BRUINS));
+  assert.equal(anchor(plain, 'Get Tickets'), tn(BRUINS));
   // The only CTA difference a package row makes is the disclosure block: the
   // rest of the block (Get tickets, Share, Also on Ticketmaster, parking and
   // hotels, every href and attribute) is byte for byte the same.

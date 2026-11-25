@@ -758,7 +758,7 @@ export const getVenueIndexEntries = cache(async (): Promise<VenueIndexEntry[]> =
 });
 
 /** Per-topic venue coverage counts for the redesigned homepage's gameday
- *  utility grid. Each count = verified buildings whose hub page actually
+ *  utility grid. Each count = listed buildings (above the index floor) whose hub page actually
  *  renders that section: bag/gates/transit mirror the hasBag/hasGates/
  *  hasTransit predicates in buildVenueDescription below, parking mirrors the
  *  narrower hasParkingData gate (see the inline note). If those predicates
@@ -771,18 +771,24 @@ export interface VenueUtilityCounts {
   bag: number;
   transit: number;
   gates: number;
-  /** Verified buildings total (the honest "venue guides" population). */
-  verifiedTotal: number;
+  /** Buildings above the index floor: exactly the population /venues lists
+   *  and the sitemap carries (venueHubIsIndexable). It was every verified
+   *  building, which counted guides /venues does not list, so the homepage
+   *  hero could print a larger total than the page it links to. */
+  guideTotal: number;
 }
 
 export const getVenueUtilityCounts = cache(async (): Promise<VenueUtilityCounts> => {
   const [hubDocs, { gateSlugs }] = await Promise.all([loadVenueHubDocs(), loadTenants()]);
 
-  const counts: VenueUtilityCounts = { parking: 0, bag: 0, transit: 0, gates: 0, verifiedTotal: 0 };
+  const counts: VenueUtilityCounts = { parking: 0, bag: 0, transit: 0, gates: 0, guideTotal: 0 };
   for (const doc of hubDocs) {
     const d = doc.data;
-    if (d.verified !== true) continue;
-    counts.verifiedTotal++;
+    // THE ONE POPULATION: the index floor, the same call getVenueIndexEntries
+    // and the sitemap make. Every topic count below is a subset of it, so no
+    // tile can exceed what /venues lists.
+    if (!venueHubIsIndexable(readIndexFloorFields(d))) continue;
+    counts.guideTotal++;
 
     // Deliberately the NARROW gate (hasParkingData, VenueHubView.tsx:206):
     // published lot facts or an official lot map. The wider hasParking in

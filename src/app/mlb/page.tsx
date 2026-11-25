@@ -17,7 +17,8 @@ import { getVenueLinksForTeams } from '@/lib/venue-hub';
 import { getPlayoffsInboundOrNone } from '@/lib/postseason/data';
 import { leagueCard, leagueFinalCard, leagueHeroLine } from '@/lib/postseason/inbound';
 import { LeagueFinalBracketCard, LeaguePlayoffsCard, LeaguePlayoffsHeroLine } from '@/components/playoffs/inbound/LeaguePlayoffsCard';
-import { seasonLabel } from '@/lib/seasons/season-window';
+import { getLeagueHubSeason } from '@/lib/data';
+import { HubSeasonNote } from '@/components/hub/HubSeasonNote';
 
 // League hub accent (house palette, mirrors LEAGUE_HUB_REGISTRY MLB entry).
 const ACCENT = '#7c4a3a';
@@ -41,17 +42,22 @@ const HUB_URL = 'https://www.getpromonight.com/mlb';
 // it moves on the first day of the next season's lead-in without a deploy.
 // Never new Date().getFullYear(), which would flip the copy at midnight on
 // Jan 1, before the new season's data exists.
-function hubCopy() {
-  const YEAR = seasonLabel('MLB');
+// `early`: the hub names next season before it opens, while only some clubs
+// have published. The copy then promises no full schedule.
+function hubCopy(YEAR: string, early = false) {
   return {
     YEAR,
     TITLE: `MLB Promotions & Giveaways ${YEAR}`,
-    DESCRIPTION: `Every MLB team's ${YEAR} promo schedule in one place: bobblehead nights, jersey giveaways, theme nights, and food deals across all 30 clubs, grouped by division and refreshed through the season.`,
+    DESCRIPTION: early
+      ? `MLB ${YEAR} promo schedules as clubs announce them: bobblehead nights, jersey giveaways, theme nights, and food deals, with all 30 clubs grouped by division.`
+      : `Every MLB team's ${YEAR} promo schedule in one place: bobblehead nights, jersey giveaways, theme nights, and food deals across all 30 clubs, grouped by division and refreshed through the season.`,
   };
 }
 
-export function generateMetadata(): Metadata {
-  const { TITLE, DESCRIPTION } = hubCopy();
+export async function generateMetadata(): Promise<Metadata> {
+  // The season the hub names: the labelled one, or the next one early once
+  // this season has ended and a club has published (getLeagueHubSeason).
+  const { TITLE, DESCRIPTION } = hubCopy(...(await getLeagueHubSeason('MLB').then((x) => [x.label, x.early] as const)));
   return {
     title: TITLE,
     description: DESCRIPTION,
@@ -90,7 +96,8 @@ const FAQS: HubFaqItem[] = [
 
 
 export default async function MlbHubPage() {
-  const { YEAR, TITLE, DESCRIPTION } = hubCopy();
+  const hubSeason = await getLeagueHubSeason('MLB');
+  const { YEAR, TITLE, DESCRIPTION } = hubCopy(hubSeason.label, hubSeason.early);
   const [slate, stats, divisions, today] = await Promise.all([
     getLeagueSlate('MLB'),
     getLeagueHubStats('MLB'),
@@ -137,7 +144,7 @@ export default async function MlbHubPage() {
         subtitle="Giveaways, bobblehead nights, theme nights and food deals across the 30 MLB clubs, grouped by division."
         freshness="Rechecked weekly and updated as clubs announce promotions."
         accent={ACCENT}
-        notice={heroLine ? <LeaguePlayoffsHeroLine line={heroLine} surface="web_mlb_hub" /> : undefined}
+        notice={heroLine ? <LeaguePlayoffsHeroLine line={heroLine} surface="web_mlb_hub" /> : hubSeason.note ? <HubSeasonNote text={hubSeason.note} /> : undefined}
       >
         <HubStatBar stats={stats} leagueLabel="MLB" />
       </HubHero>
@@ -184,7 +191,12 @@ export default async function MlbHubPage() {
           sectionId="mlb-browse-team"
           surface="web_mlb_hub_team_card"
           collection="mlb_hub"
-          intro={`All 30 MLB clubs by division. Open any team for its full ${YEAR} promotional schedule.`}
+          // On a hub naming next season early, the cards of the clubs that
+          // have published say so; the rest keep the default line.
+          {...(hubSeason.early
+            ? { subtitleByTeamId: Object.fromEntries(hubSeason.publishedTeamIds.map((id) => [id, `${hubSeason.label} promotions published`])) }
+            : {})}
+          intro={hubSeason.early ? 'All 30 MLB clubs by division. Open any team for its promotional schedule.' : `All 30 MLB clubs by division. Open any team for its full ${YEAR} promotional schedule.`}
           selectorLabel="Filter teams by division"
           allLabel="All divisions"
         />

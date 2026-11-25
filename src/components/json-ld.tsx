@@ -155,7 +155,7 @@ export function JsonLd({
     // entity can never disagree with the title a crawler sees (serp-targeting
     // ruling 2026-11-05: the WebPage name follows the promotional-schedule
     // title; the hero subtitle does not).
-    name: teamMetaTitle(team, teamDisplayName(team)),
+    name: teamMetaTitle(team, teamDisplayName(team), claim.labelDay),
     datePublished: '2025-12-01',
   };
 

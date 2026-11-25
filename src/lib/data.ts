@@ -21,6 +21,7 @@ import type {
   DerivedSignals,
 } from './types';
 import { SCORED_LEAGUES, isRegularSeasonGame } from './types';
+// (PROMO_SCORED_LEAGUES is passed in by its one caller, src/lib/seasons/ranked-rows.ts.)
 import { makeCollectionLoader, makeKeyedTtlCache, type CachedDoc } from './collection-cache';
 import {
   buildWeekBuckets,
@@ -42,6 +43,7 @@ import { JOIN_LEAGUES, applyGameDisplay, buildGameIndex, gameEventLinkUrl, needs
 import { attachPromoPageFields, stampPromoPageCanonical } from './promo-page-stamp';
 import { isSplitSeasonLeague } from './season-label';
 import type { SeasonEligible } from './seasons/season-window';
+import { hubLabelDay, leadInStart, nextSeasonNotYetOpen, seasonLabel, seasonOfDate } from './seasons/season-window';
 import { groupLeagueTeams, leagueSuperGroups, type HubSuperGroup, type HubTeamGroup } from './hub-grouping';
 import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
 import { ticketNetworkEventLinkFor } from './affiliates';
@@ -1299,8 +1301,11 @@ export async function getTeamsWithPromoCounts(): Promise<(Team & { promoCount: n
 // ── Scoring readers ────────────────────────────────────────────────────────
 // Surface the promo-pipeline scoring layer (PR #19 in promo-pipeline) to the
 // /best-promos, /best-promos/bobbleheads, and /team-rankings discovery pages.
-// All three readers filter to SCORED_LEAGUES (MLB / MLS / WNBA) so callers
-// never see NBA / NHL data and don't need to know about the exclusion.
+// All three readers filter to SCORED_LEAGUES (MLB / MLS / WNBA) by default, so
+// a caller that says nothing never sees NBA / NHL rows. The one caller that
+// wants them (the upcoming list of /best-promos and of /best-promos/bobbleheads,
+// src/lib/seasons/ranked-rows.ts) passes PROMO_SCORED_LEAGUES as `leagues`;
+// the social feed and both retrospective reads do not.
 
 // Internal helper. Walks the collectionGroup once, returns enriched promos.
 // `dateRange` is inclusive on both ends. `itemTypeFilter`, when set, filters
@@ -1310,6 +1315,7 @@ async function fetchScoredPromos(
   endDate: string,
   itemTypeFilter?: string,
   eligible?: SeasonEligible,
+  leagues: ReadonlySet<string> = SCORED_LEAGUES,
 ): Promise<ScoredPromoWithTeam[]> {
   const teams = await getAllTeams();
   const teamById = new Map(teams.map((t) => [t.id, t]));
@@ -1350,12 +1356,17 @@ async function fetchScoredPromos(
     if (!teamRef) continue;
     const team = teamById.get(teamRef.id);
     if (!team) continue;
-    if (!SCORED_LEAGUES.has(team.league as 'MLB' | 'MLS' | 'WNBA')) continue;
+    if (!leagues.has(team.league)) continue;
 
     const data = doc.data();
     // Visibility guard before building the scored object: only true hides;
     // absent and false pass (same predicate as isVisiblePromo). Postseason
     // rows are kept off this surface the same way.
+    // An NHL or NBA ticket package is not a promotion anywhere the site ranks
+    // or lists promotions (dropTicketPackageRows above; WEB6 G2). The pipeline
+    // never scores one, so this is the second lock: a row flagged after it
+    // was scored is still left out here, as it is on the homepage rail.
+    if (isTicketPackageLeague(team.league) && isTicketPackageDoc(data)) continue;
     if (data.tombstoned === true) continue;
     if (data.isPostseason === true) continue;
     if (typeof data.score !== 'number') continue;
@@ -1415,8 +1426,9 @@ async function fetchScoredPromos(
     if (b.score !== a.score) return b.score - a.score;
     return a.date.localeCompare(b.date);
   });
-  // Only MLB rows can resolve here (MLS and WNBA have no games spine), and
-  // only the ones with an empty slot cost the read; see withGameDisplay.
+  // Only rows of a league with a games spine can resolve here (MLS and WNBA
+  // have none), and only the ones with an empty slot cost the read; see
+  // withGameDisplay.
   return withGameDisplay(out);
 }
 
@@ -1429,8 +1441,9 @@ export async function getScoredPromosInDateRange(
   endDate: string,
   limit: number = 300,
   eligible?: SeasonEligible,
+  leagues?: ReadonlySet<string>,
 ): Promise<ScoredPromoWithTeam[]> {
-  const all = await fetchScoredPromos(startDate, endDate, undefined, eligible);
+  const all = await fetchScoredPromos(startDate, endDate, undefined, eligible, leagues);
   return all.slice(0, limit);
 }
 
@@ -1443,8 +1456,9 @@ export async function getScoredPromosByItemType(
   itemType: string,
   limit: number = 500,
   eligible?: SeasonEligible,
+  leagues?: ReadonlySet<string>,
 ): Promise<ScoredPromoWithTeam[]> {
-  const all = await fetchScoredPromos(startDate, endDate, itemType, eligible);
+  const all = await fetchScoredPromos(startDate, endDate, itemType, eligible, leagues);
   return all.slice(0, limit);
 }
 
@@ -1699,8 +1713,10 @@ function hubTodayYMD(): string {
 // league in memory (promo docs carry no league field; league lives on the parent
 // team), the same shape fetchScoredPromos uses. Every hub league runs a daily
 // cadence, so this is a rolling window, not a fixed weekly slate.
-// getPromosInDateRange already dedupes to one promo per team, the right density
-// for a cross-team rail. Wrapped in cache() and keyed on `league`, so the page
+// getPromosInDateRange dedupes exact (team, date, title) repeats ONLY, so a
+// team with three promos in the window is three rows here, not one. The hub
+// rail groups them into one card per team (src/lib/hub-rail.ts); the stat bar
+// counts distinct teams. Wrapped in cache() and keyed on `league`, so the page
 // and getLeagueHubStats share one query per request for the same league.
 export const getLeagueSlate = cache(async (league: string): Promise<PromoWithTeam[]> => {
   const today = hubTodayYMD();
@@ -1812,6 +1828,68 @@ export const getLeagueUpcomingPromoCounts = cache(
     return counts;
   },
 );
+
+// THE SEASON A LEAGUE HUB NAMES (2026-11 fix round, ruling on item 2).
+// Between seasons a hub names the season just played. Once that season has
+// ENDED and at least one club has published a promotion for the next one,
+// the hub names the next season and says how many clubs have published so
+// far (hubLabelDay, src/lib/seasons/season-window.ts). A league still in
+// play, or in its lead-in, is untouched and makes no read here.
+//
+// The one read is the next season's rows only (date on or after its lead-in
+// day), league-scoped in memory like every other hub reader, visible rows,
+// NHL and NBA ticket packages left out as everywhere a promotion is counted.
+export interface LeagueHubSeason {
+  /** The printed season: "2026", "2027", "2026-27". */
+  label: string;
+  /** True when the hub names the next season early. */
+  early: boolean;
+  /** Clubs with at least one published promotion in the next season. */
+  clubsPublished: number;
+  teamCount: number;
+  /** "8 of 30 clubs have published 2027 promotions so far." Null unless `early`. */
+  note: string | null;
+  /** The clubs counted in `clubsPublished`, so the team cards can say which. Empty unless `early`. */
+  publishedTeamIds: string[];
+}
+
+export const getLeagueHubSeason = cache(async (league: string): Promise<LeagueHubSeason> => {
+  const today = hubTodayYMD();
+  const teams = (await getAllTeams()).filter((t) => t.league === league);
+  const same: LeagueHubSeason = { label: seasonLabel(league, today), early: false, clubsPublished: 0, teamCount: teams.length, note: null, publishedTeamIds: [] };
+  const next = nextSeasonNotYetOpen(league, today);
+  // No next season in the table, or the labelled one is still in play: no read.
+  if (!next || hubLabelDay(league, today, 1) === today) return same;
+  const ids = new Set(teams.map((t) => t.id));
+  const clubs = new Set<string>();
+  try {
+    const snapshot = await db.collectionGroup('promos').where('date', '>=', leadInStart(next)).get();
+    for (const doc of snapshot.docs) {
+      const teamId = doc.ref.parent.parent?.id;
+      if (!teamId || !ids.has(teamId) || clubs.has(teamId)) continue;
+      const data = doc.data();
+      if (data.tombstoned === true || data.isPostseason === true) continue;
+      if (isTicketPackageLeague(league) && isTicketPackageDoc(data)) continue;
+      if (seasonOfDate(league, data.date)?.season !== next.season) continue;
+      clubs.add(teamId);
+    }
+  } catch (err) {
+    // A failed read never fails a hub: it keeps the label it had.
+    console.error('getLeagueHubSeason read failed; keeping the labelled season', err);
+    return same;
+  }
+  const labelDay = hubLabelDay(league, today, clubs.size);
+  if (labelDay === today) return same;
+  const label = seasonLabel(league, labelDay);
+  return {
+    label,
+    early: true,
+    clubsPublished: clubs.size,
+    teamCount: teams.length,
+    publishedTeamIds: [...clubs].sort(),
+    note: `${clubs.size} of ${teams.length} ${league === 'WNBA' || league === 'NBA' ? 'teams' : 'clubs'} ${clubs.size === 1 ? 'has' : 'have'} published ${label} promotions so far.`,
+  };
+});
 
 // The super-header bands for a league (empty when the league groups flat).
 // Exported so the hub page can hand them to HubTeamGrid without re-deriving.

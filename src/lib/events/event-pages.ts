@@ -48,7 +48,7 @@ export const eventHubPath = (show: string) => `/events/${show}`;
 export const eventStopPath = (show: string, venue: string) => `/events/${show}/${venue}`;
 
 /** Where a link INTO /events sits. Every inbound anchor names one. */
-export const EVENT_LINK_SURFACES = ['venue_events_module', 'team_also_at', 'footer_events', 'events_hub_list'] as const;
+export const EVENT_LINK_SURFACES = ['venue_events_module', 'team_also_at', 'footer_events', 'nav_events', 'events_hub_list'] as const;
 export type EventLinkSurface = (typeof EVENT_LINK_SURFACES)[number];
 /** Where a link OUT of /events to the rest of the site sits. */
 export const EVENT_OUT_SURFACES = ['event_to_venue', 'event_to_team'] as const;
@@ -418,13 +418,37 @@ export function eventCardPath(stop: Pick<EventStop, 'show' | 'venueSlug' | 'upda
   return `/api/event-card/${stop.show}~${stop.venueSlug}?v=${stamp}`;
 }
 
-/** The year a stop's title carries: the year of the last upcoming
- *  performance; with none upcoming, of the last stored one; else null. */
-export function stopYear(stop: Pick<EventStop, 'performances'>, tl: StopTimeline): number | null {
+/**
+ * The year a run of dates is named by (ruling 2026-11-25): the single year
+ * when every date falls in one, and the span written like a season, "2026-27",
+ * ONLY when the run crosses New Year. Null for no usable date. The one helper
+ * behind every events title: the stop pages and the hub.
+ *
+ * Before this, a title took the year of the LAST upcoming show, so the hub
+ * read "Monster Jam 2027" while Anaheim's Dec 19 and 20, 2026 shows were the
+ * next ones on it.
+ */
+export function runYearLabel(dates: readonly string[]): string | null {
+  const years = dates.filter((d) => typeof d === 'string' && EVENT_YMD_RE.test(d)).map((d) => Number(d.slice(0, 4)));
+  if (years.length === 0) return null;
+  const first = Math.min(...years);
+  const last = Math.max(...years);
+  return last === first ? String(first) : `${first}-${String(last % 100).padStart(2, '0')}`;
+}
+
+/** The year a stop's title carries: its UPCOMING run's (runYearLabel); with
+ *  nothing upcoming, the year of the last stored performance; else null. */
+export function stopYear(stop: Pick<EventStop, 'performances'>, tl: StopTimeline): string | null {
   const up = upcomingPerformances(tl);
-  const rows = up.length ? up : stop.performances;
-  if (!rows.length) return null;
-  return Number([...rows].sort((a, b) => a.key.localeCompare(b.key))[rows.length - 1].date.slice(0, 4));
+  if (up.length) return runYearLabel(up.map((p) => p.date));
+  if (!stop.performances.length) return null;
+  return [...stop.performances].sort((a, b) => a.key.localeCompare(b.key))[stop.performances.length - 1].date.slice(0, 4);
+}
+
+/** The year the hub's title carries: the run from the first upcoming show of
+ *  any listed stop to the last. */
+export function hubYear(stops: ReadonlyArray<{ nextDate: string; lastDate: string }>): string | null {
+  return runYearLabel(stops.flatMap((s) => [s.nextDate, s.lastDate]));
 }
 
 /** "Monster Jam Minneapolis" (ruling 2026-11-18, Phase 3A). The venue is on the line under it. */
@@ -434,7 +458,7 @@ export function stopH1(showName: string, searchCity: string): string {
 
 /** Bare title; the root layout appends " | PromoNight". "and Bag Policy" is
  *  dropped when the page prints no bag rule. */
-export function stopTitle(showName: string, searchCity: string, year: number | null, bagRule: boolean): string {
+export function stopTitle(showName: string, searchCity: string, year: string | number | null, bagRule: boolean): string {
   const head = `${showName} ${searchCity}${year ? ` ${year}` : ''}`;
   return bagRule ? `${head}: Dates, Tickets and Bag Policy` : `${head}: Dates and Tickets`;
 }
@@ -442,13 +466,13 @@ export function stopTitle(showName: string, searchCity: string, year: number | n
 /** The hub may say "schedule" (ruling 2026-11-19, Phase 5A): the scope line
  *  directly under the H1 carries the limit (stops at venues we cover, with
  *  computed counts), so the word does not claim the full tour. */
-export function hubTitle(showName: string, year: number | null): string {
+export function hubTitle(showName: string, year: string | number | null): string {
   return `${showName}${year ? ` ${year}` : ''} Schedule: Dates, Cities and Tickets`;
 }
-export function hubH1(showName: string, year: number | null): string {
+export function hubH1(showName: string, year: string | number | null): string {
   return `${showName}${year ? ` ${year}` : ''} schedule`;
 }
-export function hubDescription(showName: string, year: number | null): string {
+export function hubDescription(showName: string, year: string | number | null): string {
   return `${showName}${year ? ` ${year}` : ''} schedule at venues PromoNight covers: dates by city and month, with showtimes and tickets on each stop page and links to each venue's bag and parking details.`;
 }
 /** The line directly under the hub H1. Counts are of the stops listed, never the tour's. */
