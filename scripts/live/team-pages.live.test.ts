@@ -51,7 +51,7 @@
 //    sitemap promo page that is a special-ticket package (NHL or NBA, the
 //    About block's "Comes with a special ticket package.") and still sells
 //    tickets carries the disclosure INSIDE its CTA block (the <section> with
-//    "Get tickets"), in the server HTML; no other promo page carries it.
+//    "Get Tickets"), in the server HTML; no other promo page carries it.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -562,7 +562,15 @@ test(`every live package page carries the disclosure inside its CTA block, and n
   const promos = (await sitemap()).filter((p) => PROMO_RE.test(p));
   const rows = await pool(promos, async (p) => {
     const html = await promoPage(p);
-    const at = html.indexOf('>Get tickets</a>');
+    // THE PRIMARY BUTTON, by its 52px class, never by the first label match.
+    // Since 2026-11-25 every ticket button reads "Get Tickets", and on a
+    // multi-date page the small per-date links come first in the document, so
+    // the first match of the label is not the primary and its <section> is
+    // not the CTA block. The guard matched the literal '>Get tickets</a>',
+    // found nothing after the label changed, and failed on "found live package
+    // pages" with every page correct (known-issues 132).
+    const primary = [...html.matchAll(/<a ([^>]*)>Get Tickets<\/a>/g)].find((m) => m[1].includes('h-[52px]'));
+    const at = primary ? primary.index! + primary[0].length - '</a>'.length : -1;
     const cta = at < 0 ? '' : html.slice(html.lastIndexOf('<section', at), html.indexOf('</section>', at));
     const pkg = /^\/(nba|nhl)\//.test(p) && html.includes(TICKET_PACKAGE_ROW_NOTE);
     return { p, pkg, sells: at >= 0, inCta: cta.includes(PACKAGE_CTA_DISCLOSURE), anywhere: html.includes(PACKAGE_CTA_DISCLOSURE) };
