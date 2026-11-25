@@ -1,6 +1,7 @@
 import type { PromoWithTeam } from '@/lib/types';
 import type { SeasonEligible } from '@/lib/seasons/season-window';
-import { isBestPromoRow } from '@/lib/scoring-weights';
+import { BEST_PROMO_MIN_ROWS, isBestPromoRow } from '@/lib/scoring-weights';
+import { PROMO_SCORED_LEAGUES } from '@/lib/types';
 
 // Top-N future promos by stored per-promo score, picked in memory over the
 // corpus the homepage already fetches. mapPromoDoc carries score,
@@ -27,17 +28,32 @@ import { isBestPromoRow } from '@/lib/scoring-weights';
 // (src/lib/scoring-weights.ts) admits a scored giveaway at
 // BEST_PROMO_SCORE_FLOOR or above and never a theme night. When nothing
 // passes, the array is empty and HomePageV2 renders no section at all.
+//
+// THE LEAGUES ARE NAMED (2026-11 fix round). The pick used to take any row
+// that carried a score, which was a league gate only by accident: NBA and NHL
+// rows had none. It now reads PROMO_SCORED_LEAGUES (MLB, MLS, WNBA, NBA, NHL),
+// so a league joins the rail by being added to that set, not by a write.
+//
+// TEN OR NOTHING (ruling 2026-11-25). With fewer than BEST_PROMO_MIN_ROWS
+// qualifying rows the rail returns nothing, the same minimum /best-promos
+// needs before it leaves its retrospective: a rail of three cards whose "Full
+// rankings" link lands on a page that lists none of them is the mismatch this
+// closes. The count is taken over the whole in-season future, before the cut
+// to `n`.
 export function pickBestStubPromos(
   allFuture: PromoWithTeam[],
   n: number,
   eligible: SeasonEligible,
 ): PromoWithTeam[] {
-  return allFuture
+  const qualifying = allFuture
     .filter(
       (p) => typeof p.score === 'number' && p.scoreBreakdown != null && p.derivedSignals != null,
     )
+    .filter((p) => PROMO_SCORED_LEAGUES.has(p.team.league))
     .filter(isBestPromoRow)
-    .filter((p) => eligible(p.team.league, p.date))
+    .filter((p) => eligible(p.team.league, p.date));
+  if (qualifying.length < BEST_PROMO_MIN_ROWS) return [];
+  return qualifying
     .sort((a, b) => (b.score as number) - (a.score as number) || a.date.localeCompare(b.date))
     .slice(0, n);
 }

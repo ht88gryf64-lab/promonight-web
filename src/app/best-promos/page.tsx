@@ -9,13 +9,12 @@ import { BestPromosBrowser } from '@/components/scoring/best-promos-browser';
 import { ScoredJsonLd } from '@/components/scoring/scored-jsonld';
 import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-tracker';
 import { isRedesignEnabled } from '@/lib/redesign';
-import { numberWord } from '@/lib/coverage-counts';
-import { SCORED_LEAGUES } from '@/lib/types';
+import { PROMO_SCORED_LEAGUE_LIST } from '@/lib/types';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { addDaysYmd, siteYmd } from '@/lib/site-today';
-import { loadRankedRows, RANKED_MIN_UPCOMING_ROWS } from '@/lib/seasons/ranked-rows';
+import { loadRankedRows, RANKED_LEAGUES, RANKED_MIN_UPCOMING_ROWS } from '@/lib/seasons/ranked-rows';
 import { LEAD_IN_DAYS } from '@/lib/seasons/season-window';
-import { BEST_PROMO_SCORE_FLOOR, ITEM_WEIGHTS_ANSWER, PERFECT_SCORE_ANSWER, PERFECT_SCORE_SHORT_ANSWER, SCORE_COMPONENTS_ANSWER, UNSCORED_LEAGUES_ANSWER } from '@/lib/scoring-weights';
+import { BEST_PROMO_SCORE_FLOOR, ITEM_WEIGHTS_ANSWER, PERFECT_SCORE_ANSWER, PERFECT_SCORE_SHORT_ANSWER, RANKED_LEAGUES_ANSWER, SCORE_COMPONENTS_ANSWER } from '@/lib/scoring-weights';
 
 // Server-side fetch runs once per ISR revalidate window. Scoring rides
 // each league's weekly scan (MLB Tue year-round; WNBA Wed and MLS Thu in
@@ -44,15 +43,25 @@ function addDaysYMD(base: Date, days: number): string {
 // generateMetadata, not a static object: the year in the title is the one
 // the rows on the page carry (loadRankedRows, src/lib/seasons/ranked-rows.ts),
 // read from the same cached fetch as the page body.
+// The leagues a mode's list draws on, as copy: the upcoming list ranks every
+// league whose promos are scored (PROMO_SCORED_LEAGUE_LIST), the retrospective
+// the three with a finished season on file (RANKED_LEAGUES). One helper, so
+// the head, the capsules and the JSON-LD cannot name different sets.
+function rankedLeaguesText(retrospective: boolean): string {
+  const list: readonly string[] = retrospective ? RANKED_LEAGUES : PROMO_SCORED_LEAGUE_LIST;
+  return `${list.slice(0, -1).join(', ')}, and ${list[list.length - 1]}`;
+}
+
 export async function generateMetadata(): Promise<Metadata> {
-  const { label } = await loadRankedRows(null);
+  const { label, retrospective } = await loadRankedRows(null);
+  const leagues = rankedLeaguesText(retrospective);
   return {
     title: `Best Sports Promo Nights of ${label}: Score-Ranked Giveaways`,
-    description: `Score-ranked promo nights across MLB, MLS, and WNBA in ${label}. Bobbleheads, jerseys, and theme nights ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. MLB rescored weekly; WNBA and MLS in season.`,
+    description: `Score-ranked promo nights across ${leagues} in ${label}. Bobbleheads, jerseys, and theme nights ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. Rescored with each league's weekly scan.`,
     alternates: { canonical: PAGE_URL },
     openGraph: {
       title: `Best Sports Promo Nights of ${label}`,
-      description: `Score-ranked promo nights across MLB, MLS, and WNBA. MLB rescored weekly; WNBA and MLS in season.`,
+      description: `Score-ranked promo nights across ${leagues}. Rescored with each league's weekly scan.`,
       url: PAGE_URL,
       type: 'website',
       images: [
@@ -84,9 +93,9 @@ const FAQS = [
       'The list ranks by score, not team identity. A team running mostly food deals and theme nights will rank below teams with high-cap bobblehead programs. Filter by league above to see how teams in your league cluster, or visit the team page for the full schedule.',
   },
   {
-    question: 'Why are NBA and NHL not included?',
+    question: 'Which leagues are ranked?',
     answer:
-      UNSCORED_LEAGUES_ANSWER,
+      RANKED_LEAGUES_ANSWER,
   },
   {
     question: 'How often does this list update?',
@@ -101,7 +110,7 @@ const FAQS = [
   {
     question: 'Can I see only bobblehead nights?',
     answer:
-      `Yes. Visit /best-promos/bobbleheads for a ranking of bobblehead nights only, across the ${numberWord(SCORED_LEAGUES.size)} scored leagues, with its own ranked list.`,
+      `Yes. Visit /best-promos/bobbleheads for a ranking of bobblehead nights only, across MLB, MLS, and WNBA, with its own ranked list.`,
   },
 ];
 
@@ -135,6 +144,7 @@ export default async function BestPromosPage() {
   // loader generateMetadata also reads (src/lib/seasons/ranked-rows.ts).
   const { promos, retrospective, label, todayYMD } = await loadRankedRows(null);
   const teamScores = await getAllTeamScores();
+  const leaguesText = rankedLeaguesText(retrospective);
 
   // Resolve PostalAddress data for the unique teams in the ItemList
   // payload (ITEMLIST_SCHEMA_CAP cards). Done after the promo fetch so we
@@ -156,13 +166,19 @@ export default async function BestPromosPage() {
   );
   const locationsByTeamId = await getSchemaLocationsForTeams(uniqueTeams);
 
-  // Latest computedAt across all teamScores is the canonical "last
-  // scored" stamp for the page. Falls back to today if the collection is
-  // empty for some reason (which it shouldn't be in production).
-  const latestComputedAt = teamScores.reduce((acc, t) => {
+  // WHEN THE SCORES ON THIS PAGE WERE LAST COMPUTED: the latest scoredAt among
+  // the rows it lists. It used to be the latest teamScores.computedAt, which
+  // is a TEAM-score stamp: NBA and NHL promos are scored with no teamScores
+  // document (the pipeline's --promos-only run), so a list made of their rows
+  // would have shown the date of some other league's sweep. A row's own
+  // scoredAt is written by every scoring run that touches it, for every
+  // league. The team stamp remains the fallback for a list with no stamped row.
+  const latestRowScoredAt = promos.reduce((acc, p) => (p.scoredAt && p.scoredAt > acc ? p.scoredAt : acc), '');
+  const latestTeamComputedAt = teamScores.reduce((acc, t) => {
     if (!t.computedAt) return acc;
     return !acc || t.computedAt > acc ? t.computedAt : acc;
   }, '');
+  const latestComputedAt = latestRowScoredAt || latestTeamComputedAt;
   // Real stamp only: no render-clock fallback (docs/known-issues.md entry 17).
   // Null hides the visible Last-updated line rather than asserting today.
   const lastUpdatedDisplay = latestComputedAt
@@ -200,14 +216,14 @@ export default async function BestPromosPage() {
   const jsonLdLastUpdated = rankedContentDate || latestComputedAt;
 
   const jsonLdDescription = retrospective
-    ? `Score-ranked list of the ${promos.length} best promotional events of the ${label} season across MLB, MLS, and WNBA.`
-    : `Score-ranked list of ${promos.length} top promotional events across MLB, MLS, and WNBA in ${label}.`;
+    ? `Score-ranked list of the ${promos.length} best promotional events of the ${label} season across ${leaguesText}.`
+    : `Score-ranked list of ${promos.length} top promotional events across ${leaguesText} in ${label}.`;
   // In retrospective mode the stamp says what the date actually is, the last
   // time SCORES were computed, rather than implying the content is fresh.
   const stampLine = retrospective
     ? `${label} season record${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} promos ranked`
     : null;
-  const capsuleRetro = `These are the ${promos.length} best-scored promo nights of the ${label} season across MLB, MLS, and WNBA. This list is the season's record, ranked from 100 down, not a list of what is on next. Every entry pulls from official team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. An upcoming ranking returns from ${LEAD_IN_DAYS} days before a scored league's next Opening Day, once at least ${RANKED_MIN_UPCOMING_ROWS} giveaways scoring ${BEST_PROMO_SCORE_FLOOR} or more are on the schedule.`;
+  const capsuleRetro = `These are the ${promos.length} best-scored promo nights of the ${label} season across ${leaguesText}. This list is the season's record, ranked from 100 down, not a list of what is on next. Every entry pulls from official team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. An upcoming ranking returns from ${LEAD_IN_DAYS} days before a scored league's next Opening Day, once at least ${RANKED_MIN_UPCOMING_ROWS} giveaways scoring ${BEST_PROMO_SCORE_FLOOR} or more are on the schedule.`;
 
   if (isRedesignEnabled()) {
     return (
@@ -239,7 +255,7 @@ export default async function BestPromosPage() {
           <div className="mx-auto max-w-4xl px-6 pb-20 pt-10">
             <p className="rounded-2xl border border-rd-line bg-rd-card p-5 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
               {retrospective ? capsuleRetro : (
-                <>The {promos.length} best-scored giveaway nights of {label}, each scoring {BEST_PROMO_SCORE_FLOOR} or more, are ranked below from 100 down. Every entry pulls from official MLB, MLS, and WNBA team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. The list refreshes with each league&apos;s weekly scan: MLB year-round, WNBA and MLS in season.</>
+                <>The {promos.length} best-scored giveaway nights of {label}, each scoring {BEST_PROMO_SCORE_FLOOR} or more, are ranked below from 100 down. Every entry pulls from official {leaguesText} team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. The list refreshes with each league&apos;s weekly scan.</>
               )}
             </p>
 
@@ -310,10 +326,10 @@ export default async function BestPromosPage() {
           <p className="mt-5 text-text-secondary text-base leading-relaxed max-w-3xl">
             {retrospective ? capsuleRetro : (
               <>The {promos.length} best-scored giveaway nights of {label}, each scoring {BEST_PROMO_SCORE_FLOOR} or more, are
-              ranked below from 100 down. Every entry pulls from official MLB,
-              MLS, and WNBA team-promotion announcements and is scored 0 to 100
+              ranked below from 100 down. Every entry pulls from official {leaguesText}
+              {' '}team-promotion announcements and is scored 0 to 100
               on attendance cap, item value, sponsor presence, and highlight
-              tier. The list refreshes with each league&apos;s weekly scan: MLB year-round, WNBA and MLS in season.</>
+              tier. The list refreshes with each league&apos;s weekly scan.</>
             )}
           </p>
 

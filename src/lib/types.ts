@@ -232,8 +232,24 @@ export interface TeamScoreWithTeam extends TeamScore {
 // score / scoreBreakdown / derivedSignals fields and don't appear in the
 // teamScores collection. Filtering at this set keeps the scoring-pages
 // code league-agnostic everywhere else.
+//
+// SINCE THE 2026-11 FIX ROUND THIS IS THE TEAM-SCORE SET: the leagues with a
+// teamScores document, which /team-rankings and the league hub stat bars
+// read. NBA and NHL promos now carry scores too, but their teams do not (the
+// team score is not calibrated for a season that crosses the calendar year;
+// docs/known-issues.md entry 28), so they are in PROMO_SCORED_LEAGUES below
+// and NOT here.
 export const SCORED_LEAGUES = new Set(['MLB', 'MLS', 'WNBA'] as const);
 export type ScoredLeague = 'MLB' | 'MLS' | 'WNBA';
+
+// Leagues whose PROMOS are scored (score, scoreBreakdown, derivedSignals on
+// the promo document). Read by the two surfaces that rank promos across
+// leagues, and by nothing else: the homepage Best Promos rail and
+// /best-promos in upcoming mode. /best-promos/bobbleheads, the social feed's
+// scored pass and every team-score surface stay on SCORED_LEAGUES. NFL promos
+// are not scored. Order is the order copy lists them in.
+export const PROMO_SCORED_LEAGUE_LIST = ['MLB', 'MLS', 'WNBA', 'NBA', 'NHL'] as const;
+export const PROMO_SCORED_LEAGUES: ReadonlySet<string> = new Set(PROMO_SCORED_LEAGUE_LIST);
 
 export interface Venue {
   // Firestore doc id of the `venues` record. Shares a namespace with

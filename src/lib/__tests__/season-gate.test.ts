@@ -298,15 +298,17 @@ test('/team-rankings reader: a team\'s tease is its best IN-SEASON row, not drop
   assert.equal(ungated.get('la-galaxy')?.title, 'Shrek Hawaiian Shirt', 'the gate is what changed it');
 });
 
-test('homepage best rail: gated before the cut, so it fills from in-season rows', async () => {
+test('homepage best rail: the gated readers feed it, and this four-row corpus is under its ten-row minimum', async () => {
   const { pickBestStubPromos } = await import('../../components/redesign/pick-best-stub-promos');
   const { getPromosFromDate } = await import('../data');
   const all = await getPromosFromDate('2026-11-05');
   const gate = currentSeasonPredicate('2026-11-05', REAL_FINALS);
-  // Galaxy Scarf (40) is in season but under the rail's floor of 65
-  // (src/lib/scoring-weights.ts), so the gated rail holds the beanie alone.
-  assert.deepEqual(titles(pickBestStubPromos(all, 2, gate)), ['Camo Beanie']);
-  assert.deepEqual(titles(pickBestStubPromos(all, 8, currentSeasonPredicate('2027-02-10', REAL_FINALS))), ['Juan Marichal Bobblehead', 'Shrek Hawaiian Shirt']);
+  // One in-season row is at the floor of 65 (Camo Beanie, 68; Galaxy Scarf is
+  // 40), and the rail shows nothing below ten qualifying rows. The gate-before-
+  // the-cut proof moved to src/lib/__tests__/ranked-floor.test.ts, on a corpus
+  // large enough to fill the rail.
+  assert.deepEqual(titles(pickBestStubPromos(all, 2, gate)), []);
+  assert.deepEqual(titles(pickBestStubPromos(all, 8, currentSeasonPredicate('2027-02-10', REAL_FINALS))), []);
 });
 
 // ── Every ranked surface is wired, and only those ─────────────────────────
@@ -316,7 +318,7 @@ test('the four ranked call sites pass the season gate', () => {
   // The two score-ranked pages read through one loader (ruling 2026-11-05,
   // point 4), and the loader is what passes the gate.
   const loader = src('lib/seasons/ranked-rows.ts');
-  assert.match(loader, /getScoredPromosInDateRange\(todayYMD, endYMD, Number\.MAX_SAFE_INTEGER, gate\)/);
+  assert.match(loader, /getScoredPromosInDateRange\(todayYMD, endYMD, Number\.MAX_SAFE_INTEGER, gate, PROMO_SCORED_LEAGUES\)/);
   assert.match(loader, /getScoredPromosByItemType\(todayYMD, endYMD, itemType, BOBBLEHEAD_FETCH_CAP, gate\)/);
   assert.match(loader, /const gate = await getCurrentSeasonPredicate\(now\);/);
   assert.match(src('app/best-promos/page.tsx'), /await loadRankedRows\(null\)/);

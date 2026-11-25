@@ -21,6 +21,7 @@ import type {
   DerivedSignals,
 } from './types';
 import { SCORED_LEAGUES, isRegularSeasonGame } from './types';
+// (PROMO_SCORED_LEAGUES is passed in by its one caller, src/lib/seasons/ranked-rows.ts.)
 import { makeCollectionLoader, makeKeyedTtlCache, type CachedDoc } from './collection-cache';
 import {
   buildWeekBuckets,
@@ -1299,8 +1300,11 @@ export async function getTeamsWithPromoCounts(): Promise<(Team & { promoCount: n
 // ── Scoring readers ────────────────────────────────────────────────────────
 // Surface the promo-pipeline scoring layer (PR #19 in promo-pipeline) to the
 // /best-promos, /best-promos/bobbleheads, and /team-rankings discovery pages.
-// All three readers filter to SCORED_LEAGUES (MLB / MLS / WNBA) so callers
-// never see NBA / NHL data and don't need to know about the exclusion.
+// All three readers filter to SCORED_LEAGUES (MLB / MLS / WNBA) by default, so
+// a caller that says nothing never sees NBA / NHL rows. The one caller that
+// wants them (/best-promos in upcoming mode) passes PROMO_SCORED_LEAGUES as
+// `leagues`; the social feed, /best-promos/bobbleheads and the retrospective
+// read do not.
 
 // Internal helper. Walks the collectionGroup once, returns enriched promos.
 // `dateRange` is inclusive on both ends. `itemTypeFilter`, when set, filters
@@ -1310,6 +1314,7 @@ async function fetchScoredPromos(
   endDate: string,
   itemTypeFilter?: string,
   eligible?: SeasonEligible,
+  leagues: ReadonlySet<string> = SCORED_LEAGUES,
 ): Promise<ScoredPromoWithTeam[]> {
   const teams = await getAllTeams();
   const teamById = new Map(teams.map((t) => [t.id, t]));
@@ -1350,7 +1355,7 @@ async function fetchScoredPromos(
     if (!teamRef) continue;
     const team = teamById.get(teamRef.id);
     if (!team) continue;
-    if (!SCORED_LEAGUES.has(team.league as 'MLB' | 'MLS' | 'WNBA')) continue;
+    if (!leagues.has(team.league)) continue;
 
     const data = doc.data();
     // Visibility guard before building the scored object: only true hides;
@@ -1429,8 +1434,9 @@ export async function getScoredPromosInDateRange(
   endDate: string,
   limit: number = 300,
   eligible?: SeasonEligible,
+  leagues?: ReadonlySet<string>,
 ): Promise<ScoredPromoWithTeam[]> {
-  const all = await fetchScoredPromos(startDate, endDate, undefined, eligible);
+  const all = await fetchScoredPromos(startDate, endDate, undefined, eligible, leagues);
   return all.slice(0, limit);
 }
 

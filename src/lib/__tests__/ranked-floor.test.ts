@@ -18,7 +18,7 @@ import { BEST_PROMO_SCORE_FLOOR } from '../scoring-weights';
 
 // ── the loader's two reads, replaced; the clock, set per test ──────────────
 
-type Call = { start: string; end: string; limit: number | undefined; gated: boolean; itemType?: string };
+type Call = { start: string; end: string; limit: number | undefined; gated: boolean; itemType?: string; leagues?: ReadonlySet<string> };
 const calls: Call[] = [];
 let forwardRows: ScoredPromoWithTeam[] = [];
 let pastRows: ScoredPromoWithTeam[] = [];
@@ -28,8 +28,8 @@ mock.module('server-only', { namedExports: {} });
 mock.module(new URL('../data.ts', import.meta.url).href, {
   namedExports: {
     // The real readers sort by score and cut at `limit`; so do these.
-    getScoredPromosInDateRange: async (start: string, end: string, limit?: number, eligible?: unknown) => {
-      calls.push({ start, end, limit, gated: !!eligible });
+    getScoredPromosInDateRange: async (start: string, end: string, limit?: number, eligible?: unknown, leagues?: ReadonlySet<string>) => {
+      calls.push({ start, end, limit, gated: !!eligible, leagues });
       return (eligible ? forwardRows : pastRows).slice(0, limit ?? 300);
     },
     getScoredPromosByItemType: async (start: string, end: string, itemType: string, limit?: number, eligible?: unknown) => {
@@ -87,11 +87,51 @@ test('rail: a theme row never appears, whatever it scores', async () => {
     row('theme', 100, '2027-04-01'), row('theme', 83, '2027-04-01'), row('kids', 95, '2027-04-01'), row('food', 90, '2027-04-01'),
     row('giveaway', 65, '2027-04-03'), row('giveaway', 98, '2027-04-02'), row('giveaway', 64, '2027-04-01'),
   ] as PromoWithTeam[];
-  const picked = pickBestStubPromos(pool, 8, always);
-  assert.deepEqual(picked.map((p) => [p.type, p.score]), [['giveaway', 98], ['giveaway', 65]]);
+  // Two giveaways qualify: under the 10-row minimum, so nothing shows at all.
+  assert.deepEqual(pickBestStubPromos(pool, 8, always), []);
+  // With nine more qualifying giveaways the rail fills, and still holds no
+  // theme, kids or food row, however high those score.
+  const full = [...pool, ...giveaways(9, 70)] as PromoWithTeam[];
+  const picked = pickBestStubPromos(full, 8, always);
+  assert.equal(picked.length, 8);
+  assert.deepEqual(picked.map((p) => p.score), [98, 70, 70, 70, 70, 70, 70, 70]);
   assert.ok(picked.every((p) => p.type === 'giveaway' && (p.score as number) >= BEST_PROMO_SCORE_FLOOR));
   // The season gate still applies on top of the floor.
-  assert.deepEqual(pickBestStubPromos(pool, 8, () => false), []);
+  assert.deepEqual(pickBestStubPromos(full, 8, () => false), []);
+});
+
+test('rail: nine qualifying rows show nothing, ten show the rail', async () => {
+  const { pickBestStubPromos } = await import('../../components/redesign/pick-best-stub-promos');
+  assert.deepEqual(pickBestStubPromos(giveaways(9) as PromoWithTeam[], 8, always), [], 'nine: no rail');
+  assert.equal(pickBestStubPromos(giveaways(10) as PromoWithTeam[], 8, always).length, 8, 'ten: the rail, cut to its eight cards');
+  assert.equal(pickBestStubPromos(giveaways(10) as PromoWithTeam[], 20, always).length, 10);
+  // The count is of QUALIFYING rows: under-floor giveaways and themes do not make up the ten.
+  const padded = [...giveaways(9), row('giveaway', BEST_PROMO_SCORE_FLOOR - 1, '2027-04-01'), row('theme', 100, '2027-04-01'), row('kids', 90, '2027-04-01')] as PromoWithTeam[];
+  assert.deepEqual(pickBestStubPromos(padded, 8, always), []);
+  // And it is taken AFTER the season gate: ten qualifying rows of which one is out of season are nine.
+  const tenWithOneOut = [...giveaways(9, 80, '2027-04-01'), row('giveaway', 98, '2028-04-01')] as PromoWithTeam[];
+  assert.deepEqual(pickBestStubPromos(tenWithOneOut, 8, (_l, d) => d < '2028-01-01'), []);
+  // Gated before the cut: an out-of-season 98 never takes an in-season row's card.
+  const eleven = [...giveaways(10, 80, '2027-04-01'), row('giveaway', 98, '2028-04-01')] as PromoWithTeam[];
+  const picked = pickBestStubPromos(eleven, 8, (_l, d) => d < '2028-01-01');
+  assert.equal(picked.length, 8);
+  assert.ok(picked.every((p) => p.score === 80));
+});
+
+test('rail: the leagues are named, NBA and NHL are in and an unlisted league is out', async () => {
+  const { pickBestStubPromos } = await import('../../components/redesign/pick-best-stub-promos');
+  const { PROMO_SCORED_LEAGUES, PROMO_SCORED_LEAGUE_LIST, SCORED_LEAGUES } = await import('../types');
+  assert.deepEqual([...PROMO_SCORED_LEAGUE_LIST], ['MLB', 'MLS', 'WNBA', 'NBA', 'NHL']);
+  assert.deepEqual([...SCORED_LEAGUES], ['MLB', 'MLS', 'WNBA'], 'the team-score set is unchanged');
+  const tenFrom = (league: string) => Array.from({ length: 10 }, () => row('giveaway', 90, '2027-01-15', league)) as PromoWithTeam[];
+  for (const league of PROMO_SCORED_LEAGUE_LIST) assert.equal(pickBestStubPromos(tenFrom(league), 8, always).length, 8, league);
+  // A score on a row of a league outside the set does not put it on the rail.
+  for (const league of ['NFL', 'CFB']) assert.deepEqual(pickBestStubPromos(tenFrom(league), 8, always), [], league);
+  assert.equal(PROMO_SCORED_LEAGUES.has('NFL'), false);
+  // Mixed: the NFL rows neither show nor count toward the ten.
+  assert.deepEqual(pickBestStubPromos([...tenFrom('NFL'), ...tenFrom('NBA').slice(0, 9)], 8, always), []);
+  const mixed = pickBestStubPromos([...tenFrom('NFL'), ...tenFrom('NHL'), ...tenFrom('NBA')], 8, always);
+  assert.ok(mixed.every((p) => p.team.league === 'NHL' || p.team.league === 'NBA'));
 });
 
 test('rail: an empty rail renders no section, heading, lede or link', () => {
@@ -135,7 +175,62 @@ test('/best-promos: 9 qualifying rows stay in the retrospective, 10 leave it', a
   assert.equal(ten.retrospective, false, 'the tenth qualifying row flips it');
   assert.equal(ten.promos.length, 10);
   assert.ok(ten.promos.every((p) => p.type === 'giveaway' && p.score >= BEST_PROMO_SCORE_FLOOR), 'upcoming mode lists qualifying giveaways only');
-  assert.equal(ten.label, 2027, 'the year of the earliest row shown');
+  assert.equal(ten.label, 2027, 'one calendar year: that year');
+  // The forward read asks for every promo-scored league; the past read does not.
+  const { PROMO_SCORED_LEAGUES } = await import('../types');
+  assert.equal(calls.find((c) => c.gated)!.leagues, PROMO_SCORED_LEAGUES);
+  forwardRows = giveaways(9);
+  await loadAt('2027-02-10', null);
+  assert.equal(calls.find((c) => !c.gated)!.leagues, undefined, 'the retrospective stays on the default three leagues');
+});
+
+test('/best-promos: upcoming rows that cross New Year are labelled like a season, "2026-27"', async () => {
+  const { upcomingLabel } = await import('../seasons/ranked-rows');
+  assert.equal(upcomingLabel(['2026-12-01', '2026-11-27']), 2026);
+  assert.equal(upcomingLabel(['2027-04-01']), 2027);
+  assert.equal(upcomingLabel(['2026-12-01', '2027-01-05', '2027-04-11']), '2026-27');
+  assert.equal(upcomingLabel(['2027-01-05', '2026-12-01']), '2026-27', 'order does not matter');
+  assert.equal(upcomingLabel(['2099-12-31', '2100-01-01']), '2099-00');
+  assert.equal(upcomingLabel([]), '');
+  // Through the loader, on the rows of 2026-11-25: NBA and NHL, November to April.
+  finals = new Map([['MLB_2026', '2026-10-28'], ['WNBA_2026', '2026-10-31']]);
+  pastRows = [row('giveaway', 98, '2026-07-04')];
+  forwardRows = [...Array.from({ length: 4 }, () => row('giveaway', 98, '2026-12-01', 'NBA')), ...Array.from({ length: 8 }, () => row('giveaway', 95, '2027-02-12', 'NHL'))];
+  const got = await loadAt('2026-11-25', null);
+  assert.equal(got.retrospective, false);
+  assert.equal(got.label, '2026-27');
+  // Before New Year is crossed by any row, the plain year.
+  forwardRows = Array.from({ length: 12 }, () => row('giveaway', 98, '2026-12-01', 'NBA'));
+  assert.equal((await loadAt('2026-11-25', null)).label, 2026);
+  // The page prints the one label in the title, the og title, the H1 and the JSON-LD title.
+  const page = readFileSync(new URL('../../app/best-promos/page.tsx', import.meta.url), 'utf-8');
+  assert.match(page, /title: `Best Sports Promo Nights of \$\{label\}: Score-Ranked Giveaways`/);
+  assert.match(page, /title: `Best Sports Promo Nights of \$\{label\}`/);
+  assert.ok((page.match(/BEST SPORTS PROMO NIGHTS OF \{label\}/g)?.length ?? 0) >= 1);
+  assert.doesNotMatch(page, /Number\(label\)|label \+ 1/);
+});
+
+test('/best-promos: the league copy follows the mode, and the stamp reads the rows', () => {
+  const page = readFileSync(new URL('../../app/best-promos/page.tsx', import.meta.url), 'utf-8');
+  // No league list is typed into a sentence that upcoming mode prints.
+  const typed = page.match(/MLB, MLS, and WNBA/g)?.length ?? 0;
+  assert.equal(typed, 1, 'the only typed list left is the bobblehead page pointer, which is about that page');
+  assert.match(page, /across MLB, MLS, and WNBA, with its own ranked list/);
+  assert.doesNotMatch(page, /MLB rescored weekly|MLB year-round, WNBA and MLS in season/);
+  assert.match(page, /retrospective \? RANKED_LEAGUES : PROMO_SCORED_LEAGUE_LIST/);
+  // "Scores last computed" comes from the listed rows' scoredAt before any team-score stamp.
+  assert.match(page, /const latestComputedAt = latestRowScoredAt \|\| latestTeamComputedAt;/);
+  assert.match(page, /promos\.reduce\(\(acc, p\) => \(p\.scoredAt && p\.scoredAt > acc \? p\.scoredAt : acc\), ''\)/);
+});
+
+test('league chips: the default three always, NBA and NHL only when the rows hold them', async () => {
+  const { leagueFilterOptions, LEAGUE_FILTER_VALUES } = await import('../../components/scoring/league-filter');
+  const values = (s?: ReadonlySet<string>) => leagueFilterOptions(s).map((o) => o.value);
+  assert.deepEqual([...LEAGUE_FILTER_VALUES], ['All', 'MLB', 'MLS', 'WNBA'], '/team-rankings keeps its closed set');
+  assert.deepEqual(values(), ['All', 'MLB', 'MLS', 'WNBA']);
+  assert.deepEqual(values(new Set(['MLB'])), ['All', 'MLB', 'MLS', 'WNBA'], 'a list without NBA or NHL shows the chips it always did');
+  assert.deepEqual(values(new Set(['NBA', 'NHL'])), ['All', 'MLB', 'MLS', 'WNBA', 'NBA', 'NHL']);
+  assert.deepEqual(values(new Set(['NHL', 'MLS'])), ['All', 'MLB', 'MLS', 'WNBA', 'NHL']);
 });
 
 test('/best-promos: the floor through the loader, 64 does not count and 65 does', async () => {

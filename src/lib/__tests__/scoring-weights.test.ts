@@ -30,7 +30,9 @@ import {
   SCORE_MAX,
   SPONSOR_POINTS,
   UNCAPPED_BOBBLEHEAD_CEILING,
-  UNSCORED_LEAGUES_ANSWER,
+  RANKED_LEAGUES_ANSWER,
+  TEAM_RANKINGS_NBA_NHL_ANSWER,
+  BEST_PROMO_MIN_ROWS,
   GENERIC_TITLE_CEILING,
   PERFECT_SCORE_SHORT_ANSWER,
   NINETY_EIGHT_VS_HUNDRED_ANSWER,
@@ -136,7 +138,7 @@ test('the arithmetic the "perfect 100" answer states holds in the mirror itself'
 });
 
 test('the FAQ copy states the real numbers and none of the retired claims', () => {
-  for (const a of [SCORE_COMPONENTS_ANSWER, PERFECT_SCORE_ANSWER, ITEM_WEIGHTS_ANSWER, UNSCORED_LEAGUES_ANSWER, NINETY_EIGHT_VS_HUNDRED_ANSWER, SMALL_CAP_ANSWER]) {
+  for (const a of [SCORE_COMPONENTS_ANSWER, PERFECT_SCORE_ANSWER, ITEM_WEIGHTS_ANSWER, RANKED_LEAGUES_ANSWER, TEAM_RANKINGS_NBA_NHL_ANSWER, NINETY_EIGHT_VS_HUNDRED_ANSWER, SMALL_CAP_ANSWER]) {
     assert.doesNotMatch(a, /—|–/, 'no dashes in user-facing copy');
     assert.doesNotMatch(a, /undefined|NaN/);
   }
@@ -167,9 +169,18 @@ test('the FAQ copy states the real numbers and none of the retired claims', () =
     assert.doesNotMatch(a, /likeness/i);
     assert.doesNotMatch(a, /requires four signals|five components/i);
   }
-  // NBA and NHL: not scored yet. No mechanism cited, no date or release promised.
-  assert.match(UNSCORED_LEAGUES_ANSWER, /NBA and NHL promos are not scored yet/);
-  assert.doesNotMatch(UNSCORED_LEAGUES_ANSWER, /extraction|pipeline|future release|soon|will join|20\d\d/i);
+  // The leagues: NBA and NHL promos ARE scored now; NFL is not. No mechanism
+  // cited, no date or release promised, on either page.
+  assert.match(RANKED_LEAGUES_ANSWER, /Promos from MLB, MLS, WNBA, NBA, and NHL are scored/);
+  assert.match(RANKED_LEAGUES_ANSWER, /NFL promos are not scored/);
+  assert.match(RANKED_LEAGUES_ANSWER, /that record covers MLB, MLS, and WNBA/);
+  assert.match(TEAM_RANKINGS_NBA_NHL_ANSWER, /NBA and NHL promos are scored/);
+  assert.match(TEAM_RANKINGS_NBA_NHL_ANSWER, /Their teams are not ranked yet/);
+  assert.match(TEAM_RANKINGS_NBA_NHL_ANSWER, /runs across two calendar years/);
+  assert.match(TEAM_RANKINGS_NBA_NHL_ANSWER, /not calibrated/);
+  for (const a of [RANKED_LEAGUES_ANSWER, TEAM_RANKINGS_NBA_NHL_ANSWER]) {
+    assert.doesNotMatch(a, /not scored yet|extraction|pipeline|future release|soon|will join|20\d\d/i);
+  }
 });
 
 test('the pages take these answers from the module and carry no second copy', () => {
@@ -184,8 +195,9 @@ test('the pages take these answers from the module and carry no second copy', ()
   assert.match(src('components/scoring/best-promos-browser.tsx'), /showTickets=\{!retrospective\}/);
   assert.match(best, /SCORE_COMPONENTS_ANSWER,/);
   assert.match(best, /ITEM_WEIGHTS_ANSWER,/);
-  assert.match(best, /UNSCORED_LEAGUES_ANSWER,/);
-  assert.match(teams, /UNSCORED_LEAGUES_ANSWER,/);
+  assert.match(best, /RANKED_LEAGUES_ANSWER,/);
+  assert.match(teams, /TEAM_RANKINGS_NBA_NHL_ANSWER,/);
+  assert.doesNotMatch(best, /Why are NBA and NHL not included/);
   for (const s of [best, teams]) {
     assert.doesNotMatch(s, /structured-extraction|player likeness|jerseys earn 20|five components/);
   }
@@ -203,6 +215,7 @@ test('the pages take these answers from the module and carry no second copy', ()
 
 test('isBestPromoRow: a scored giveaway at the floor or above, and never a theme night', () => {
   assert.equal(BEST_PROMO_SCORE_FLOOR, 65);
+  assert.equal(BEST_PROMO_MIN_ROWS, 10);
   assert.equal(isBestPromoRow({ type: 'giveaway', score: 65 }), true);
   assert.equal(isBestPromoRow({ type: 'giveaway', score: 64 }), false);
   assert.equal(isBestPromoRow({ type: 'theme', score: 100 }), false);
