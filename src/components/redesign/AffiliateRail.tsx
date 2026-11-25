@@ -57,7 +57,7 @@ export async function AffiliateRail({ team, venue, className, ticketTestPage = n
         {/* Tickets — the single tickets CTA (locked team_page_sidebar placement).
             Ticketmaster only for a club TicketNetwork lists no home events for
             (tnHomeUnavailable; Matt 2026-11-03). */}
-        <TicketmasterCTA team={team} surface="web_team_page" placement="team_page_sidebar" size="full" ticketNetwork={ticketNetworkForGame(null, team)} ticketTest={ticketTestPage?.test ?? null} stubHubEventUrl={ticketTestPage?.teamStubHubEventUrl ?? null} />
+        <TicketmasterCTA team={team} surface="web_team_page" placement="team_page_sidebar" size="full" ticketNetwork={ticketNetworkForGame(null, team)} ticketTest={ticketTestPage?.test ?? null} stubHubEventUrl={ticketTestPage?.teamStubHubEventUrl ?? null} {...(ticketTestPage ? { eventUrl: ticketTestPage.teamTicketNetworkEventUrl, teamLevelCard: true } : {})} />
         {/* Parking */}
         <SpotHeroCTA team={team} venue={venue} surface="web_team_page" placement="team_page_prepare" />
         {/* Hotels */}

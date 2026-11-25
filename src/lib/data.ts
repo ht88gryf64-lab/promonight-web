@@ -40,7 +40,7 @@ import { VENUE_LOCATIONS_STATIC } from './venue-locations';
 import { resolveMlbZone } from './mlb-venue-tz';
 import { gameZoneAbbrev } from './format-game-time';
 import { JOIN_LEAGUES, applyGameDisplay, buildGameIndex, gameEventLinkUrl, gameStubHubLinkUrl, needsGameDisplay } from './promo-game-join';
-import { isTicketTestOn, stubHubEventUrlFor, type TicketTestResolution } from './ticket-test';
+import { isTicketTestActive, stubHubEventUrlFor, type TicketTestResolution } from './ticket-test';
 import { attachPromoPageFields, stampPromoPageCanonical } from './promo-page-stamp';
 import { isSplitSeasonLeague } from './season-label';
 import type { SeasonEligible } from './seasons/season-window';
@@ -925,11 +925,14 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
   // ruling, 2026-11-13).
   const tnUrl = ticketNetworkEventLinkFor({ tnEventUrl: d.tnEventUrl, tnEventId: d.tnEventId, tnEventDate: d.tnEventDate }, game.date);
   if (tnUrl) game.tnEventUrl = tnUrl;
-  // shEventUrl ONLY, and only while the ticket partner test is on (2026-11-25):
-  // with the switch off no game object, and no RSC payload, gains a key.
+  // shEventUrl ONLY, and only while the ticket partner test is RUNNING: the
+  // switch on and the site day inside the test's dates (Gate 3 ruling 2: the
+  // switch is on from the merge, and before the start date every page must
+  // be exactly what main renders). Otherwise no game object, and no RSC
+  // payload, gains a key.
   // shEventId and shEventDate stay unmapped; the URL is exposed only when
   // shEventDate is the game's date and the id is the one in the URL.
-  if (isTicketTestOn()) {
+  if (isTicketTestActive()) {
     const shUrl = stubHubEventUrlFor({ shEventUrl: d.shEventUrl, shEventId: d.shEventId, shEventDate: d.shEventDate }, game.date);
     if (shUrl) game.shEventUrl = shUrl;
   }

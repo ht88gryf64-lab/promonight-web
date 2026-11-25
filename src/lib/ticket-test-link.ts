@@ -88,9 +88,11 @@ export function buildStubHubLink(opts: { eventUrl: string | null | undefined; pu
 }
 
 /** What one ticket control on a test team's page links to. `fallback` is true
- *  only when the team is on StubHub today and this control has no matched
- *  StubHub event, so it carries the TicketNetwork link (or, for a club
- *  TicketNetwork does not list, the Ticketmaster link) instead. */
+ *  when the team is on StubHub today and this control has no matched StubHub
+ *  event, so it carries the TicketNetwork link (or, for a club TicketNetwork
+ *  does not list, the Ticketmaster link) instead; and when a team-level card
+ *  on a TicketNetwork day has no matched upcoming home game and carries the
+ *  team performer page. */
 export interface TestTicketLink {
   partner: 'stubhub' | 'ticketnetwork' | 'ticketmaster';
   href: string;
@@ -99,7 +101,16 @@ export interface TestTicketLink {
 
 export function pickTestTicketLink(
   test: TicketTestResolution,
-  links: { stubHubEventUrl?: string | null; ticketNetwork: string | null; ticketmaster: string | null },
+  links: {
+    stubHubEventUrl?: string | null;
+    ticketNetwork: string | null;
+    ticketmaster: string | null;
+    /** A team-level card only (Gate 3 ruling 1): true when the TicketNetwork
+     *  link is the team performer page because the team has no matched
+     *  upcoming home game on TicketNetwork. A TicketNetwork day then reports
+     *  fallback, as a StubHub day without an event does. */
+    ticketNetworkIsFallback?: boolean;
+  },
 ): TestTicketLink | null {
   if (test.partner === 'stubhub') {
     const sh = buildStubHubLink({ eventUrl: links.stubHubEventUrl, pubref: test.pubref });
@@ -107,11 +118,28 @@ export function pickTestTicketLink(
     if (links.ticketNetwork) return { partner: 'ticketnetwork', href: links.ticketNetwork, fallback: true };
     return links.ticketmaster ? { partner: 'ticketmaster', href: links.ticketmaster, fallback: true } : null;
   }
-  if (links.ticketNetwork) return { partner: 'ticketnetwork', href: links.ticketNetwork, fallback: false };
+  if (links.ticketNetwork) return { partner: 'ticketnetwork', href: links.ticketNetwork, fallback: links.ticketNetworkIsFallback === true };
   // A TicketNetwork day whose control never had a TicketNetwork link (an away
   // row at a building TicketNetwork does not list): Ticketmaster, as before
   // the test. Not a fallback: `fallback` means a StubHub day without an event.
   return links.ticketmaster ? { partner: 'ticketmaster', href: links.ticketmaster, fallback: false } : null;
+}
+
+/** The team-level card's two event URLs (Gate 3 ruling 1): the team's next
+ *  upcoming home game that has a matched event for today's partner. `home` is
+ *  the page's home games in date order, each carrying only the URLs the page
+ *  may link (the loader has already dropped a played, postponed or doubleheader
+ *  game's, and keeps a StubHub one only on a StubHub day). At most one of the
+ *  two is set; both null means the card falls back to the team performer page. */
+export function teamLevelEventUrls(
+  test: TicketTestResolution,
+  home: readonly { shEventUrl?: string | null; tnEventUrl?: string | null }[],
+): { teamStubHubEventUrl: string | null; teamTicketNetworkEventUrl: string | null } {
+  const first = (key: 'shEventUrl' | 'tnEventUrl') => home.find((g) => g[key])?.[key] ?? null;
+  return {
+    teamStubHubEventUrl: test.partner === 'stubhub' ? first('shEventUrl') : null,
+    teamTicketNetworkEventUrl: test.partner === 'ticketnetwork' ? first('tnEventUrl') : null,
+  };
 }
 
 /** The affiliate_click properties of a ticket click on a test surface. */

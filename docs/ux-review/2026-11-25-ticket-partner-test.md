@@ -343,3 +343,9 @@ Checked after the review, on production builds served locally:
 
 - **Switch off equals main.** The branch built with the switch off and main built the same way, 15 pages (six team pages, /promos/today, two league hubs, /best-promos, /my-teams, a venue hub, two promo pages, the homepage): the rendered HTML is identical on all 15, and the flight payload differs only by one more JavaScript chunk reference in the module import rows. No new key, no new element.
 - **Switch on.** Multi-team pages (/promos/today, /nhl, /best-promos) and a club outside the test (Twins) carry no StubHub link and no test line. Test team pages carry one partner's links only. No config string (seed, pairs, click counts) is in any client chunk.
+
+Gate 3 rulings (owner, 2026-11-25), applied after the table above:
+
+- **Defect 1, fixed.** Both arms now send the team-level card to the same kind of page: the team's next upcoming home game that has a matched event for the day's partner (StubHub's event through the Partnerize link, or TicketNetwork's event page). An arm with no such game links the TicketNetwork team performer page and the click says fallback.
+- **Defects 3 and 4, fixed by new copy.** The line is now "PromoNight may earn a commission on ticket purchases. Resale prices may differ from face value.", shorter than the first version and with no "these links".
+- **Defects 6 and 8** are fixed on their own branch, fix/ticket-card-overlap, for every page, with its own review.

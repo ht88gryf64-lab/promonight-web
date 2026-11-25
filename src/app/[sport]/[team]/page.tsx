@@ -51,7 +51,7 @@ import { teamLabelDay } from '@/lib/seasons/season-window';
 import { partitionTicketPackages, upcomingTicketPackages } from '@/lib/ticket-packages';
 import { RedesignTeamPage } from '@/components/redesign/RedesignTeamPage';
 import { ticketNetworkForGame } from '@/lib/affiliates';
-import { resolveTicketTest } from '@/lib/ticket-test';
+import { resolveTicketTest, teamLevelEventUrls } from '@/lib/ticket-test';
 import { TicketTestProvider, type TicketTestPageValue } from '@/components/affiliates/TicketTestContext';
 
 export const revalidate = 86400;
@@ -399,12 +399,16 @@ export default async function TeamPage({
   const gameContexts = games.length > 0
     ? await enrichGamesForTeam(team.id, games, promos, { today: todayStr, ticketTest })
     : undefined;
-  // The team-level card (the sidebar, a promo card with no game) links the
-  // team's next home game on StubHub: the first home context that kept a
-  // StubHub event (enrichGamesForTeam keeps one only on a StubHub day, for an
-  // upcoming scheduled game).
+  // The team-level card (the sidebar, the legacy hero, a promo card with no
+  // game) links the team's next upcoming home game that has a matched event
+  // for today's partner (Gate 3 ruling 1): the first home context that kept
+  // that partner's event URL. enrichGamesForTeam keeps a URL only for an
+  // upcoming scheduled game that is not half of a doubleheader, and keeps the
+  // StubHub one only on a StubHub day, so the same date gates apply as on the
+  // rows. No such game: both are null and the card falls back to the
+  // TicketNetwork team performer page.
   const ticketTestPage: TicketTestPageValue | null = ticketTest
-    ? { test: ticketTest, teamStubHubEventUrl: gameContexts?.find((c) => c.isHome && c.game.shEventUrl)?.game.shEventUrl ?? null }
+    ? { test: ticketTest, ...teamLevelEventUrls(ticketTest, (gameContexts ?? []).filter((c) => c.isHome).map((c) => c.game)) }
     : null;
   // Time and opponent slots from the contexts just built, so a promo shows the
   // same time here as on /promos/today (src/lib/promo-game-join.ts). No read:
@@ -540,6 +544,7 @@ export default async function TeamPage({
               ticketNetwork={ticketNetworkForGame(null, team)}
               ticketTest={ticketTest}
               stubHubEventUrl={ticketTestPage?.teamStubHubEventUrl ?? null}
+              {...(ticketTestPage ? { eventUrl: ticketTestPage.teamTicketNetworkEventUrl, teamLevelCard: true } : {})}
             />
           </div>
         </div>

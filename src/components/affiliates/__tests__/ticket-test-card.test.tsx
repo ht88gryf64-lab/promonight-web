@@ -13,7 +13,7 @@ mock.module('server-only', { namedExports: {} });
 
 const WILD = { id: 'minnesota-wild', league: 'NHL', city: 'Minnesota', name: 'Wild', abbreviation: 'MIN', primaryColor: '#154734', secondaryColor: '#A6192E', sportSlug: 'nhl', division: 'Central', ticketmasterSlug: 'minnesota-wild', ticketNetworkSlug: 'minnesota-wild' } as unknown as Team;
 const SH_URL = 'https://www.stubhub.com/minnesota-wild-saint-paul-tickets-11-25-2026/event/161350087/';
-const TEST_NOTE = 'PromoNight may earn a commission on ticket purchases made through these links. Resale prices may differ from face value.';
+const TEST_NOTE = 'PromoNight may earn a commission on ticket purchases. Resale prices may differ from face value.';
 const RESALE_NOTE = 'TicketNetwork is a resale marketplace. Prices may differ from face value.';
 const SH_DAY: TicketTestResolution = { partner: 'stubhub', phase: 'a', pairId: 'nhl-01', arm: 'stubhub_first', league: 'nhl', pubref: 'web-nhl-a' };
 const TN_DAY: TicketTestResolution = { partner: 'ticketnetwork', phase: 'b', pairId: 'nhl-01', arm: 'stubhub_first', league: 'nhl', pubref: 'web-nhl-b' };
@@ -89,4 +89,21 @@ test('game rows: a StubHub link only for an upcoming scheduled game that is not 
   assert.equal(gameStubHubLinkUrl({ ...g, status: 'postponed' as const }, '2026-12-01'), null);
   assert.equal(gameStubHubLinkUrl({ ...g, doubleheaderGame: 1 }, '2026-12-01'), null);
   assert.equal(gameStubHubLinkUrl({ ...g, shEventUrl: undefined }, '2026-12-01'), null);
+});
+
+test('team-level card (Gate 3 ruling 1): both arms link the next matched home game; no match on the arm is the TicketNetwork team page', async () => {
+  const TN_EVENT = 'https://www.ticketnetwork.com/tickets/8139699';
+  const stack = await render();
+  const performer = hrefs(stack).find((u) => u.includes('ticketnetwork.lusg.net'))!;
+  assert.match(decodeURIComponent(performer), /ticketnetwork\.com\/e\/performers\/minnesota-wild-tickets/);
+  // TicketNetwork day, a matched home game: the event page, through the same Impact link.
+  const tnHit = hrefs(await render({ ticketTest: TN_DAY, teamLevelCard: true, eventUrl: TN_EVENT }));
+  assert.equal(tnHit.length, 1);
+  assert.ok(tnHit[0].startsWith('https://ticketnetwork.lusg.net/') && tnHit[0].includes(encodeURIComponent(TN_EVENT)));
+  // TicketNetwork day, none matched: the team performer page.
+  assert.deepEqual(hrefs(await render({ ticketTest: TN_DAY, teamLevelCard: true, eventUrl: null })), [performer]);
+  // StubHub day, a matched home game: the Partnerize link to it.
+  assert.deepEqual(hrefs(await render({ ticketTest: SH_DAY, teamLevelCard: true, stubHubEventUrl: SH_URL })), [`https://stubhub.prf.hn/click/camref:1101l6zbdB/pubref:web-nhl-a/destination:${encodeURIComponent(SH_URL)}`]);
+  // StubHub day, none matched: the same TicketNetwork team performer page.
+  assert.deepEqual(hrefs(await render({ ticketTest: SH_DAY, teamLevelCard: true, stubHubEventUrl: null })), [performer]);
 });

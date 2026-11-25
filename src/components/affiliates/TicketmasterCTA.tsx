@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import type { Team } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
-import { buildTicketmasterUrl, buildTicketNetworkLink, ticketNetworkLinkLevel } from '@/lib/affiliates';
+import { buildTicketmasterUrl, buildTicketNetworkLink, isTicketNetworkEventUrl, ticketNetworkLinkLevel } from '@/lib/affiliates';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 import { TICKET_CTA_LABEL } from '@/lib/ticket-labels';
 import { ResaleNote, TicketTestNote } from './AffiliateDisclosure';
@@ -92,6 +92,14 @@ type Props = {
   /** The StubHub event page this card may link (the game's, or the team's next
    *  home game for a team-level card). Read only with ticketTest. */
   stubHubEventUrl?: string | null;
+  /** With ticketTest only: this card belongs to no single game (the sidebar
+   *  card, the legacy hero, a promo card without a game). BOTH arms then link
+   *  the team's next upcoming home game that has a matched event for the arm
+   *  (Gate 3 ruling 1): the caller passes that game's StubHub event as
+   *  stubHubEventUrl and its TicketNetwork event as eventUrl. An arm with no
+   *  such game links the TicketNetwork team performer page and the click
+   *  says fallback. */
+  teamLevelCard?: boolean;
 };
 
 export function TicketmasterCTA({
@@ -108,6 +116,7 @@ export function TicketmasterCTA({
   ticketNetwork = true,
   ticketTest = null,
   stubHubEventUrl = null,
+  teamLevelCard = false,
 }: Props) {
   // Both vendors receive the identical sub-ID: subKey verbatim when the call
   // site provides one (away rows pass the shared awayGameSubKey compound
@@ -176,7 +185,7 @@ export function TicketmasterCTA({
     ? 'font-outfit font-extrabold italic lowercase text-[#003C71] text-[13px]'
     : `font-outfit font-extrabold italic lowercase text-[#003C71] ${wordmarkSize}`;
 
-  const testLink = ticketTest ? pickTestTicketLink(ticketTest, { stubHubEventUrl, ticketNetwork: ticketNetworkHref, ticketmaster: ticketmasterHref || null }) : null;
+  const testLink = ticketTest ? pickTestTicketLink(ticketTest, { stubHubEventUrl, ticketNetwork: ticketNetworkHref, ticketmaster: ticketmasterHref || null, ticketNetworkIsFallback: teamLevelCard && !isTicketNetworkEventUrl(eventUrl) }) : null;
   const testClick = ticketTest && testLink ? ticketTestClickProps(ticketTest, testLink) : undefined;
 
   const ticketmasterButton = ticketmasterHref ? (

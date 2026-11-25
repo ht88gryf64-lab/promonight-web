@@ -28,6 +28,8 @@ const {
   ticketTestPhase,
   ticketTestPromoPaths,
   ticketTestTeamIds,
+  isTicketTestActive,
+  teamLevelEventUrls,
 } = require('@/lib/ticket-test') as typeof import('@/lib/ticket-test');
 
 const LEAGUES: TicketTestLeague[] = ['nba', 'nhl', 'nfl'];
@@ -235,7 +237,7 @@ test('boundary paths: every promo page of a test club once, no page of any other
 });
 
 test('the line under the button: the ruled sentence, no partner name, no price, no long dash', () => {
-  assert.equal(TICKET_TEST_NOTE, 'PromoNight may earn a commission on ticket purchases made through these links. Resale prices may differ from face value.');
+  assert.equal(TICKET_TEST_NOTE, 'PromoNight may earn a commission on ticket purchases. Resale prices may differ from face value.');
   assert.doesNotMatch(TICKET_TEST_NOTE, /StubHub|TicketNetwork|Ticketmaster|\$|\u2014|\u2013/);
 });
 
@@ -262,4 +264,63 @@ test('no test, no prop: a ticket link outside the test passes no ticketTest key 
   const route = read('../../app/[sport]/[team]/page.tsx');
   assert.equal(route.split('<TicketTestProvider').length - 1, 2);
   assert.equal(route.split('ticketTestPage ? <TicketTestProvider value={ticketTestPage}>').length - 1, 2);
+});
+
+// ── Gate 3 rulings ───────────────────────────────────────────────────────────
+
+test('before the start: with the switch ON, the day before the start resolves no club, is not a boundary and maps no StubHub URL', () => {
+  const dayBefore = new Date(Date.parse(`${TICKET_TEST.startDate}T00:00:00Z`) - 86400000).toISOString().slice(0, 10);
+  assert.equal(dayBefore, '2026-11-30');
+  for (const id of ticketTestTeamIds()) assert.equal(resolveTicketTest(id, dayBefore, true), null, id);
+  assert.equal(ticketTestBoundary(dayBefore, true), null);
+  assert.equal(isTicketTestActive(dayBefore, true), false, 'the mapper keeps shEventUrl off every game object');
+  // The start day itself is the first day of the test; the end day is the first day after it.
+  assert.equal(isTicketTestActive(TICKET_TEST.startDate, true), true);
+  assert.equal(isTicketTestActive(TICKET_TEST.endDate, true), false);
+  assert.equal(isTicketTestActive(TICKET_TEST.startDate, false), false);
+  assert.deepEqual([TICKET_TEST.startDate, TICKET_TEST.flipDate, TICKET_TEST.endDate], ['2026-12-01', '2026-12-31', '2027-01-30']);
+  // And the one gate at the mapper is that function, not the bare switch.
+  const { readFileSync } = require('node:fs') as typeof import('node:fs');
+  const data = readFileSync(new URL('../data.ts', import.meta.url), 'utf-8');
+  assert.match(data, /if \(isTicketTestActive\(\)\) \{\s+const shUrl = stubHubEventUrlFor/);
+  assert.doesNotMatch(data, /isTicketTestOn/);
+});
+
+test('team-level card: each arm gets the next home game with a matched event for that arm, and only that arm\'s', () => {
+  const TN1 = 'https://www.ticketnetwork.com/tickets/8139699';
+  const TN2 = 'https://www.ticketnetwork.com/tickets/8139700';
+  const club = TICKET_TEST_PAIRS.nhl[0].teams;
+  const shClub = club.find((t) => t.arm === 'stubhub_first')!.team;
+  const tnClub = club.find((t) => t.arm === 'ticketnetwork_first')!.team;
+  const shDay = resolveTicketTest(shClub, A_DAY, true)!;
+  const tnDay = resolveTicketTest(tnClub, A_DAY, true)!;
+  // Home games in date order; the first has no matched event on either partner.
+  const shHome = [{}, { shEventUrl: HEAT_URL }, { shEventUrl: 'https://www.stubhub.com/x-y-tickets-12-9-2026/event/5/' }];
+  const tnHome = [{}, { tnEventUrl: TN1 }, { tnEventUrl: TN2 }];
+  assert.deepEqual(teamLevelEventUrls(shDay, shHome), { teamStubHubEventUrl: HEAT_URL, teamTicketNetworkEventUrl: null });
+  assert.deepEqual(teamLevelEventUrls(tnDay, tnHome), { teamStubHubEventUrl: null, teamTicketNetworkEventUrl: TN1 });
+  // An arm never borrows the other partner's event.
+  assert.deepEqual(teamLevelEventUrls(tnDay, [{ shEventUrl: HEAT_URL }]), { teamStubHubEventUrl: null, teamTicketNetworkEventUrl: null });
+  assert.deepEqual(teamLevelEventUrls(shDay, [{ tnEventUrl: TN1 }]), { teamStubHubEventUrl: null, teamTicketNetworkEventUrl: null });
+  assert.deepEqual(teamLevelEventUrls(shDay, []), { teamStubHubEventUrl: null, teamTicketNetworkEventUrl: null });
+});
+
+test('team-level card fallback: no matched upcoming home game on the arm links the TicketNetwork team page and says fallback, on both arms', () => {
+  const performer = 'https://ticketnetwork.lusg.net/c/7236189/120057/2322?u=performer';
+  const event = 'https://ticketnetwork.lusg.net/c/7236189/120057/2322?u=event';
+  const club = TICKET_TEST_PAIRS.nba[0].teams;
+  const shDay = resolveTicketTest(club.find((t) => t.arm === 'stubhub_first')!.team, A_DAY, true)!;
+  const tnDay = resolveTicketTest(club.find((t) => t.arm === 'ticketnetwork_first')!.team, A_DAY, true)!;
+  // TicketNetwork day, matched: the event, not a fallback.
+  const tnHit = pickTestTicketLink(tnDay, { stubHubEventUrl: null, ticketNetwork: event, ticketmaster: 'https://tm.example', ticketNetworkIsFallback: false })!;
+  assert.deepEqual([tnHit.partner, tnHit.href, tnHit.fallback], ['ticketnetwork', event, false]);
+  // TicketNetwork day, none matched: the team page, a fallback.
+  const tnMiss = pickTestTicketLink(tnDay, { stubHubEventUrl: null, ticketNetwork: performer, ticketmaster: 'https://tm.example', ticketNetworkIsFallback: true })!;
+  assert.deepEqual([tnMiss.partner, tnMiss.href, tnMiss.fallback], ['ticketnetwork', performer, true]);
+  assert.equal(ticketTestClickProps(tnDay, tnMiss).fallback, true);
+  // StubHub day, none matched: the same team page, a fallback.
+  const shMiss = pickTestTicketLink(shDay, { stubHubEventUrl: null, ticketNetwork: performer, ticketmaster: 'https://tm.example', ticketNetworkIsFallback: true })!;
+  assert.deepEqual([shMiss.partner, shMiss.href, shMiss.fallback], ['ticketnetwork', performer, true]);
+  // A row's own TicketNetwork link (not a team-level card) is never a fallback on a TicketNetwork day.
+  assert.equal(pickTestTicketLink(tnDay, { stubHubEventUrl: null, ticketNetwork: performer, ticketmaster: null })!.fallback, false);
 });

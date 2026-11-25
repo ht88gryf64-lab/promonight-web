@@ -24,7 +24,7 @@ export const TICKETNETWORK_RESALE_NOTE = 'TicketNetwork is a resale marketplace.
  *  ticket partner test runs (src/lib/ticket-test.ts, Gate 0 ruling 4,
  *  2026-11-25): the same sentence on both arms, in place of the resale line
  *  above, naming no partner. */
-export const TICKET_TEST_NOTE = 'PromoNight may earn a commission on ticket purchases made through these links. Resale prices may differ from face value.';
+export const TICKET_TEST_NOTE = 'PromoNight may earn a commission on ticket purchases. Resale prices may differ from face value.';
 
 /** aria-label of a ticket link that needs context beyond its visible text. It
  *  BEGINS with the visible text, so the accessible name contains what a

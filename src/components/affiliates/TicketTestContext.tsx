@@ -18,9 +18,13 @@ import { TicketsBlock, type TicketsBlockProps } from './TicketsBlock';
 
 export interface TicketTestPageValue {
   test: TicketTestResolution;
-  /** The team's next home game's StubHub event page, for a card that belongs
-   *  to no single game. Null when the team has none matched. */
+  /** For a card that belongs to no single game (Gate 3 ruling 1): the event
+   *  page of the team's next upcoming home game that has a matched event for
+   *  today's partner. One of the two is set at most: the StubHub one on a
+   *  StubHub day, the TicketNetwork one on a TicketNetwork day. Both null:
+   *  the card links the TicketNetwork team performer page (a fallback). */
   teamStubHubEventUrl: string | null;
+  teamTicketNetworkEventUrl: string | null;
 }
 
 const TicketTestCtx = createContext<TicketTestPageValue | null>(null);
@@ -37,5 +41,6 @@ export function TicketTestProvider({ value, children }: { value: TicketTestPageV
 export function GameTicketsBlock({ gameStubHubEventUrl = null, teamLevel = false, ...props }: TicketsBlockProps & { gameStubHubEventUrl?: string | null; teamLevel?: boolean }) {
   const page = useContext(TicketTestCtx);
   if (!page) return <TicketsBlock {...props} />;
-  return <TicketsBlock {...props} ticketTest={page.test} stubHubEventUrl={teamLevel ? page.teamStubHubEventUrl : gameStubHubEventUrl} />;
+  if (teamLevel) return <TicketsBlock {...props} ticketTest={page.test} stubHubEventUrl={page.teamStubHubEventUrl} eventUrl={page.teamTicketNetworkEventUrl} teamLevelCard />;
+  return <TicketsBlock {...props} ticketTest={page.test} stubHubEventUrl={gameStubHubEventUrl} />;
 }

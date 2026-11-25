@@ -33,6 +33,7 @@ export type TicketsBlockProps = {
    *  test team's own team page passes them. */
   ticketTest?: TicketTestResolution | null;
   stubHubEventUrl?: string | null;
+  teamLevelCard?: boolean;
   /** 'section' (default): full team-page section with eyebrow + h2 + CTA.
    *  'card': modal/playoffs row look — eyebrow + CTA only, no h2; matchup
    *  context is supplied by the surrounding card. */
@@ -74,6 +75,7 @@ export function TicketsBlock({
   ticketNetwork = true,
   ticketTest = null,
   stubHubEventUrl = null,
+  teamLevelCard = false,
   variant = 'section',
 }: TicketsBlockProps) {
   if (variant === 'card') {
@@ -93,6 +95,7 @@ export function TicketsBlock({
           ticketNetwork={ticketNetwork}
           ticketTest={ticketTest}
           stubHubEventUrl={stubHubEventUrl}
+          teamLevelCard={teamLevelCard}
           size="compact"
         />
       </div>
@@ -125,6 +128,7 @@ export function TicketsBlock({
             ticketNetwork={ticketNetwork}
             ticketTest={ticketTest}
             stubHubEventUrl={stubHubEventUrl}
+            teamLevelCard={teamLevelCard}
             size="full"
           />
         </div>

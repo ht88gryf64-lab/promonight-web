@@ -13,6 +13,7 @@
 import 'server-only';
 import { TICKET_TEST, TICKET_TEST_PAIRS } from '@/config/ticket-test';
 import type { TicketTestArm } from './ticket-test-pairing';
+import { siteTodayYmd } from './site-today';
 import { isTicketTestOn, stubHubPubref, type TicketTestLeague, type TicketTestPhase, type TicketTestResolution } from './ticket-test-link';
 
 export * from './ticket-test-link';
@@ -24,6 +25,13 @@ export function ticketTestPhase(today: string, cfg: { startDate: string; flipDat
   if (!YMD_RE.test(today)) return null;
   if (today < cfg.startDate || today >= cfg.endDate) return null;
   return today < cfg.flipDate ? 'a' : 'b';
+}
+
+/** True while the test is running: the switch on AND the site day inside
+ *  [startDate, endDate). The one gate for anything that must not exist before
+ *  the start or after the end (the mapper's shEventUrl). */
+export function isTicketTestActive(today: string = siteTodayYmd(), on: boolean = isTicketTestOn()): boolean {
+  return on && ticketTestPhase(today) !== null;
 }
 
 // teamId -> its pair and arm, built once from the config literal.

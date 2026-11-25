@@ -34,7 +34,7 @@ const SH = (m: number, d: number, id: number) => `https://www.stubhub.com/detroi
 const SH_NOV = SH(11, 18, 161328900);
 const SH_DEC = SH(12, 12, 161328926);
 const HAWKS = EV(8138700, 'detroit-red-wings-vs-chicago-blackhawks-tickets-sat-dec-12-2026-little-caesars-arena');
-const NOTE = 'PromoNight may earn a commission on ticket purchases made through these links. Resale prices may differ from face value.';
+const NOTE = 'PromoNight may earn a commission on ticket purchases. Resale prices may differ from face value.';
 const SH_DAY: TicketTestResolution = { partner: 'stubhub', phase: 'a', pairId: 'nhl-01', arm: 'stubhub_first', league: 'nhl', pubref: 'web-nhl-a' };
 const TN_DAY: TicketTestResolution = { ...SH_DAY, partner: 'ticketnetwork', phase: 'b', pubref: 'web-nhl-b' };
 const partnerize = (u: string, pubref = 'web-nhl-a') => `https://stubhub.prf.hn/click/camref:1101l6zbdB/pubref:${pubref}/destination:${encodeURIComponent(u)}`;
