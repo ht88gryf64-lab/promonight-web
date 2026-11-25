@@ -98,9 +98,9 @@ test('every promo card and the promo page H1 print the display title; the head a
     ['../../components/scoring/scored-promo-card.tsx', /\{promoDisplayTitle\(promo\.title, team\)\}/], // /best-promos, bobbleheads
     ['../../components/hub/HubThisWeek.tsx', /\{promoDisplayTitle\(p\.title, team\)\}/], // hub cards
     ['../../components/hub/HubTodayPromos.tsx', /\{promoDisplayTitle\(p\.title, p\.team\)\}/],
-    ['../../components/redesign/RedesignPromoRow.tsx', /\{promoDisplayTitle\(promo\.title, \(promo as \{ team\?: \{ name\?: string \} \}\)\.team \?\? team\)\}/], // daily board, team-page rows
+    ['../../components/redesign/RedesignPromoRow.tsx', /\{promoDisplayTitle\(promo\.title, \(promo as \{ team\?: \{ name\?: string \} \}\)\.team \?\? team, \{ ownTeamPage: !\(promo as \{ team\?: unknown \}\)\.team \}\)\}/], // daily board prefixed; the club's own team page not
     ['../../components/redesign/RedesignAggregatorList.tsx', /\{promoDisplayTitle\(p\.title, p\.team\)\}/], // /promos/* lists
-    ['../../components/promo-page/PromoPageView.tsx', /<h1 [^>]*>\{promoDisplayTitle\(cleanText\(primary\.title\), team\) \|\| 'Untitled promotion'\}<\/h1>/],
+    ['../../components/promo-page/PromoPageView.tsx', /<h1 [^>]*>\{shownName\}<\/h1>/],
   ];
   for (const [rel, re] of uses) assert.match(read(rel), re, rel);
   assert.equal(read('../../components/scoring/scored-promo-card.tsx').match(/promoDisplayTitle\(promo\.title, team\)/g)?.length, 2, 'light and dark');
@@ -111,3 +111,20 @@ test('every promo card and the promo page H1 print the display title; the head a
   // Pure: no clock, no Firestore, no env.
   assert.doesNotMatch(read('../promo-display-title.ts').split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n'), /new Date|process\.env|firebase|server-only/);
 });
+
+test('the one context flag: on the club\'s own team page every title prints as stored', () => {
+  for (const [club, stored] of [['Kraken', 'Bobblehead'], ['Canadiens', 'Bobblehead Night'], ['Kings', 'Rally Towel'], ['Kings', 'Mini Tote Bag'], ['Ducks', 'T-Shirt Giveaway']] as const) {
+    assert.equal(promoDisplayTitle(stored, T(club), { ownTeamPage: true }), stored, `${club} team page: ${stored}`);
+    assert.notEqual(promoDisplayTitle(stored, T(club)), stored, `${club} elsewhere: prefixed`);
+    assert.equal(promoDisplayTitle(stored, T(club), { ownTeamPage: false }), `${club} ${stored}`);
+  }
+  assert.equal(promoDisplayTitle('Fred VanVleet Bobblehead', T('Rockets'), { ownTeamPage: true }), 'Fred VanVleet Bobblehead');
+  // The flag is the helper's, not the components': no component decides the prefix by itself.
+  const read = (rel: string) => readFileSync(new URL(rel, import.meta.url), 'utf-8');
+  const comps = ['../../components/redesign/TicketStubCard.tsx', '../../components/redesign/LightHomePromoCard.tsx', '../../components/scoring/scored-promo-card.tsx', '../../components/hub/HubThisWeek.tsx', '../../components/hub/HubTodayPromos.tsx', '../../components/redesign/RedesignAggregatorList.tsx'];
+  for (const c of comps) assert.doesNotMatch(read(c), /ownTeamPage/, `${c}: a cross-team surface, always the display title`);
+  assert.equal(read('../../components/redesign/RedesignPromoRow.tsx').match(/ownTeamPage/g)?.length, 2, 'the shared row passes the flag (once in code, once in its comment)');
+  // The team page's own prose, FAQ and game detail never call the helper: they print the stored title.
+  for (const c of ['../../components/team-content-sections.tsx', '../promo-helpers.ts', '../../components/redesign/GameExpand.tsx', '../../components/promo-list.tsx']) assert.doesNotMatch(read(c), /promo-display-title/, c);
+});
+

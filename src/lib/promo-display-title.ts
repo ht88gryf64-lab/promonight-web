@@ -21,8 +21,13 @@
 // work (docs/known-issues.md entry 127, "Bare item titles"). This file only
 // decides what a card prints.
 //
-// Used by every promo card and by the promo page's H1. NOT by the promo
-// page's <title>, og:title or JSON-LD name, which already carry the team.
+// ONE NAME PER PAGE. Cross-team surfaces (homepage rails, rankings, hubs, the
+// daily board, the /promos lists) and the promo page print the display title
+// wherever they name the promo: on the promo page that is the H1, the
+// breadcrumb, the FAQ, the timeline, the share text and the JSON-LD name. A
+// club's own team page prints the stored title everywhere (the ownTeamPage
+// flag). NOT changed anywhere: the promo page's <title> and og:title, which
+// already carry the team.
 
 /** Words that name an item or a giveaway and nothing else. A title made only
  *  of these (and of the club's own name) says what is handed out but not whose
@@ -57,8 +62,26 @@ export function isBareItemTitle(title: string | null | undefined): boolean {
  *   ("Wizards T-shirt"), bare or not.
  * - Every other title is returned as stored, byte for byte.
  * - With no team (a caller that does not have one), the stored title.
+ * - On the club's own team page (`context.ownTeamPage`), the stored title.
  */
-export function promoDisplayTitle(title: string, team: { name?: string | null } | null | undefined): string {
+export interface PromoTitleContext {
+  /** The surface is the promo's own club's team page: no prefix there. Every
+   *  other surface (homepage rails, rankings, hubs, the daily board, the
+   *  /promos lists, the promo page) leaves this unset. */
+  ownTeamPage?: boolean;
+}
+
+export function promoDisplayTitle(
+  title: string,
+  team: { name?: string | null } | null | undefined,
+  context: PromoTitleContext = {},
+): string {
+  // THE ONE CONTEXT FLAG. On a club's own team page every row is that club's,
+  // and the page's prose, FAQ answers and share labels use the stored title;
+  // a prefix there is redundant and gives one giveaway two names on one page
+  // (ux-review 2026-11-25). So the own-team page prints the stored title
+  // everywhere, and every other surface prints the display title everywhere.
+  if (context.ownTeamPage) return title;
   const club = (team?.name ?? '').trim();
   if (!club || !title) return title;
   const clubWords = words(club);

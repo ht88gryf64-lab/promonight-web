@@ -183,8 +183,10 @@ export function RedesignPromoRow({
         {/* The title reddens on hover of the whole row, since the whole row is
             the link (LightHomePromoCard's pattern). */}
         <div className={`text-sm font-semibold text-rd-ink md:text-base ${linkHref ? 'transition-colors group-hover:text-rd-red' : ''}`}>
-          {/* The row's own team when the promo carries one (the daily board), else the page's. */}
-          {promoDisplayTitle(promo.title, (promo as { team?: { name?: string } }).team ?? team)}
+          {/* A promo that carries its own team is on a cross-team host (the daily
+              board); one that does not is a row of the club's own team page,
+              which prints the stored title (ownTeamPage). */}
+          {promoDisplayTitle(promo.title, (promo as { team?: { name?: string } }).team ?? team, { ownTeamPage: !(promo as { team?: unknown }).team })}
         </div>
         {promo.description && (
           <p className="mt-1 text-xs text-rd-ink-soft md:text-sm">{promo.description}</p>
