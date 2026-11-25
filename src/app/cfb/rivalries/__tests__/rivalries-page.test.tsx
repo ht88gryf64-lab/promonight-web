@@ -93,3 +93,25 @@ for (const [label, iso, verb, played] of [
     assert.equal(ld.find((x) => x['@type'] === 'ItemList').name, 'College Football Rivalries 2026');
   });
 }
+
+// ── played games on the index (2026-11 fix round) ───────────────────────────
+test('a game already played is tagged "Played" beside its date; one still ahead is not', async () => {
+  const tagged = (h: string) => (h.match(/data-rivalry-played/g) ?? []).length;
+  // Nov 25: Red River (Oct 10) and Big Game (Nov 21) are played; the two Rivalry Week games are ahead.
+  const mid = await renderAt('2026-11-25T17:00:00Z');
+  assert.equal(tagged(mid.h), 2);
+  for (const slug of ['red-river', 'big-game']) {
+    const li = mid.h.slice(mid.h.lastIndexOf('<li', mid.h.indexOf(`href="/cfb/rivalries/${slug}"`)), mid.h.indexOf('</li>', mid.h.indexOf(`href="/cfb/rivalries/${slug}"`)));
+    assert.match(text(li), /Played/, slug);
+  }
+  for (const slug of ['egg-bowl', 'iron-bowl']) {
+    const at = mid.h.indexOf(`href="/cfb/rivalries/${slug}"`);
+    assert.doesNotMatch(text(mid.h.slice(mid.h.lastIndexOf('<li', at), mid.h.indexOf('</li>', at))), /Played/, slug);
+  }
+  // Game day itself is not played.
+  assert.equal(tagged((await renderAt('2026-11-21T17:00:00Z')).h), 1, 'only Red River on the day of the Big Game');
+  // Nov 30: all four, and the two Rivalry Week games are listed twice (the week section and the full list).
+  assert.equal(tagged((await renderAt('2026-11-30T17:00:00Z')).h), 6);
+  // Before the first game: none.
+  assert.equal(tagged((await renderAt('2026-09-01T17:00:00Z')).h), 0);
+});

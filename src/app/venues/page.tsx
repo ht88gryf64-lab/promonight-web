@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { archivoHouse } from '@/components/redesign/fonts-house';
-import { getVenueIndexEntries, SEASON_YEAR } from '@/lib/venue-hub';
+import { getVenueIndexEntries } from '@/lib/venue-hub';
 import { BAG_SEASON } from '@/lib/venue-bag-policies';
 import { groupVenueIndexEntries } from '@/lib/venue-index';
 import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
@@ -18,11 +18,14 @@ import { pageOpenGraph } from '@/lib/og';
 export const revalidate = 86400;
 
 const CANONICAL = 'https://www.getpromonight.com/venues';
-// Season year is the deliberate SEASON_YEAR constant, never getFullYear().
+// NO SEASON IS NAMED HERE (2026-11 fix round). The page said "for the 2026
+// season" over buildings whose NBA and NHL tenants are playing 2026-27, and
+// one year cannot be true of an index that spans every league's calendar.
+// The claim that is true of all of them is that each guide is verified.
 // Retitled off "Bag Policies" so the head term consolidates on the child
 // aggregator (/venues/bag-policies) instead of splitting relevance with it.
 const TITLE = 'Stadium Guides: Parking & Gameday Rules';
-const DESCRIPTION = `Bag policies, parking, gate times, and transit for MLB, NFL, MLS, WNBA, NBA, NHL, and college football stadiums and arenas, verified for the ${SEASON_YEAR} season.`;
+const DESCRIPTION = `Bag policies, parking, gate times, and transit for MLB, NFL, MLS, WNBA, NBA, NHL, and college football stadiums and arenas, one verified guide per building.`;
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -42,7 +45,7 @@ export default async function VenuesIndexPage() {
           STADIUM &amp; ARENA GUIDES
         </h1>
         <p className="mt-4 max-w-2xl font-rd text-[15px] leading-relaxed text-rd-ink-soft">
-          {entries.length} verified gameday guides for the {SEASON_YEAR} season: bag
+          {entries.length} verified gameday guides: bag
           policies, parking, gate times, and transit, one page per building. Pick
           a venue for the full rundown, or jump to its league below.
         </p>

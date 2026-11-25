@@ -19,6 +19,7 @@ import { buildRivalryIndexJsonLd } from '@/lib/cfb/rivalry-jsonld';
 import { barlowCondensed } from '@/components/cfb/rivalry/fonts';
 import { Spine, RivalryWash, spineVars, CONDENSED, GOLD, RED } from '@/components/cfb/rivalry/spine';
 import { cfbSeasonLabel } from '@/lib/cfb/season';
+import { matchupPlayed } from '@/lib/cfb/matchup-description';
 import { siteTodayYmd } from '@/lib/site-today';
 
 export const revalidate = 21600; // ISR, same cadence as the CFB hub
@@ -48,8 +49,9 @@ function gamesLabel(n: number): string {
 // spine, condensed all-caps name, gold trophy; the 'week' variant is larger
 // with the two-color corner wash. Href, text content and row count are
 // unchanged — this pass must be invisible to the three-way count check.
-function RivalryRow({ r, variant }: { r: RivalryIndexRow; variant: 'week' | 'list' }) {
+function RivalryRow({ r, variant, today }: { r: RivalryIndexRow; variant: 'week' | 'list'; today: string }) {
   const week = variant === 'week';
+  const played = matchupPlayed(r.date, today);
   // matchup is built by joining exactly two school names with ' vs '
   // (matchups.ts), so this split only restyles; textContent is unchanged.
   const [schoolA, schoolB] = r.matchup.split(' vs ');
@@ -72,6 +74,9 @@ function RivalryRow({ r, variant }: { r: RivalryIndexRow; variant: 'week' | 'lis
             </span>
             <span className="shrink-0 text-[15px] font-semibold tracking-[0.06em] text-white/45" style={{ fontFamily: CONDENSED }}>
               {r.date ? monthDay(r.date) : `Not in ${cfbSeasonLabel()}`}
+              {/* A game already played says so beside its date, so a list in
+                  date order never reads as a list of games still to come. */}
+              {played && <span data-rivalry-played className="ml-2 text-[12px] tracking-[0.08em] text-white/60">Played</span>}
             </span>
           </span>
           <span className="mt-[3px] block text-[13.5px] text-white/50">
@@ -191,7 +196,7 @@ export default async function Page() {
         </h1>
         <p className="mt-2.5 max-w-[46ch] text-sm text-white/60">
           {range && `${rivalryWeekAnswer(range, today)} `}
-          The date, the kickoff and the stadium for every rivalry we cover, in the order they are played.
+          The date and the stadium for every rivalry we cover, with the kickoff for games still ahead, in the order they are played.
         </p>
 
         {/* Seasonal section on a persistent page, not a date-scoped page: the
@@ -222,7 +227,7 @@ export default async function Page() {
                 <DayLabel g={g} />
                 <ul className="space-y-2.5">
                   {g.rows.map((r) => (
-                    <RivalryRow key={r.slug} r={r} variant="week" />
+                    <RivalryRow key={r.slug} r={r} variant="week" today={today} />
                   ))}
                 </ul>
               </div>
@@ -243,7 +248,7 @@ export default async function Page() {
               <MonthLabel g={g} />
               <ul className="space-y-2">
                 {g.rows.map((r) => (
-                  <RivalryRow key={r.slug} r={r} variant="list" />
+                  <RivalryRow key={r.slug} r={r} variant="list" today={today} />
                 ))}
               </ul>
             </div>

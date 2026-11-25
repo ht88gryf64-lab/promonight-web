@@ -27,7 +27,8 @@ import { getVenueLinksForTeams, getTeamVenueHubMap, getVenueHub } from '@/lib/ve
 import { transitSuppressed } from '@/lib/venue-transit-suppression';
 import { fieldExcluded, subFieldExcluded, hasProvenance, hasSubProvenance } from '@/lib/venue-field-exclusions';
 import { verifiedGateTenants } from '@/components/venue-hub/venue-logistics';
-import { seasonLabel } from '@/lib/seasons/season-window';
+import { getLeagueHubSeason } from '@/lib/data';
+import { HubSeasonNote } from '@/components/hub/HubSeasonNote';
 
 // League hub accent (house palette, mirrors LEAGUE_HUB_REGISTRY NFL entry).
 const ACCENT = '#5f6b57';
@@ -54,8 +55,7 @@ const HUB_URL = 'https://www.getpromonight.com/nfl';
 // it moves on the first day of the next season's lead-in without a deploy.
 // Never new Date().getFullYear(), which would flip the copy at midnight on
 // Jan 1, before the new season's data exists.
-function hubCopy() {
-  const YEAR = seasonLabel('NFL');
+function hubCopy(YEAR: string) {
   return {
     YEAR,
     TITLE: `NFL Promotions & Giveaways ${YEAR}`,
@@ -63,8 +63,10 @@ function hubCopy() {
   };
 }
 
-export function generateMetadata(): Metadata {
-  const { TITLE, DESCRIPTION } = hubCopy();
+export async function generateMetadata(): Promise<Metadata> {
+  // The season the hub names: the labelled one, or the next one early once
+  // this season has ended and a club has published (getLeagueHubSeason).
+  const { TITLE, DESCRIPTION } = hubCopy((await getLeagueHubSeason('NFL')).label);
   return {
     title: TITLE,
     description: DESCRIPTION,
@@ -98,7 +100,8 @@ const FAQS: HubFaqItem[] = [
 
 
 export default async function NflHubPage() {
-  const { YEAR, TITLE, DESCRIPTION } = hubCopy();
+  const hubSeason = await getLeagueHubSeason('NFL');
+  const { YEAR, TITLE, DESCRIPTION } = hubCopy(hubSeason.label);
   const [slate, counts, divisions, today, teams, venueMap] = await Promise.all([
     getNflWeekSlate(),
     getNflClubCounts(),
@@ -199,6 +202,7 @@ export default async function NflHubPage() {
       <HubHero
         eyebrow="NFL League Hub"
         title={`NFL PROMOTIONS ${YEAR}`}
+        notice={hubSeason.note ? <HubSeasonNote text={hubSeason.note} /> : undefined}
         subtitle="Theme nights, giveaways, and kids days across all 32 clubs, organized by NFL week with the stadium guide one tap from every game."
         freshness="From official club announcements."
         accent={ACCENT}

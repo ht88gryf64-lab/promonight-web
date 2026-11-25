@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { EventHubView } from '@/components/events/EventListViews';
 import { getHubQuestionFacts, getUpcomingStopSummaries } from '@/lib/events/event-stops';
-import { EVENTS_SITE_URL, eventHubPath, eventShowOf, hubDescription, hubTitle, isEventsPagesLive } from '@/lib/events/event-pages';
+import { EVENTS_SITE_URL, eventHubPath, eventShowOf, hubDescription, hubTitle, hubYear, isEventsPagesLive } from '@/lib/events/event-pages';
 
 // /events/{show} (Phase 2, 2026-11-18): the show hub, every upcoming stop by
 // month. It must exist as its own route: without it the path would fall to
@@ -22,8 +22,7 @@ async function load(params: Params) {
   if (!show) return null;
   const now = new Date();
   const [stops, facts] = await Promise.all([getUpcomingStopSummaries(show.slug, now), getHubQuestionFacts(show.slug, now)]);
-  const lastYear = stops.map((s) => s.lastDate).sort().pop()?.slice(0, 4);
-  return { show, stops, facts, year: lastYear ? Number(lastYear) : null };
+  return { show, stops, facts, year: hubYear(stops) };
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {

@@ -160,7 +160,8 @@ test("fix (c): the Games tile reads the list's population", () => {
   // to the raw doc count while the helper's own tests pass.
   const page = readFileSync('src/components/redesign/RedesignTeamPage.tsx', 'utf8');
   assert.match(page, /const regularGames = gameContexts \? regularSeasonContexts\(gameContexts, today\) : undefined;/);
-  assert.match(page, /gamesCount=\{regularGames\?\.length\}/);
+  // No tile on a page naming next season early (2026-11 fix round): these are this season's games.
+  assert.match(page, /gamesCount=\{claim\.labelDay \? undefined : regularGames\?\.length\}/);
   assert.doesNotMatch(page, /gamesCount=\{gameContexts\?\.length\}/);
   // The schedule is gated on the same population, so the slot cannot render empty.
   assert.match(page, /const showSchedule = hasNoUpcoming && \(regularGames\?\.length \?\? 0\) > 0;/);

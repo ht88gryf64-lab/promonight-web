@@ -16,7 +16,9 @@ import { OG_IMAGE_ALT } from '@/lib/og';
 import type { Metadata } from 'next';
 import type { CfbSchoolPage } from '@/lib/cfb/data';
 import type { MatchupPage } from '@/lib/cfb/matchups';
-import { buildMatchupDescription, matchupSideName, namesThePairing, prettySchoolId } from '@/lib/cfb/matchup-description';
+import { buildMatchupDescription, matchupPlayed, matchupSideName, namesThePairing, prettySchoolId } from '@/lib/cfb/matchup-description';
+import { ymdInZone } from '@/lib/promo-date-tile';
+import { siteYmd } from '@/lib/site-today';
 import { venueLocalKickoff } from '@/lib/cfb/kickoff';
 import { cfbSeasonLabel } from './season';
 import { headingText, rivalryIndexHeading, rivalryWeekAnswer, rivalryWeekRange, rivalryWeekRows } from './rivalry-index';
@@ -294,6 +296,15 @@ export function matchupSchoolNames(data: MatchupPage): [string, string] {
   return [matchupSideName(a, aId), matchupSideName(b, bId)];
 }
 
+/** Whether this page's game has been played, on the venue's day (the site's
+ *  day when the venue has no zone). The ONE read the head, the page body and
+ *  the JSON-LD all make, so none of them can be in a different state. */
+export function matchupIsPlayed(data: Pick<MatchupPage, 'game' | 'venueZone'>, now: Date = new Date()): boolean {
+  // A canceled game was never played, whatever its date.
+  if (data.game?.status === 'canceled') return false;
+  return matchupPlayed(data.game?.date, data.venueZone ? ymdInZone(now, data.venueZone) : siteYmd(now));
+}
+
 export function buildCfbMatchupMetadata(data: MatchupPage): Metadata {
   // displayName, never rivalry.name, so title, H1 and description agree.
   const [nameA, nameB] = matchupSchoolNames(data);
@@ -312,6 +323,7 @@ export function buildCfbMatchupMetadata(data: MatchupPage): Metadata {
     kickoff: renderedKickoff(data.game, data.venueZone),
     venueName: data.resolvedVenue?.name ?? null,
     venueCity: data.resolvedVenue?.city ?? null,
+    played: matchupIsPlayed(data),
   });
 
   const socialTitle = `${heading}${BRAND_SUFFIX}`;

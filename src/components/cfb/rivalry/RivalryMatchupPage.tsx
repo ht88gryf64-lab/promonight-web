@@ -4,8 +4,8 @@ import type { MatchupPage } from '@/lib/cfb/matchups';
 import type { TripStepKey } from '@/lib/cfb/trip-steps';
 import { planTripSteps } from '@/lib/cfb/trip-steps';
 import { resolveCfbTheme } from '@/lib/cfb/theme';
-import { buildMatchupDescription, matchupSideName, namesThePairing, prettySchoolId } from '@/lib/cfb/matchup-description';
-import { renderedKickoff } from '@/lib/cfb/metadata';
+import { buildMatchupDescription, MATCHUP_PLAYED_LINE, matchupSideName, namesThePairing, prettySchoolId } from '@/lib/cfb/matchup-description';
+import { matchupIsPlayed, renderedKickoff } from '@/lib/cfb/metadata';
 import { toAffiliateTeam } from '@/lib/cfb/page-extras';
 import { buildTicketNetworkLink, buildSpotHeroUrl } from '@/lib/affiliates';
 import { resolveHotelLink } from '@/lib/hotel-link';
@@ -105,6 +105,12 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
   // already reads "A vs B" is the whole heading.
   const pairingInName = namesThePairing(data.displayName);
 
+  // PLAYED: the game's day has passed in the venue's zone (matchupIsPlayed,
+  // the same read the head and the JSON-LD make). The page then says so, the
+  // lede turns to the past tense, and the trip section with its ticket, hotel
+  // and parking links is not rendered.
+  const played = matchupIsPlayed(data);
+
   const date = game?.date ? formatDayMonth(game.date) : null;
   // "Kickoff TBA" verbatim, no embellishment. renderedKickoff is the ONE gate
   // (announced AND verified), shared with the meta description, the lede and
@@ -122,6 +128,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
     kickoff: renderedKickoff(game, data.venueZone),
     venueName: resolvedVenue?.name ?? null,
     venueCity: resolvedVenue?.city ?? null,
+    played,
   });
 
   // Corroborating source links (cfbRivalries.source, sometimes "urlA + urlB").
@@ -271,7 +278,13 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
           ) : (
             <div className="text-xl font-bold text-white/70">Not scheduled in {Number(cfbSeasonLabel())}</div>
           )}
-          <div className="mt-2 text-sm text-white/80">{kickoff}</div>
+          {/* A played game shows that it was played where an upcoming one
+              shows its kickoff: a start time is for someone still going. */}
+          {played ? (
+            <div data-matchup-played className="mt-2 text-sm font-semibold text-white">{MATCHUP_PLAYED_LINE}</div>
+          ) : (
+            <div className="mt-2 text-sm text-white/80">{kickoff}</div>
+          )}
           {resolvedVenue && (
             <div className="mt-3 border-t border-white/10 pt-3">
               <div className="text-sm font-semibold">{resolvedVenue.name}</div>
@@ -279,6 +292,13 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
                 <div className="text-sm text-white/55">
                   {[resolvedVenue.city, resolvedVenue.state].filter(Boolean).join(', ')}
                 </div>
+              )}
+              {/* The trip section carried the page's only link to the stadium
+                  guide; a played page keeps that one, and it is not an offer. */}
+              {played && gatesHref && (
+                <Link href={gatesHref} data-matchup-stadium-guide className="mt-2 inline-block py-2 text-sm font-semibold text-white underline underline-offset-4">
+                  Stadium guide
+                </Link>
               )}
             </div>
           )}
@@ -290,7 +310,9 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
           <SchoolCard school={b} fallback={bFallback} />
         </div>
 
-        {/* 6. plan the trip */}
+        {/* 6. plan the trip. Not rendered once the game has been played: no
+            ticket, hotel or parking link for a game that is over. */}
+        {!played && (
         <section data-ad-item="rivalry-section" className="mt-8">
           <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-white/45" style={{ fontFamily: CONDENSED }}>Plan the trip</h2>
           <ol className="mt-3">
@@ -312,6 +334,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
             })}
           </ol>
         </section>
+        )}
 
         {/* 7. the trophy. The heading renders only when the rivalry doc carries a
             trophy; 7 of 32 do not, and a heading over nothing is a claim. The
@@ -389,7 +412,8 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
         {/* FTC disclosure. The trip timeline above carries TicketNetwork, Expedia
             and SpotHero links, so the same disclosure the pro team pages carry
             ships here too. */}
-        <AffiliateDisclosure tone="dark" className="mt-10 text-center" />
+        {/* The disclosure travels with the affiliate links: none on a played page. */}
+        {!played && <AffiliateDisclosure tone="dark" className="mt-10 text-center" />}
       </div>
     </div>
   );

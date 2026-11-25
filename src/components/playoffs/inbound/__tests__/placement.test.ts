@@ -133,7 +133,9 @@ for (const [league, lower, page] of HUBS) {
     const c = code(page);
     assert.match(c, new RegExp(`const heroLine = leagueHeroLine\\(inbound, '${league}'\\);`));
     const hero = c.slice(c.indexOf('<HubHero'), c.indexOf('</HubHero>'));
-    assert.match(hero, new RegExp(`notice=\\{heroLine \\? <LeaguePlayoffsHeroLine line=\\{heroLine\\} surface="web_${lower}_hub" /> : undefined\\}`));
+    // The playoffs line comes first; with none, the slot may carry the early-season note
+    // (2026-11 fix round). The two cannot coincide: the note needs the season to have ended.
+    assert.match(hero, new RegExp(`notice=\\{heroLine \\? <LeaguePlayoffsHeroLine line=\\{heroLine\\} surface="web_${lower}_hub" /> : hubSeason\\.note \\? <HubSeasonNote text=\\{hubSeason\\.note\\} /> : undefined\\}`));
     assert.ok(c.indexOf('</HubHero>') < c.indexOf('page-content'), 'the hero closes before page-content opens');
     assert.equal((c.match(/<LeaguePlayoffsHeroLine/g) ?? []).length, 1);
   });

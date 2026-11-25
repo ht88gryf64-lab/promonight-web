@@ -43,6 +43,7 @@ import { JOIN_LEAGUES, applyGameDisplay, buildGameIndex, gameEventLinkUrl, needs
 import { attachPromoPageFields, stampPromoPageCanonical } from './promo-page-stamp';
 import { isSplitSeasonLeague } from './season-label';
 import type { SeasonEligible } from './seasons/season-window';
+import { hubLabelDay, leadInStart, nextSeasonNotYetOpen, seasonLabel, seasonOfDate } from './seasons/season-window';
 import { groupLeagueTeams, leagueSuperGroups, type HubSuperGroup, type HubTeamGroup } from './hub-grouping';
 import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
 import { ticketNetworkEventLinkFor } from './affiliates';
@@ -1827,6 +1828,65 @@ export const getLeagueUpcomingPromoCounts = cache(
     return counts;
   },
 );
+
+// THE SEASON A LEAGUE HUB NAMES (2026-11 fix round, ruling on item 2).
+// Between seasons a hub names the season just played. Once that season has
+// ENDED and at least one club has published a promotion for the next one,
+// the hub names the next season and says how many clubs have published so
+// far (hubLabelDay, src/lib/seasons/season-window.ts). A league still in
+// play, or in its lead-in, is untouched and makes no read here.
+//
+// The one read is the next season's rows only (date on or after its lead-in
+// day), league-scoped in memory like every other hub reader, visible rows,
+// NHL and NBA ticket packages left out as everywhere a promotion is counted.
+export interface LeagueHubSeason {
+  /** The printed season: "2026", "2027", "2026-27". */
+  label: string;
+  /** True when the hub names the next season early. */
+  early: boolean;
+  /** Clubs with at least one published promotion in the next season. */
+  clubsPublished: number;
+  teamCount: number;
+  /** "8 of 30 clubs have published 2027 promotions so far." Null unless `early`. */
+  note: string | null;
+}
+
+export const getLeagueHubSeason = cache(async (league: string): Promise<LeagueHubSeason> => {
+  const today = hubTodayYMD();
+  const teams = (await getAllTeams()).filter((t) => t.league === league);
+  const same: LeagueHubSeason = { label: seasonLabel(league, today), early: false, clubsPublished: 0, teamCount: teams.length, note: null };
+  const next = nextSeasonNotYetOpen(league, today);
+  // No next season in the table, or the labelled one is still in play: no read.
+  if (!next || hubLabelDay(league, today, 1) === today) return same;
+  const ids = new Set(teams.map((t) => t.id));
+  const clubs = new Set<string>();
+  try {
+    const snapshot = await db.collectionGroup('promos').where('date', '>=', leadInStart(next)).get();
+    for (const doc of snapshot.docs) {
+      const teamId = doc.ref.parent.parent?.id;
+      if (!teamId || !ids.has(teamId) || clubs.has(teamId)) continue;
+      const data = doc.data();
+      if (data.tombstoned === true || data.isPostseason === true) continue;
+      if (isTicketPackageLeague(league) && isTicketPackageDoc(data)) continue;
+      if (seasonOfDate(league, data.date)?.season !== next.season) continue;
+      clubs.add(teamId);
+    }
+  } catch (err) {
+    // A failed read never fails a hub: it keeps the label it had.
+    console.error('getLeagueHubSeason read failed; keeping the labelled season', err);
+    return same;
+  }
+  const labelDay = hubLabelDay(league, today, clubs.size);
+  if (labelDay === today) return same;
+  const label = seasonLabel(league, labelDay);
+  return {
+    label,
+    early: true,
+    clubsPublished: clubs.size,
+    teamCount: teams.length,
+    note: `${clubs.size} of ${teams.length} ${league === 'WNBA' || league === 'NBA' ? 'teams' : 'clubs'} ${clubs.size === 1 ? 'has' : 'have'} published ${label} promotions so far.`,
+  };
+});
 
 // The super-header bands for a league (empty when the league groups flat).
 // Exported so the hub page can hand them to HubTeamGrid without re-deriving.

@@ -22,7 +22,8 @@ import { HubTeamGrid } from '@/components/hub/HubTeamGrid';
 import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { HubFaq, type HubFaqItem } from '@/components/hub/HubFaq';
 import { getVenueLinksForTeams } from '@/lib/venue-hub';
-import { seasonLabel } from '@/lib/seasons/season-window';
+import { getLeagueHubSeason } from '@/lib/data';
+import { HubSeasonNote } from '@/components/hub/HubSeasonNote';
 
 // HELD ROUTE. This page exists on the feature/nhl-hub-held branch and is not
 // linked from anywhere: LEAGUE_HUB_REGISTRY keeps NHL live:false, so the nav,
@@ -55,8 +56,7 @@ const HUB_URL = 'https://www.getpromonight.com/nhl';
 // it moves on the first day of the next season's lead-in without a deploy.
 // Never new Date().getFullYear(), which would flip the copy at midnight on
 // Jan 1, before the new season's data exists.
-function hubCopy() {
-  const SEASON = seasonLabel('NHL');
+function hubCopy(SEASON: string) {
   return {
     SEASON,
     TITLE: `NHL Promotions & Giveaways ${SEASON}`,
@@ -64,8 +64,10 @@ function hubCopy() {
   };
 }
 
-export function generateMetadata(): Metadata {
-  const { TITLE, DESCRIPTION } = hubCopy();
+export async function generateMetadata(): Promise<Metadata> {
+  // The season the hub names: the labelled one, or the next one early once
+  // this season has ended and a club has published (getLeagueHubSeason).
+  const { TITLE, DESCRIPTION } = hubCopy((await getLeagueHubSeason('NHL')).label);
   return {
     title: TITLE,
     description: DESCRIPTION,
@@ -99,7 +101,8 @@ const FAQS: HubFaqItem[] = [
 
 
 export default async function NhlHubPage() {
-  const { SEASON, TITLE, DESCRIPTION } = hubCopy();
+  const hubSeason = await getLeagueHubSeason('NHL');
+  const { SEASON, TITLE, DESCRIPTION } = hubCopy(hubSeason.label);
   const [slate, stats, divisions, today, upcomingCounts] = await Promise.all([
     getLeagueSlate('NHL'),
     getLeagueHubStats('NHL'),
@@ -136,6 +139,7 @@ export default async function NhlHubPage() {
       <HubHero
         eyebrow="NHL League Hub"
         title={`NHL PROMOTIONS ${SEASON}`}
+        notice={hubSeason.note ? <HubSeasonNote text={hubSeason.note} /> : undefined}
         subtitle="Theme nights, giveaways, bobbleheads and kids days across the 32 NHL clubs, grouped by division."
         freshness="Rechecked weekly in season and updated as clubs announce promotions."
         accent={ACCENT}
