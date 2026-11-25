@@ -278,6 +278,8 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
           {!stop.tombstoned && upcoming.length ? (
             <section aria-label="Showtimes and tickets" className="mt-[18px] flex flex-col gap-2.5">
               <H2>Pick your show</H2>
+              {/* One resale line for every showtime button, directly under the heading and above the buttons (ruling 2026-11-25). */}
+              {upcoming.some((p) => ticketUrlFor(p)) ? <ResaleNote tone="light" /> : null}
               {tl.upcoming.map((g) => (
                 <div key={g.visit.visitId} className="flex flex-col gap-2.5" data-visit={g.visit.visitId}>
                   {tl.upcoming.length > 1 ? (
@@ -336,8 +338,6 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
                   })}
                 </div>
               ))}
-              {/* One resale line for the whole group of showtime buttons, under them. */}
-              {upcoming.some((p) => ticketUrlFor(p)) ? <ResaleNote tone="light" /> : null}
               <p className="m-0 mt-0.5 font-rd text-[11px] leading-[1.4] text-rd-ink-faint">{`${AFFILIATE_DISCLOSURE_TEXT} Times are local to the venue.`}</p>
             </section>
           ) : null}

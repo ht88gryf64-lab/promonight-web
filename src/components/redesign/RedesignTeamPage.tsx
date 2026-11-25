@@ -248,7 +248,13 @@ export function RedesignTeamPage({
   // The season slot's one block: the schedule where it supersedes the
   // calendar, the calendar everywhere else. Built here so the two branches of
   // the wrapper below can hold the same element.
-  const seasonBlock =
+  // A PAGE NAMING NEXT SEASON EARLY WITH NO GAME DATES YET HAS NO CALENDAR
+  // (ruling 2026-11-25). The calendar's days come from the game schedule; with
+  // none ahead it is a month of disabled days over a list of real promos. The
+  // promo list below stays. The calendar returns by itself on the first render
+  // after the schedule holds a game dated today or later.
+  const hideCalendar = !!claim.labelDay && !(gameContexts ?? []).some((c) => c.game.date >= today);
+  const seasonBlock = hideCalendar ? null :
     showSchedule && gameContexts ? (
       // A server component: its props are not serialized, so a null statusLine
       // leaves MLB and NFL output exactly as it was.
@@ -550,9 +556,9 @@ export function RedesignTeamPage({
                 {postseason}
                 {seasonBlock}
               </div>
-            ) : (
+            ) : seasonBlock ? (
               <div className={`rd-weave-item ${showSchedule ? 'order-[11]' : 'order-[10]'}`}>{seasonBlock}</div>
-            )}
+            ) : null}
 
             {/* Rivals, zero-promo mount: directly under the schedule. */}
             {hasNoUpcoming ? rivalsBlock : null}

@@ -16,6 +16,8 @@ import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { DailyBoardHero } from '@/components/promos-today/DailyBoardHero';
+import { buildTicketNetworkLink, ticketNetworkForGame } from '@/lib/affiliates';
+import { ResaleNote } from '@/components/affiliates/AffiliateDisclosure';
 import { TodayLeagueSection } from '@/components/promos-today/TodayLeagueSection';
 import { TodayBoardFilter } from '@/components/promos-today/TodayBoardFilter';
 import { LeagueDayEmpty } from '@/components/promos-today/LeagueDayEmpty';
@@ -109,7 +111,14 @@ export default async function PromosTodayPage() {
         groups={jsonLdGroups}
       />
 
-      <DailyBoardHero dateLabel={formatBoardDate(todayYMD)} answer={answer} />
+      {/* The resale line prints ONCE for the whole board, under the lede, whenever
+          any card on the page will carry a TicketNetwork tile (ruling 2026-11-25).
+          Same two calls the tile makes (TicketmasterCTA). */}
+      <DailyBoardHero
+        dateLabel={formatBoardDate(todayYMD)}
+        answer={answer}
+        note={[...today, ...tomorrow].some((p) => ticketNetworkForGame(null, p.team) && buildTicketNetworkLink({ team: p.team, surface: 'web_today' })) ? <ResaleNote /> : undefined}
+      />
 
       <div className="mx-auto max-w-5xl px-6 pt-6">
         <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="promo_collection" />

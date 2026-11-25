@@ -47,7 +47,7 @@ async function html(el: React.ReactElement): Promise<string> {
 }
 const text = (h: string) => h.replace(/<!-- -->/g, '').replace(/<script[\s\S]*?<\/script>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&#x27;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ');
 
-async function teamPage(team: Team, promos: Promo[]) {
+async function teamPage(team: Team, promos: Promo[], contexts: GameContext[] = games2026) {
   const { splitPromosByDate, countPromosByType, teamDisplayName } = await import('@/lib/promo-helpers');
   const { resolveClaimMode } = await import('@/lib/season-scope');
   const { RedesignTeamPage } = await import('../RedesignTeamPage');
@@ -57,7 +57,7 @@ async function teamPage(team: Team, promos: Promo[]) {
   const h = await html(
     <StarredTeamsProvider><RedesignTeamPage team={team} coverage={{ teamCount: 169, leagueList: 'x', appLeagueList: 'y' } as never} venue={null} promos={promos}
       upcomingPromos={upcoming} upcomingCounts={countPromosByType(upcoming)} claim={claim}
-      displayName={teamDisplayName(team)} gameContexts={games2026} today={TODAY} recurringDeals={[]} playoffsActive={false}
+      displayName={teamDisplayName(team)} gameContexts={contexts} today={TODAY} recurringDeals={[]} playoffsActive={false}
       inPlayoffs={false} playoffPromos={[]} playoffRound="" playoffLastUpdated={null} /></StarredTeamsProvider>,
   );
   return { h, t: text(h), claim };
@@ -79,7 +79,18 @@ test('FLIPPED (Giants): 2027 in the hero and the list, a partial announcement, t
   assert.match(t, /have announced 16 promotional events so far for the 2027 season/);
   // No 2026 claim over the upcoming rows, and no 2027 claim over the completed ones.
   assert.doesNotMatch(t, /UPCOMING PROMOS|2026 SEASON PROMOS|COMPLETED 2027/);
-  // The calendar opens on March 2027 (the first upcoming promo), not November 2026.
+  // NO CALENDAR: the schedule holds no game dated today or later, so there is no month grid
+  // of disabled days and no category chips for it. The promo list above is all there.
+  assert.doesNotMatch(h, /aria-label="(Previous|Next) month"/);
+  assert.doesNotMatch(t, /Still to come (All|Giveaways)/);
+  assert.doesNotMatch(t, /November 2026/);
+});
+
+test('FLIPPED with next-season game dates: the calendar is back and opens on the first promo\'s month', async () => {
+  const games2027 = [ctx({ ...game('n1', '2027-03-25', 'x'), status: 'scheduled', season: 2027 } as Game), ctx({ ...game('n2', '2027-04-02', 'x'), status: 'scheduled', season: 2027 } as Game)];
+  const { h, t, claim } = await teamPage(GIANTS, [...done, ...ahead], [...games2026, ...games2027]);
+  assert.equal(claim.labelDay, '2027-02-07');
+  assert.match(h, /aria-label="(Previous|Next) month"/, 'the month grid is rendered');
   assert.match(t, /March 2027/);
   assert.doesNotMatch(t, /November 2026/);
 });

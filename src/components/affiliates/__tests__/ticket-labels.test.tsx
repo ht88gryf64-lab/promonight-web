@@ -76,21 +76,33 @@ test('primaryOnly: one button, Ticketmaster, no resale line; the code prints the
   assert.match(src, /\{lead === ticketNetworkButton && ticketNetworkButton && !inline \? <ResaleNote className="px-1" \/> : null\}/);
 });
 
-test('inline row (the daily boards): no line inside the row; the league group prints it once', async () => {
+test('inline row (the daily board): no line in the row, the card or the league group; the page prints it once under its lede', async () => {
   const h = await render({ layout: 'inline', size: 'compact', placement: 'today_card' });
   assert.equal(anchors(h).length, 2);
   assert.doesNotMatch(h, /data-resale-note/);
   assert.equal(count(h, '>Get Tickets<'), 2);
-  const section = readFileSync(new URL('../../promos-today/TodayLeagueSection.tsx', import.meta.url), 'utf-8');
-  assert.match(section, /\{promos\.some\(\(p\) => ticketNetworkForGame\(null, p\.team\) && buildTicketNetworkLink\(\{ team: p\.team, surface \}\)\) \? \(\s*<ResaleNote tone="light" className="mt-3" \/>\s*\) : null\}/);
-  assert.equal(count(section, '<ResaleNote'), 1);
-  assert.doesNotMatch(readFileSync(new URL('../../promos-today/TodayPromoCard.tsx', import.meta.url), 'utf-8'), /ResaleNote/, 'never one per card');
+  const read = (rel: string) => readFileSync(new URL(rel, import.meta.url), 'utf-8');
+  assert.doesNotMatch(read('../../promos-today/TodayPromoCard.tsx'), /ResaleNote/, 'never one per card');
+  assert.doesNotMatch(read('../../promos-today/TodayLeagueSection.tsx'), /ResaleNote/, 'never one per league group');
+  const page = read('../../../app/promos/today/page.tsx');
+  assert.equal(count(page, '<ResaleNote'), 1);
+  assert.match(page, /note=\{\[\.\.\.today, \.\.\.tomorrow\]\.some\(\(p\) => ticketNetworkForGame\(null, p\.team\) && buildTicketNetworkLink\(\{ team: p\.team, surface: 'web_today' \}\)\) \? <ResaleNote \/> : undefined\}/);
+  // Rendered: the hero prints the line under the lede when handed one, and nothing when not.
+  const { renderToStaticMarkup } = await import('react-dom/server');
+  const { DailyBoardHero } = await import('../../promos-today/DailyBoardHero');
+  const { ResaleNote } = await import('../AffiliateDisclosure');
+  const withNote = renderToStaticMarkup(<DailyBoardHero dateLabel="Wednesday, November 25" answer="15 promos today." note={<ResaleNote />} />);
+  assert.equal(count(withNote, NOTE), 1);
+  assert.ok(withNote.indexOf(NOTE) > withNote.indexOf('15 promos today.'), 'under the lede');
+  assert.doesNotMatch(renderToStaticMarkup(<DailyBoardHero dateLabel="x" answer="y" />), /resale/i);
 });
 
 test('one line per group on a page with several buttons: the event stop and the promo page', () => {
   const stop = readFileSync(new URL('../../events/EventStopView.tsx', import.meta.url), 'utf-8');
   assert.equal(count(stop, '<ResaleNote'), 1, 'once for all showtimes');
-  assert.ok(stop.indexOf('<ResaleNote') > stop.indexOf('{TICKET_CTA_LABEL}'), 'under the buttons');
+  // Directly under the heading, above the buttons (ruling 2026-11-25).
+  assert.match(stop, /<H2>Pick your show<\/H2>\s*\{\/\*[^*]*\*\/\}\s*\{upcoming\.some\(\(p\) => ticketUrlFor\(p\)\) \? <ResaleNote tone="light" \/> : null\}/);
+  assert.ok(stop.indexOf('<ResaleNote') < stop.indexOf('{TICKET_CTA_LABEL}'), 'above the buttons');
   assert.doesNotMatch(stop.split('\n').filter((l) => !/^\s*(\/\/|\*|\{\/\*)/.test(l)).join('\n'), />\s*Tickets\s*</, 'no bare "Tickets" button');
   const promo = readFileSync(new URL('../../promo-page/PromoPageView.tsx', import.meta.url), 'utf-8');
   assert.equal(count(promo, '<ResaleNote'), 1, 'under the primary row; the per-date links share it');

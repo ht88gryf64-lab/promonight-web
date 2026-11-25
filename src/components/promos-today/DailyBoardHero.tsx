@@ -3,7 +3,7 @@
 // Google / AI Overviews pull for the "sports promotions today" intent). Pure
 // server component. The date sits in its own red line rather than being joined to
 // the H1 with an em dash (house no-em-dash rule).
-export function DailyBoardHero({ dateLabel, answer }: { dateLabel: string; answer: string }) {
+export function DailyBoardHero({ dateLabel, answer, note }: { dateLabel: string; answer: string; /** One line under the lede: the board's resale line, when a TicketNetwork tile is on the page. */ note?: React.ReactNode }) {
   return (
     <section className="relative overflow-hidden text-white" style={{ backgroundColor: '#1d1714' }}>
       <div
@@ -27,6 +27,7 @@ export function DailyBoardHero({ dateLabel, answer }: { dateLabel: string; answe
         </h1>
         <p className="rd-display mt-1 text-2xl leading-none text-rd-red md:text-3xl">{dateLabel}</p>
         <p className="mt-4 max-w-2xl font-rd text-[15px] leading-relaxed text-white/85">{answer}</p>
+        {note ? <div className="mt-3 max-w-2xl">{note}</div> : null}
       </div>
     </section>
   );
