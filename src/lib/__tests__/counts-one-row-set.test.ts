@@ -58,19 +58,20 @@ test('every printed venue total reads the index floor: the utility counts are su
   assert.match(code('../../app/page.tsx'), /value: String\(venueCounts\.guideTotal\), label: 'Venue guides'/);
 });
 
-test('/venues says what the listing rule checks and does not say "verified"', () => {
+test('/venues does not say "verified" and states no listing rule', () => {
   const page = code('../../app/venues/page.tsx');
   assert.doesNotMatch(page, /verified/i);
   assert.match(page, /\{entries\.length\} gameday guides: bag/);
-  assert.match(page.replace(/\s+/g, ' '), /A building is listed here once its guide covers at least two of bag policy, parking and transit\./);
-  // The sentence is the code's rule: two of three, as venueHubIsIndexable computes it.
-  assert.match(code('../venue-hub.ts'), /const twoOfThree = \[hasBag, hasParking, hasTransit\]\.filter\(Boolean\)\.length >= 2;/);
+  // A stated rule ("at least two of ...") was false for a listed building whose page hides an excluded field.
+  assert.doesNotMatch(page, /at least two|is listed here once/);
 });
 
 test('a hub naming next season early marks the clubs that have published', () => {
   for (const h of ['mlb', 'mls', 'wnba']) {
     assert.match(code(`../../app/${h}/page.tsx`), /subtitleByTeamId: Object\.fromEntries\(hubSeason\.publishedTeamIds\.map\(\(id\) => \[id, `\$\{hubSeason\.label\} promotions published`\]\)\)/, h);
   }
+  // The card's accessible name carries the mark too.
+  assert.match(code('../../components/hub/HubTeamGrid.tsx'), /aria-label=\{subtitle \? `\$\{name\} \$\{subtitle\}` : `\$\{name\} promotional schedule`\}/);
   const data = code('../data.ts');
   assert.match(data, /publishedTeamIds: \[\.\.\.clubs\]\.sort\(\),/);
   assert.match(data, /note: null, publishedTeamIds: \[\] \};/, 'empty when the hub has not flipped');
