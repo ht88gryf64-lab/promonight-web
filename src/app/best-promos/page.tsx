@@ -237,7 +237,7 @@ export default async function BestPromosPage() {
                 <span className="text-white/60">Best promos</span>
               </div>
               <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: '#ff5a78' }}>Best of {label}</p>
-              <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST SPORTS PROMO NIGHTS OF {label}</h1>
+              <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST SPORTS PROMO NIGHTS OF <span className="whitespace-nowrap">{label}</span></h1>
               <p className="mt-3 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">{stampLine ?? <>{lastUpdatedDisplay ? <>Last updated {lastUpdatedDisplay} · </> : null}{promos.length} promos ranked</>}</p>
             </div>
           </section>
@@ -308,7 +308,7 @@ export default async function BestPromosPage() {
             Best of {label}
           </span>
           <h1 className="font-display text-4xl md:text-6xl tracking-[1px] mt-2">
-            BEST SPORTS PROMO NIGHTS OF {label}
+            BEST SPORTS PROMO NIGHTS OF <span className="whitespace-nowrap">{label}</span>
           </h1>
           <p className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mt-3">
             {stampLine ?? <>{lastUpdatedDisplay ? <>Last updated {lastUpdatedDisplay} · </> : null}{promos.length} promos ranked</>}

@@ -206,7 +206,8 @@ test('/best-promos: upcoming rows that cross New Year are labelled like a season
   const page = readFileSync(new URL('../../app/best-promos/page.tsx', import.meta.url), 'utf-8');
   assert.match(page, /title: `Best Sports Promo Nights of \$\{label\}: Score-Ranked Giveaways`/);
   assert.match(page, /title: `Best Sports Promo Nights of \$\{label\}`/);
-  assert.ok((page.match(/BEST SPORTS PROMO NIGHTS OF \{label\}/g)?.length ?? 0) >= 1);
+  // In the H1 the label does not break at its hyphen ("2026-" over "27" at 390).
+  assert.equal(page.match(/BEST SPORTS PROMO NIGHTS OF <span className="whitespace-nowrap">\{label\}<\/span>/g)?.length, 2);
   assert.doesNotMatch(page, /Number\(label\)|label \+ 1/);
 });
 
@@ -226,7 +227,8 @@ test('/best-promos: the league copy follows the mode, and the stamp reads the ro
   assert.match(loader, /retrospective \? RANKED_LEAGUES : PROMO_SCORED_LEAGUE_LIST/);
   const bobble = readFileSync(new URL('../../app/best-promos/bobbleheads/page.tsx', import.meta.url), 'utf-8');
   for (const src of [page, bobble]) assert.match(src, /rankedLeaguesText\(retrospective\)/);
-  assert.equal(bobble.match(/MLB, MLS, and WNBA/g), null);
+  assert.equal(bobble.match(/MLB, MLS, and WNBA/g)?.length, 1, 'the one typed list left is about the team rankings page, which does cover those three');
+  assert.match(bobble, /which covers MLB, MLS, and WNBA teams/);
   assert.doesNotMatch(bobble, /MLB rescored weekly|the three leagues/);
   assert.match(bobble, /const latestComputedAt = latestRowScoredAt \|\| latestTeamComputedAt;/);
   // "Scores last computed" comes from the listed rows' scoredAt before any team-score stamp.

@@ -53,5 +53,6 @@ export function buildHubRail(slate: readonly PromoWithTeam[], limit: number = HU
 
 /** "Showing 8 of 13 teams" when the rail is cut, null when it shows them all. */
 export function hubRailCountLine(rail: HubRail): string | null {
+  if (rail.cards.length === 0) return null;
   return rail.cards.length < rail.teamsTotal ? `Showing ${rail.cards.length} of ${rail.teamsTotal} teams` : null;
 }

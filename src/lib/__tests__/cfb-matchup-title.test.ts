@@ -46,3 +46,26 @@ test('the page takes its title and H1 from the one heading, and adds no date or 
   assert.ok(h1.indexOf('<SchoolName school={a}') < h1.indexOf('{data.displayName} {Number(cfbSeasonLabel())}'));
   assert.match(h1, /<span className="sr-only">: <\/span>/);
 });
+
+test('one naming rule and one pairing rule for the title, the H1 and the matchup line', async () => {
+  const { matchupSideName, namesThePairing, prettySchoolId } = await import('../cfb/matchup-description');
+  const { matchupSchoolNames, matchupHeading } = await import('../cfb/metadata');
+  // Short name, else name, else a readable id (with the display-name map: "uab" is "UAB").
+  assert.equal(matchupSideName({ shortName: 'Ole Miss', name: 'Mississippi' }, 'ole-miss'), 'Ole Miss');
+  assert.equal(matchupSideName({ shortName: '', name: 'Minnesota' }, 'minnesota'), 'Minnesota');
+  assert.equal(matchupSideName(null, 'uab'), prettySchoolId('uab'));
+  assert.equal(matchupSideName(null, 'north-dakota-state'), 'North Dakota State');
+  const data = { schools: [{ shortName: 'Ole Miss', name: 'Mississippi' }, null], rivalry: { schoolIds: ['ole-miss', 'uab'] } };
+  assert.deepEqual(matchupSchoolNames(data as never), ['Ole Miss', prettySchoolId('uab')]);
+  // "vs", "vs.", "versus" and "v." all mean the name is already the pairing; a trophy name is not.
+  for (const n of ['Florida vs Georgia', 'UCLA vs. USC', 'Army versus Navy', 'Harvard v. Yale']) assert.equal(namesThePairing(n), true, n);
+  for (const n of ["Paul Bunyan's Axe", 'Iron Bowl', 'Battle of the Vs', 'Canvas Cup', 'Civil War']) assert.equal(namesThePairing(n), false, n);
+  assert.equal(matchupHeading('Army versus Navy', 'Army', 'Navy', '2026'), 'Army versus Navy 2026');
+  // The page uses the same two helpers and has no naming function of its own.
+  const page = readFileSync(new URL('../../components/cfb/rivalry/RivalryMatchupPage.tsx', import.meta.url), 'utf-8');
+  assert.match(page, /const pairingInName = namesThePairing\(data\.displayName\);/);
+  assert.match(page, /\{matchupSideName\(school, school\.id\)\}/);
+  assert.match(page, /const aFallback = prettySchoolId\(aId\);/);
+  assert.doesNotMatch(page, /function prettyId|shortName \|\| school\.name/);
+});
+

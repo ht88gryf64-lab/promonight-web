@@ -4452,7 +4452,7 @@ One line each. None blocks the release; each needs its own change or ruling.
 - **Jersey and signed false positives that remain.** Still typed jersey: "Jersey Mike's", "Jersey City", "Jersey Shore", "jersey retirement", "jersey no. 30". Still typed premium: "re-signed", "co-signed", "newly signed free agent". Fixes 1 to 3 covered only the named cases.
 - **Unflagged package twin.** Nashville, 2027-02-18: "Billy Strings Bobblehead" (95, "Ticket package includes a guaranteed Billy Strings bobblehead") is not flagged `ticketPackageRequired` and lists beside "Music City Billy Strings Bobblehead" (98).
 - **Copy between the web deploy and the score write.** For that interval `/team-rankings` says NBA and NHL promos are scored while their rows carry no score yet. The final-gate sequence keeps the interval short.
-- **Rail card titles (ux-review D1).** FIXED in `feature/discovery-links`: a long title steps down in size until it fits (`src/lib/stub-title.ts`), so "Evgeni Malkin Talking Bobblehead" and "Cutter Gauthier Bobblehead Giveaway" print whole.
+- **Rail card titles (ux-review D1).** FIXED in `feature/discovery-links`: a long title steps down in size until it fits, on Archivo's measured character widths (`src/lib/stub-title.ts`). A title no size fits (one word wider than the 180px column at 16px) still falls to the clamp.
 - **Rail at 1280 (ux-review D5).** With eight cards the rail overflows at 1280 with no arrows and no scrollbar; wheel and keyboard scroll work. The Tonight rail has the same build.
 - **NBA game times (ux-review D7).** The NBA rows on the rail show a date and no game time; their promo pages have none either.
 - **Empty league chips (ux-review D8).** On `/best-promos` the MLB, MLS and WNBA chips return no rows while those leagues have nothing ahead, and the empty state suggests a wider date range even at "Rest of season".
@@ -4463,9 +4463,13 @@ One line each. None blocks the release; each needs its own change or ruling.
 One line each.
 
 - **Venue hub sources map.** The `t-mobile-park` venueHubs doc has 2 of its 15 `sources` keys written as URLs (the Mariners ballpark guide and disability-access guide), so a field lookup can never match them. The reader logs `[venue-hub] sources map is partially inverted` on every read.
-- **Hub rail team link.** On the league hubs' this-week cards the promo titles fire `this_week_card_tap`; the team name is a plain link and fires nothing, where the whole card used to count as one tap.
+- **Hub rail plain links.** On the league hubs' this-week cards the promo titles fire `this_week_card_tap` (and `promo_link_click` when they go to a promo page); the team name and the "more promo days this week" link are plain links and fire nothing, where the whole card used to count as one tap.
 - **Legacy nav.** The gate-off dark nav (`src/components/nav.tsx`) has no Events link; the footer still carries one there.
 - **Rivalry registry count.** The registry holds 32 matchup pages; the 33rd URL of the family is the index, whose title was already set from stored game days.
 - **Rivalry title, date and network.** The title carries neither. Both would come from the verified game fields, and neither fits 60 characters beside two school names; the description carries the verified date and kickoff.
 - **Hub rail, later days.** A team with promos on several days that week gets one card for its soonest day and a link reading "N more promo days this week" to its team page; the later days' promos are not listed on the hub.
-
+- **Events link between 768 and 859px.** The top bar has no room for a sixth item there ("My Teams" and "League hubs" wrap to two lines), so the Events link shows from 860px, from 980px while Playoffs or World Cup is in the bar, and from 1100px with both. Below 768 it is in the menu sheet; in between it is in the footer only.
+- **Hub JSON-LD.** A hub's ItemList still lists every slate row with its team-page URL (28 on /nba, 39 on /nhl on 2026-11-25) while the rail shows one card per team with promo-page links.
+- **Rivalry JSON-LD names.** The breadcrumb and SportsEvent names stay "{name} {season}" while the title and H1 lead with the schools; og:title and twitter:title are the heading plus the brand with no 60-character cap, as before.
+- **Bobblehead rows typed theme or kids.** The bobblehead page's upcoming list holds giveaways only. In the 2026 record 31 of 280 bobblehead rows are typed theme or kids, so next spring's upcoming list will be about a tenth shorter than the old rule would have made it.
+- **Hub ticket block id.** A hub card's ticket block carries the first promo's id even when the card lists several.

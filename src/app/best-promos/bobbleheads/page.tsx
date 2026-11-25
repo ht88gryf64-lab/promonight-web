@@ -82,24 +82,24 @@ const FAQS = [
   {
     question: 'Are bobbleheads still given away if you arrive late?',
     answer:
-      'Usually no. Bobbleheads are handed out at the stadium gates until the listed quantity runs out, typically the first 10,000 to 25,000 ticketed fans through the entrances. Some teams reserve a small allocation at guest services for fans with specific ticket packages, but the open giveaway runs out fast.',
+      'Usually no. Bobbleheads are handed out at the gates until the listed quantity runs out, and each card above shows that quantity when the team states one. Some teams reserve a small allocation at guest services for fans with specific ticket packages, but the open giveaway runs out fast.',
   },
   {
     question: 'How many bobbleheads does each team give away?',
     answer:
-      'Quantities vary by team and event, recorded in the attendance cap field on each card above. MLB programs typically distribute 15,000 to 25,000 bobbleheads per game. WNBA bobbleheads sit around 8,000 to 12,000 to match smaller venue capacities.',
+      'Quantities vary by team and event, from a limited run for the first few hundred fans to one for most of the building. When the team states a number, the card above shows it as the first fans to arrive.',
   },
   {
     question: 'Do bobbleheads have to be claimed at the gate?',
     answer:
-      'Almost always yes. Bobbleheads are handed out at the stadium entrance to ticketed fans on arrival. A handful of teams will reserve some for redemption at guest services for fans with specific ticket packages; the team promo page lists those exceptions when they exist.',
+      'Almost always yes. Bobbleheads are handed out at the entrance to ticketed fans on arrival. A handful of teams will reserve some for redemption at guest services for fans with specific ticket packages; the team promo page lists those exceptions when they exist.',
   },
 ];
 
 const INLINE_ANSWERS = [
   {
     afterPosition: 14,
-    question: 'Why do WNBA bobbleheads score so high?',
+    question: 'Why do small bobblehead runs score so high?',
     answer:
       SMALL_CAP_ANSWER,
   },
@@ -113,7 +113,7 @@ const INLINE_ANSWERS = [
     afterPosition: 44,
     question: 'How are recurring bobbleheads tracked?',
     answer:
-      'Each calendar date with a bobblehead is one row above. A team that runs three bobblehead nights across the season shows three rows, each scored independently. The team-rankings page rolls those individual scores into a single average via the averagePromoScore field.',
+      'Each calendar date with a bobblehead is one row above. A team that runs three bobblehead nights across the season shows three rows, each scored independently. The team rankings page, which covers MLB, MLS, and WNBA teams, rolls those individual scores into a single average.',
   },
 ];
 
@@ -182,7 +182,7 @@ export default async function BobbleheadsPage() {
   const stampLine = retrospective
     ? `${label} season · no ranked bobbleheads ahead${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} bobbleheads ranked`
     : null;
-  const capsuleRetro = `These are the ${promos.length} top-scored bobblehead giveaways of the ${label} season across ${leaguesText}. Nothing here is upcoming: no league we score has a bobblehead giveaway still to come in its current season, so this is the year ranked rather than a list of what is on next. MLB clubs run the majority of bobblehead programs. Each listed event is scored on attendance cap, item value, sponsor presence, and highlight tier. Upcoming bobbleheads return here from ${LEAD_IN_DAYS} days before each league's Opening Day, as clubs announce them.`;
+  const capsuleRetro = `These are the ${promos.length} top-scored bobblehead giveaways of the ${label} season across ${leaguesText}. Nothing here is upcoming: no ranked bobblehead giveaway is still to come this season, so this is the year ranked rather than a list of what is on next. MLB clubs run the majority of bobblehead programs. Each listed event is scored on attendance cap, item value, sponsor presence, and highlight tier. Upcoming bobbleheads return here from ${LEAD_IN_DAYS} days before each league's Opening Day, as clubs announce them.`;
 
   if (isRedesignEnabled()) {
     return (
@@ -208,7 +208,7 @@ export default async function BobbleheadsPage() {
                 <span className="text-white/60">Bobbleheads</span>
               </div>
               <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: '#ff5a78' }}>Bobbleheads of {label}</p>
-              <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST BOBBLEHEAD NIGHTS OF {label}</h1>
+              <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST BOBBLEHEAD NIGHTS OF <span className="whitespace-nowrap">{label}</span></h1>
               <p className="mt-3 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">{stampLine ?? <>{lastUpdatedDisplay ? <>Last updated {lastUpdatedDisplay} · </> : null}{promos.length} bobbleheads ranked</>}</p>
             </div>
           </section>
@@ -278,7 +278,7 @@ export default async function BobbleheadsPage() {
             Bobbleheads of {label}
           </span>
           <h1 className="font-display text-4xl md:text-6xl tracking-[1px] mt-2">
-            BEST BOBBLEHEAD NIGHTS OF {label}
+            BEST BOBBLEHEAD NIGHTS OF <span className="whitespace-nowrap">{label}</span>
           </h1>
           <p className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mt-3">
             {stampLine ?? <>{lastUpdatedDisplay ? <>Last updated {lastUpdatedDisplay} · </> : null}{promos.length} bobbleheads ranked</>}

@@ -211,9 +211,12 @@ test('the pages take these answers from the module and carry no second copy', ()
   assert.match(bobble, /NINETY_EIGHT_VS_HUNDRED_ANSWER,/);
   assert.match(bobble, /SMALL_CAP_ANSWER,/);
   assert.doesNotMatch(bobble, /player likeness|miss the sponsor signal|capped at 10,000 covers/);
-  // The bobblehead page covers three leagues; it no longer says those are all the leagues scored.
+  // The bobblehead page's retrospective speaks of ranked rows, not of which leagues are scored.
   assert.doesNotMatch(bobble, /the three leagues we score|the three leagues this page covers/);
-  assert.match(bobble, /no league we score has a bobblehead giveaway still to come in its current season/);
+  // True before the NBA and NHL score write as well as after: it speaks of RANKED rows only.
+  assert.match(bobble, /no ranked bobblehead giveaway is still to come this season/);
+  assert.doesNotMatch(bobble, /no league we score has/);
+  assert.match(bobble, /The team rankings page, which covers MLB, MLS, and WNBA teams/);
 });
 
 test('isBestPromoRow: a scored giveaway at the floor or above, and never a theme night', () => {

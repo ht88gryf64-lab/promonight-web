@@ -5,7 +5,7 @@ import { normalizeSport } from '@/lib/analytics';
 import { categoryForPromo } from '@/components/redesign/categories';
 import { teamDisplayName, synthPromoId, promoAnchorId, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { formatClock } from '@/components/promos-today/helpers';
-import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
+import { HubPromoLink } from './HubPromoLink';
 import { promoPageHref } from '@/lib/promo-page-href';
 
 // Persistent per-league "today's promos" module for a league hub. Data-driven off
@@ -81,12 +81,13 @@ export function HubTodayPromos({
         {slate.map((p) => {
           const cat = categoryForPromo(p);
           const clock = formatClock(promoDisplayTime(p));
+          const pageHref = promoPageHref(p);
           return (
-            <TrackedTapLink
+            <HubPromoLink
               key={`${p.team.id}-${p.date}-${p.title}`}
-              href={promoPageHref(p) ?? `/${p.team.sportSlug}/${p.team.id}#promo-${promoAnchorId(p)}`}
-              trackEvent="this_week_card_tap"
-              trackProps={{
+              href={pageHref ?? `/${p.team.sportSlug}/${p.team.id}#promo-${promoAnchorId(p)}`}
+              toPromoPage={pageHref !== null}
+              tap={{
                 surface,
                 team_id: p.team.id,
                 sport: normalizeSport(p.team.league),
@@ -112,7 +113,7 @@ export function HubTodayPromos({
                 {teamDisplayName(p.team)}
                 {clock ? <span className="text-rd-ink-faint"> · {clock}</span> : null}
               </div>
-            </TrackedTapLink>
+            </HubPromoLink>
           );
         })}
       </div>

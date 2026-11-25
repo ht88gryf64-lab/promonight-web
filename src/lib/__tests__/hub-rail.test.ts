@@ -61,6 +61,11 @@ test('eight teams at most, and the count line says how many of how many', () => 
   // Exactly eight teams: no line. Nine: "8 of 9".
   assert.equal(hubRailCountLine(buildHubRail(thirteen.filter((p) => p.team.id < 'team-08'))), null);
   assert.equal(hubRailCountLine(buildHubRail(thirteen.filter((p) => p.team.id < 'team-09'))), 'Showing 8 of 9 teams');
+  // An unsorted slate and a team whose soonest day is not its first row still give the soonest day.
+  const shuffled = [promo('b', '2026-11-29', 'Late'), promo('a', '2026-11-27', 'A'), promo('b', '2026-11-25', 'Early'), promo('b', '2026-11-25', 'Early too')];
+  assert.deepEqual(buildHubRail(shuffled).cards.map((c) => [c.team.id, c.date, c.promos.map((p) => p.title), c.moreDays]), [['b', '2026-11-25', ['Early', 'Early too'], 1], ['a', '2026-11-27', ['A'], 0]]);
+  // A limit of zero shows no cards and prints no count line.
+  assert.equal(hubRailCountLine(buildHubRail(shuffled, 0)), null);
   assert.deepEqual(buildHubRail([]), { cards: [], teamsTotal: 0 });
 });
 
@@ -86,12 +91,21 @@ test('hub promo links: the promo page when the row has one, else its row on the 
   // Both hub components build the href exactly that way, and neither hardcodes the fragment alone.
   for (const f of ['HubTodayPromos.tsx', 'HubThisWeek.tsx']) {
     const src = readFileSync(new URL(`../../components/hub/${f}`, import.meta.url), 'utf-8');
-    assert.match(src, /promoPageHref\(p\) \?\? `/, f);
+    assert.match(src, /const pageHref = promoPageHref\(p\);/, f);
+    assert.match(src, /href=\{pageHref \?\? `/, f);
+    // promo_link_click fires only for a link that really goes to a promo page.
+    assert.match(src, /toPromoPage=\{pageHref !== null\}/, f);
     assert.match(src, /#promo-\$\{promoAnchorId\(p\)\}/, f);
     assert.doesNotMatch(src, /href=\{`\/\$\{p\.team\.sportSlug\}\/\$\{p\.team\.id\}#promo-/, f);
   }
   // On the this-week card the team name keeps the team link and the title carries the promo link.
   const week = readFileSync(new URL('../../components/hub/HubThisWeek.tsx', import.meta.url), 'utf-8');
   assert.match(week, /<a href=\{teamHref\}[^>]*>\s*\{name\}\s*<\/a>/);
-  assert.match(week, /href=\{promoPageHref\(p\) \?\? `\$\{teamHref\}#promo-\$\{promoAnchorId\(p\)\}`\}[\s\S]{0,1400}\{p\.title\}/);
+  // Both plain links in the card are at least 24px tall.
+  assert.equal(week.match(/<a href=\{teamHref\} className="[^"]*min-h-\[24px\]/g)?.length, 2);
+  assert.match(week, /href=\{pageHref \?\? `\$\{teamHref\}#promo-\$\{promoAnchorId\(p\)\}`\}[\s\S]{0,1400}\{p\.title\}/);
+  // The hub link fires the hub's tap event always, and the shared inbound event for a promo page.
+  const link = readFileSync(new URL('../../components/hub/HubPromoLink.tsx', import.meta.url), 'utf-8');
+  assert.match(link, /track\('this_week_card_tap', tap\);/);
+  assert.match(link, /if \(toPromoPage\) \{\s*track\('promo_link_click', \{ surface: tap\.surface, team_slug: tap\.team_id, promo_id: tap\.promo_id, destination_url: href, \.\.\.utmTriplet\(\) \}\);/);
 });

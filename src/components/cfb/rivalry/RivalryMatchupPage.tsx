@@ -4,7 +4,7 @@ import type { MatchupPage } from '@/lib/cfb/matchups';
 import type { TripStepKey } from '@/lib/cfb/trip-steps';
 import { planTripSteps } from '@/lib/cfb/trip-steps';
 import { resolveCfbTheme } from '@/lib/cfb/theme';
-import { buildMatchupDescription } from '@/lib/cfb/matchup-description';
+import { buildMatchupDescription, matchupSideName, namesThePairing, prettySchoolId } from '@/lib/cfb/matchup-description';
 import { renderedKickoff } from '@/lib/cfb/metadata';
 import { toAffiliateTeam } from '@/lib/cfb/page-extras';
 import { buildTicketNetworkLink, buildSpotHeroUrl } from '@/lib/affiliates';
@@ -50,7 +50,7 @@ function SchoolName({ school, fallback }: { school: CfbSchool & { id: string } |
   if (!school) return <span className="text-white/70">{fallback}</span>;
   return (
     <Link href={`/cfb/${school.id}`} className="underline-offset-4 hover:underline" style={{ color: schoolAccent(school)! }}>
-      {school.shortName || school.name}
+      {matchupSideName(school, school.id)}
     </Link>
   );
 }
@@ -76,7 +76,7 @@ function SchoolCard({ school, fallback }: { school: CfbSchool & { id: string } |
       style={{ borderLeft: `4px solid ${theme.primary}` }}
     >
       <div className="text-sm font-semibold" style={{ color: theme.accent }}>
-        {school.shortName || school.name}
+        {matchupSideName(school, school.id)}
       </div>
       <div className="mt-0.5 text-xs text-white/50">{school.mascot}</div>
     </Link>
@@ -96,12 +96,14 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
   const { rivalry, game, schools, resolvedVenue, siblings } = data;
   const [a, b] = schools;
   const [aId, bId] = rivalry.schoolIds;
-  const aFallback = prettyId(aId);
-  const bFallback = prettyId(bId);
+  // prettySchoolId, the one the title and description use (it knows "uab" is
+  // "UAB"), so an untracked side reads the same in the head and on the page.
+  const aFallback = prettySchoolId(aId);
+  const bFallback = prettySchoolId(bId);
 
   // Same rule as matchupHeading (src/lib/cfb/metadata.ts): a display name that
   // already reads "A vs B" is the whole heading.
-  const pairingInName = /\bvs\.?\b/i.test(data.displayName);
+  const pairingInName = namesThePairing(data.displayName);
 
   const date = game?.date ? formatDayMonth(game.date) : null;
   // "Kickoff TBA" verbatim, no embellishment. renderedKickoff is the ONE gate
@@ -393,6 +395,3 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
   );
 }
 
-function prettyId(id: string): string {
-  return id.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-}

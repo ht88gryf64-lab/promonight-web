@@ -4,7 +4,7 @@ import { teamDisplayName, synthPromoId, promoAnchorId, promoDisplayOpponent, pro
 import { promoPageHref } from '@/lib/promo-page-href';
 import { buildHubRail, hubRailCountLine } from '@/lib/hub-rail';
 import { normalizeSport, type AnalyticsSurface } from '@/lib/analytics';
-import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
+import { HubPromoLink } from './HubPromoLink';
 import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { IconFlame, IconArrowRight } from '@tabler/icons-react';
@@ -98,14 +98,16 @@ export function HubThisWeek({
                 return (
                   <div
                     key={`${team.id}-${card.date}`}
-                    className="overflow-hidden rounded-2xl border border-rd-line bg-rd-card"
+                    className="flex flex-col overflow-hidden rounded-2xl border border-rd-line bg-rd-card"
                     style={{ borderTopColor: team.primaryColor, borderTopWidth: 3 }}
                   >
-                    <div className="p-5">
+                    {/* flex-1: in a two-column row the shorter card's ticket
+                        block sits at the bottom, level with its neighbour's. */}
+                    <div className="flex-1 p-5">
                       {/* The team line keeps the team link; each promo below links
                           to its own page (or, without one, its row on the team page). */}
                       <div className="font-rd text-[13px] text-rd-ink-soft">
-                        <a href={teamHref} className="font-semibold text-rd-ink hover:text-rd-red hover:underline">
+                        <a href={teamHref} className="inline-flex min-h-[24px] items-center font-semibold text-rd-ink underline decoration-rd-line-strong underline-offset-[3px] hover:text-rd-red hover:decoration-rd-red">
                           {name}
                         </a>
                         {opponent ? <span className="text-rd-ink-faint"> vs {opponent}</span> : null}
@@ -113,6 +115,7 @@ export function HubThisWeek({
                       <ul className="mt-3 space-y-3">
                         {card.promos.map((p) => {
                           const cat = categoryForPromo(p);
+                          const pageHref = promoPageHref(p);
                           return (
                             <li key={`${p.date}-${p.title}`}>
                               <div className="flex items-center gap-2">
@@ -130,10 +133,10 @@ export function HubThisWeek({
                                   </span>
                                 )}
                               </div>
-                              <TrackedTapLink
-                                href={promoPageHref(p) ?? `${teamHref}#promo-${promoAnchorId(p)}`}
-                                trackEvent="this_week_card_tap"
-                                trackProps={{
+                              <HubPromoLink
+                                href={pageHref ?? `${teamHref}#promo-${promoAnchorId(p)}`}
+                                toPromoPage={pageHref !== null}
+                                tap={{
                                   surface,
                                   team_id: team.id,
                                   sport: normalizeSport(team.league),
@@ -145,13 +148,13 @@ export function HubThisWeek({
                                 className="mt-1.5 inline-block min-h-[24px] font-rd font-semibold text-rd-ink transition-colors hover:text-rd-red hover:underline"
                               >
                                 {p.title}
-                              </TrackedTapLink>
+                              </HubPromoLink>
                             </li>
                           );
                         })}
                       </ul>
                       {card.moreDays > 0 && (
-                        <a href={teamHref} className="mt-3 inline-block font-rd text-[13px] font-semibold text-rd-red hover:underline">
+                        <a href={teamHref} className="mt-3 inline-flex min-h-[24px] items-center font-rd text-[13px] font-semibold text-rd-red hover:underline">
                           {card.moreDays === 1 ? '1 more promo day this week' : `${card.moreDays} more promo days this week`}
                         </a>
                       )}

@@ -127,6 +127,10 @@ test('every surface uses the helper: no file builds an /events href by hand, and
   assert.doesNotMatch(menu, /eventPageHref|isEventsPagesLive/, 'the client menu never reads the flag');
   assert.equal(eventPageHref({ kind: 'index' }, 'nav_events', true)?.href, '/events');
   assert.equal(eventPageHref({ kind: 'index' }, 'nav_events', false), null);
+  // The bar shows Events only from the width it fits at, wider when Playoffs or World Cup is in the bar too.
+  const bar = readFileSync(join(SRC, 'components/redesign/BrandBar.tsx'), 'utf8');
+  assert.match(bar, /\['hidden min-\[860px\]:inline', 'hidden min-\[980px\]:inline', 'hidden min-\[1100px\]:inline'\]\[extras\]/);
+  assert.match(bar, /className=\{`\$\{LINK_CLASS\} \$\{EVENTS_SHOW\}`\}/);
   // Links out carry their own two surfaces through EventPageLink.
   const out = files.map((f) => readFileSync(f, 'utf8')).join('\n');
   for (const s of EVENT_OUT_SURFACES) assert.ok(out.includes(`linkSurface="${s}"`), `no link out of /events carries ${s}`);

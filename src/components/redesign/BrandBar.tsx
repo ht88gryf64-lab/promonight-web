@@ -46,6 +46,15 @@ export function BrandBar({ playoffsActive = false, worldCupActive = false }: Bra
   // clicks stay separable from the footer's. Resolved HERE, on the server:
   // the flag is not a public env var, so the client menu is handed the href.
   const eventsLink = eventPageHref({ kind: 'index' }, 'nav_events');
+  // IT SHOWS ONLY WHERE THE BAR HAS ROOM FOR IT. With the five standing items
+  // the bar fits Events from 840px up; below that "My Teams" and "League
+  // hubs" wrapped to two lines (measured in Chrome, 2026-11-25). Each
+  // conditional link (Playoffs, World Cup) takes roughly another 110px. So
+  // the breakpoint moves with them, and under it the link is simply absent
+  // from the bar: the footer still carries Events on every page, and below
+  // 768 the menu sheet lists it. Literal class strings, for Tailwind's scan.
+  const extras = (playoffsActive ? 1 : 0) + (worldCupActive ? 1 : 0);
+  const EVENTS_SHOW = ['hidden min-[860px]:inline', 'hidden min-[980px]:inline', 'hidden min-[1100px]:inline'][extras];
 
   // Opaque cream (ruling 2026-11-08, ux-review D1): at 85% the dark body
   // showed through, because div.rd-root is display: contents and paints
@@ -71,7 +80,7 @@ export function BrandBar({ playoffsActive = false, worldCupActive = false }: Bra
               </Link>
             ))}
             {eventsLink ? (
-              <EventPageLink href={eventsLink.href} linkSurface={eventsLink.surface} className={LINK_CLASS}>
+              <EventPageLink href={eventsLink.href} linkSurface={eventsLink.surface} className={`${LINK_CLASS} ${EVENTS_SHOW}`}>
                 Events
               </EventPageLink>
             ) : null}

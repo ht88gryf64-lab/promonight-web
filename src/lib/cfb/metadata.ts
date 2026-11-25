@@ -16,7 +16,7 @@ import { OG_IMAGE_ALT } from '@/lib/og';
 import type { Metadata } from 'next';
 import type { CfbSchoolPage } from '@/lib/cfb/data';
 import type { MatchupPage } from '@/lib/cfb/matchups';
-import { buildMatchupDescription, prettySchoolId } from '@/lib/cfb/matchup-description';
+import { buildMatchupDescription, matchupSideName, namesThePairing, prettySchoolId } from '@/lib/cfb/matchup-description';
 import { venueLocalKickoff } from '@/lib/cfb/kickoff';
 import { cfbSeasonLabel } from './season';
 import { headingText, rivalryIndexHeading, rivalryWeekAnswer, rivalryWeekRange, rivalryWeekRows } from './rivalry-index';
@@ -266,9 +266,6 @@ export function renderedKickoff(game: MatchupPage['game'], venueZone: string | n
 /** The whole rendered <title>, brand included, stays within this. */
 export const MATCHUP_TITLE_MAX = 60;
 
-/** Whether a display name already names the pairing. */
-const namesThePairing = (displayName: string): boolean => /\bvs\.?\b/i.test(displayName);
-
 /** "Minnesota vs Wisconsin: Paul Bunyan's Axe 2026", or "Florida vs Georgia 2026". */
 export function matchupHeading(displayName: string, schoolA: string, schoolB: string, season: string): string {
   if (namesThePairing(displayName)) return `${displayName} ${season}`;
@@ -290,12 +287,11 @@ export function matchupTitle(displayName: string, schoolA: string, schoolB: stri
   return candidates.find((c) => c.length <= MATCHUP_TITLE_MAX) ?? candidates[candidates.length - 1];
 }
 
-/** Both sides' names as the page prints them: the tracked school's name, else
- *  a readable form of its id, so the pairing never renders as a gap. */
+/** Both sides' names exactly as the page's H1 prints them (matchupSideName). */
 export function matchupSchoolNames(data: MatchupPage): [string, string] {
   const [a, b] = data.schools;
   const [aId, bId] = data.rivalry.schoolIds;
-  return [a?.name ?? prettySchoolId(aId), b?.name ?? prettySchoolId(bId)];
+  return [matchupSideName(a, aId), matchupSideName(b, bId)];
 }
 
 export function buildCfbMatchupMetadata(data: MatchupPage): Metadata {
