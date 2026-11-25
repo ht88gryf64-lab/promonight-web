@@ -4543,3 +4543,10 @@ One line each. From `docs/ux-review/2026-11-25-release-final.md` and the whole-r
 - **NFL, NHL and NBA hubs** do not carry the early copy or the published-club marks (first reachable for NFL after 2027-02-14).
 - **Scoring test skips without the pipeline checkout.** `scoring-weights.test.ts` proves nothing without `PROMO_PIPELINE_DIR`.
 
+## 132. Logged at the final gate of the 2026-11 fix round (2026-11-25)
+
+One line each.
+
+- **Live guards match literal label text.** The package-disclosure guard in `scripts/live/team-pages.live.test.ts` looked for `>Get tickets</a>`; when the label became "Get Tickets" it matched nothing and failed with every page correct. A label change breaks such a guard silently: it reports a failure about the pages, not about itself. The guard now finds the primary button by its 52px class.
+- **Twins page at 935,306 bytes.** On production after the 2026-11-25 deploy `/mlb/minnesota-twins` is 935,306 bytes against the 950,000 cap (14,694 under), the largest team page; the next four are 895,000 to 902,000.
+
