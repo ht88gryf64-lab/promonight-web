@@ -4560,3 +4560,6 @@ One line each.
 - **Social feed.** `src/lib/social-feed/rss.ts` builds each item title as team name plus stored title ("Seattle Kraken Bobblehead"), so it already reads whole; the share card image draws the stored title under a team eyebrow.
 - **Two Kraken dates share one promo page.** Jan 31 and Mar 21, 2027 both store "Bobblehead" and resolve to `/nhl/seattle-kraken/promos/bobblehead`, although the sponsors differ (Symetra, Toyota).
 - **Kings "Rally Towel" has a theme the title dropped.** The 2027-01-02 row's description says "Pride rally towel giveaway"; the display rule prints "Kings Rally Towel".
+- **"In 2026" on a 2026-27 page.** The Canadiens team page's FAQ answer reads "The most anticipated Canadiens giveaway in 2026 is..." on a page titled 2026-27. Not checked yet: whether every NHL and NBA team page (the two-calendar-year leagues) carries the same single year in its FAQ answers.
+- **Promo page share text, not clicked.** That the share control is handed the display title ("Kraken Bobblehead") was confirmed in source and by test, not by clicking Share in a browser.
+

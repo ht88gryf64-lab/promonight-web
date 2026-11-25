@@ -116,3 +116,18 @@ One line each in `docs/known-issues.md`:
 - **132** live guards that match literal label text; the Twins page at 935,306 bytes against the 950,000 cap.
 
 Reports: `docs/ux-review/2026-11-25-*.md`, one per branch and one for the release.
+
+## Follow-up: bare title display (2026-11-25)
+
+After the score write the homepage rail showed a Kraken row titled only "Bobblehead" at 98. The club's own page lists it as "Giveaway: Bobblehead, Presented by Symetra, First 5,000 fans", with no player named, so the stored title is faithful and there was nothing to correct it to. Nine of the 192 upcoming NBA and NHL giveaways at 65 or higher had such a title that day.
+
+The rule, in `src/lib/promo-display-title.ts` (one pure helper, no data write):
+
+- A **bare item title**, one made only of generic item words ("Bobblehead", "Bobblehead Night", "Rally Towel", "T-Shirt Giveaway"), is DISPLAYED with the club's short name in front: "Kraken Bobblehead", "Canadiens Bobblehead Night".
+- A title that already names the club ("Wizards T-shirt") or names anything else ("Fred VanVleet Bobblehead") prints as stored.
+- **One name per page.** Cross-team surfaces (homepage rails, `/best-promos` and bobbleheads cards, hub cards, the daily board, the `/promos` lists) and the promo page use the display title everywhere they name the promo: on the promo page that is the H1, the breadcrumb, the FAQ, the timeline line and tooltips, the share text and the JSON-LD name. A club's own team page prints the stored title everywhere (the helper's `ownTeamPage` flag), so its rows match its prose, FAQ and share labels.
+- Unchanged: the stored title, the page slug, the score, the scorer's generic-title rule (known-issues 127), and the promo page's `<title>` and og:title, which already carry the team.
+- The rule heals itself: when the club names the player, the weekly scan stores the new title and it prints as stored.
+
+Commit on main: `e91004a` (branch head `6405350`). Deferred lines: known-issues 133.
+
