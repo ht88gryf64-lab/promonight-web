@@ -4520,3 +4520,26 @@ One line each.
 - **Two identical ticket cards.** On team pages the Ticketmaster and TicketNetwork cards both read "Get Tickets" and differ by logo and the line under the pair (ux-review 2026-11-25, D5; by ruling).
 - **Hub card name and subtitle run together for axe.** The two spans have no whitespace between them, so the cards still fail label-content-name-mismatch on every hub (on production too).
 - **No calendar on an early team page.** A page naming next season early shows no calendar until the schedule holds a game dated today or later (ruling 2026-11-25); the category chips go with it.
+
+## 131. Deferred from the final-gate sweep (logged 2026-11-25)
+
+One line each. From `docs/ux-review/2026-11-25-release-final.md` and the whole-release review.
+
+- **Daily board cards do not name the home team.** A card reads "Kitchen Apron, First 7,500 fans, VS FLAMES"; the homepage ticket sheet has the same gap.
+- **"TICKETS" pill.** The small pill on homepage promo cards and team-page rows reads "TICKETS", not "Get Tickets"; it opens the ticket pair and is not itself a ticket link.
+- **Tap targets under 44px added by the round.** "Stadium guide" (98x36), "Also on Ticketmaster" (133x21), and the TicketNetwork button in a stacked pair (43px tall).
+- **/best-promos retrospective disclosure.** The page prints the commission disclosure while its cards carry no outbound link.
+- **Past SportsEvent JSON-LD on /best-promos.** 50 entries, all past, all EventScheduled.
+- **Hub copy slips.** /mlb FAQ typo ("open any club full promotional schedule") and "Oakland Athletics" beside "Sutter Health Park, West Sacramento"; /nba FAQ says "card below" for cards above.
+- **Monster Jam Houston venue name.** Listed as "Reliant Stadium" (NRG Stadium since 2014).
+- **Rivalry copy.** "known as Okefenokee Oar" names the trophy as the rivalry; "Stadium guide" lands on a page whose H1 is the bag policy.
+- **Homepage hero stats at 390.** The four stats wrap two and two with mismatched columns.
+- **Contrast.** The "NIGHT" wordmark is 4.33:1 on every page; league chips on the homepage fall to 1.65:1.
+- **Promo page fan guide.** "usually 10,000 to 25,000" sits under "FIRST 8,000 FANS".
+- **Daily board time format.** One card prints "07:00 PM"; no time zone on board or homepage times.
+- **Team-scoped scan dispatch rescores the league.** The NHL and NBA workflows pass `--league` only to the scoring step.
+- **Legacy scorer.** `lib/scoring/score-team-from-firestore.js` has neither the package rule nor the NBA and NHL team-score withhold; its cron is disabled.
+- **/about is not in the nightly refresh list,** so its derived league sentence relies on its 24-hour window plus a visit.
+- **NFL, NHL and NBA hubs** do not carry the early copy or the published-club marks (first reachable for NFL after 2027-02-14).
+- **Scoring test skips without the pipeline checkout.** `scoring-weights.test.ts` proves nothing without `PROMO_PIPELINE_DIR`.
+
