@@ -17,7 +17,8 @@ import { HubTeamGrid } from '@/components/hub/HubTeamGrid';
 import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { HubFaq, type HubFaqItem } from '@/components/hub/HubFaq';
 import { getVenueLinksForTeams } from '@/lib/venue-hub';
-import { seasonLabel } from '@/lib/seasons/season-window';
+import { getLeagueHubSeason } from '@/lib/data';
+import { HubSeasonNote } from '@/components/hub/HubSeasonNote';
 
 // League hub accent (house palette, mirrors LEAGUE_HUB_REGISTRY MLS entry).
 const ACCENT = '#3f7d5a';
@@ -41,8 +42,7 @@ const HUB_URL = 'https://www.getpromonight.com/mls';
 // it moves on the first day of the next season's lead-in without a deploy.
 // Never new Date().getFullYear(), which would flip the copy at midnight on
 // Jan 1, before the new season's data exists.
-function hubCopy() {
-  const YEAR = seasonLabel('MLS');
+function hubCopy(YEAR: string) {
   return {
     YEAR,
     TITLE: `MLS Promotions & Giveaways ${YEAR}`,
@@ -50,8 +50,10 @@ function hubCopy() {
   };
 }
 
-export function generateMetadata(): Metadata {
-  const { TITLE, DESCRIPTION } = hubCopy();
+export async function generateMetadata(): Promise<Metadata> {
+  // The season the hub names: the labelled one, or the next one early once
+  // this season has ended and a club has published (getLeagueHubSeason).
+  const { TITLE, DESCRIPTION } = hubCopy((await getLeagueHubSeason('MLS')).label);
   return {
     title: TITLE,
     description: DESCRIPTION,
@@ -90,7 +92,8 @@ const FAQS: HubFaqItem[] = [
 
 
 export default async function MlsHubPage() {
-  const { YEAR, TITLE, DESCRIPTION } = hubCopy();
+  const hubSeason = await getLeagueHubSeason('MLS');
+  const { YEAR, TITLE, DESCRIPTION } = hubCopy(hubSeason.label);
   const [slate, stats, conferences, today] = await Promise.all([
     getLeagueSlate('MLS'),
     getLeagueHubStats('MLS'),
@@ -138,7 +141,7 @@ export default async function MlsHubPage() {
         title={`MLS PROMOTIONS ${YEAR}`}
         subtitle="Jersey giveaways, scarf nights and theme nights across the 30 MLS clubs, grouped by conference."
         freshness="Rechecked weekly in season and updated as clubs announce promotions."
-        notice={heroLine ? <LeaguePlayoffsHeroLine line={heroLine} surface="web_mls_hub" /> : undefined}
+        notice={heroLine ? <LeaguePlayoffsHeroLine line={heroLine} surface="web_mls_hub" /> : hubSeason.note ? <HubSeasonNote text={hubSeason.note} /> : undefined}
         accent={ACCENT}
       >
         <HubStatBar stats={stats} leagueLabel="MLS" />

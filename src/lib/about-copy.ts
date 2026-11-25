@@ -45,10 +45,10 @@ import { numberWord } from '@/lib/coverage-counts';
  * quietly stale. The sitemap entry for /about reads this same constant, so the
  * visible date and <lastmod> cannot disagree.
  */
-export const ABOUT_LAST_REVIEWED = '2026-10-16';
+export const ABOUT_LAST_REVIEWED = '2026-11-25';
 
 /** Human rendering of ABOUT_LAST_REVIEWED. Fixed parts only, no locale clock. */
-export const ABOUT_LAST_REVIEWED_LABEL = 'October 16, 2026';
+export const ABOUT_LAST_REVIEWED_LABEL = 'November 25, 2026';
 
 // SHA-256 of this file with every line naming the fingerprint removed, so the
 // value cannot hash itself. The lockstep test recomputes it; a mismatch means
@@ -75,8 +75,15 @@ export const ABOUT_LAST_REVIEWED_LABEL = 'October 16, 2026';
 // list gains NBA (weekly scan enabled 2026-09-29, 20 of 30 active in
 // promo-pipeline team-configs/nba.js), the "added by hand" paragraph is NFL
 // alone, and the coverage line says NBA teams are posting. The date moved.
+// 2026-11-25 (fix round): the sentence saying where each league stands is no
+// longer typed here. It read "NHL and NBA teams are posting theirs now. Most
+// of the NFL is still waiting" six weeks after that stopped being true, and
+// this lock could not see it. It is derived per render and passed in
+// (aboutSections' leagueState). The scanner counts (27 of 32, 20 of 30) were
+// the enable-day figures; they are now SCANNER_CLUBS, held to the pipeline's
+// team configs by test. Review date bumped with the edit.
 // eslint-disable-next-line prettier/prettier
-export const ABOUT_COPY_FINGERPRINT = '63b665a54d250a435afa64718c99c95b360fcc85deba31bc7334e2c2c0caa97e';
+export const ABOUT_COPY_FINGERPRINT = '54f875fb6e40de26e7f9349b883cb257fc1cb1bc9e64a74ea27d5d2a9b451691';
 
 export interface AboutCounts {
   teamCount: number;
@@ -89,6 +96,20 @@ export interface AboutCounts {
   /** "MLB, MLS, and WNBA". */
   rankedLeagueList: string;
 }
+
+/**
+ * HOW MANY CLUBS THE WEEKLY SCAN CHECKS, by league: the clubs that are not
+ * `active: false` in the pipeline's team-configs/nhl.js and team-configs/nba.js.
+ * The page said 27 of 32 and 20 of 30, the figures from the day each scan was
+ * enabled; on 2026-11-25 the configs held 29 and 28. A number typed into copy
+ * goes stale silently, so src/lib/__tests__/about-freshness.test.ts compares
+ * these against the pipeline checkout (PROMO_PIPELINE_DIR) and fails when a
+ * club is enabled or withheld there and this does not follow.
+ */
+export const SCANNER_CLUBS = {
+  NHL: { checked: 29, total: 32 },
+  NBA: { checked: 28, total: 30 },
+} as const;
 
 /** Inline links are written as [label](/path) and rendered by both variants
  *  through the same parser, so the copy owns its links and the two gate
@@ -132,7 +153,14 @@ export function aboutLede(c: AboutCounts): string {
   );
 }
 
-export function aboutSections(c: AboutCounts): AboutSection[] {
+/**
+ * `leagueState` is the sentence saying where each league stands TODAY
+ * (aboutLeagueStateSentence, src/lib/about-league-state.ts), derived by the
+ * page from the season windows and the upcoming promo rows. It is passed in,
+ * never typed here: the typed version went false with the calendar, and this
+ * file's review lock cannot see the calendar. Absent, the sentence is left out.
+ */
+export function aboutSections(c: AboutCounts, leagueState: string = ''): AboutSection[] {
   return [
     {
       id: 'why',
@@ -214,7 +242,7 @@ export function aboutSections(c: AboutCounts): AboutSection[] {
                 // the day its hub went live. Every other surface reads the
                 // registry flag; this string is hand-written, so it has to be
                 // kept in step by hand.
-                '[NFL](/nfl) publishes in a burst, mostly right before its season starts, and gets added by hand when I run a sweep. NHL and NBA used to sit in that group; NHL moved to the weekly scan in September 2026, with 27 of the 32 clubs checked automatically, and NBA followed at the end of that month, with 20 of the 30 teams checked automatically. In both leagues the rest are held back until their pages carry a current schedule. [College football](/cfb) is different again: those pages carry schedules, venues and rivalries, not promotions.',
+                `[NFL](/nfl) publishes in a burst, mostly right before its season starts, and gets added by hand when I run a sweep. NHL and NBA used to sit in that group; NHL moved to the weekly scan in September 2026 and NBA followed at the end of that month. ${SCANNER_CLUBS.NHL.checked} of the ${SCANNER_CLUBS.NHL.total} NHL clubs and ${SCANNER_CLUBS.NBA.checked} of the ${SCANNER_CLUBS.NBA.total} NBA teams are checked automatically. In both leagues the rest are held back until their pages carry a current schedule. [College football](/cfb) is different again: those pages carry schedules, venues and rivalries, not promotions.`,
             },
             {
               lead: 'A new promo’s title has to be built from words that are actually on the page it came from.',
@@ -245,7 +273,7 @@ export function aboutSections(c: AboutCounts): AboutSection[] {
             {
               lead: 'Team pages',
               text:
-                `for all ${c.teamCount} teams, carrying whatever promotional calendar the team has published, past and upcoming, plus venue details for the ballpark or arena. MLB, MLS and WNBA carry a full season, and NHL and NBA teams are posting theirs now. Most of the NFL is still waiting on team announcements. [Browse every team](/teams).`,
+                `for all ${c.teamCount} teams, carrying whatever promotional calendar the team has published, past and upcoming, plus venue details for the ballpark or arena. ${leagueState ? `${leagueState} ` : ''}[Browse every team](/teams).`,
             },
             {
               lead: 'Collections',

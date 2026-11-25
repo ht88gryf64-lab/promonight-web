@@ -11,9 +11,11 @@ interface TeamHeroProps {
   venue: Venue | null;
   promoCount: number;
   promoCounts: Record<PromoType, number>;
+  /** The day the page labels its season by, when it has flipped early (ClaimMode.labelDay). */
+  labelDay?: string;
 }
 
-export function TeamHero({ team, venue, promoCount, promoCounts }: TeamHeroProps) {
+export function TeamHero({ team, venue, promoCount, promoCounts, labelDay }: TeamHeroProps) {
   const displayName = teamDisplayName(team);
   return (
     <section
@@ -78,7 +80,7 @@ export function TeamHero({ team, venue, promoCount, promoCounts }: TeamHeroProps
           </div>
         </div>
         <p className="font-display text-2xl md:text-3xl tracking-[1px] text-text-secondary mb-2">
-          {`${currentSeasonLabel(team.league)} PROMO SCHEDULE`}
+          {`${currentSeasonLabel(team.league, labelDay)} PROMO SCHEDULE`}
         </p>
         <p className="text-text-muted text-xs font-mono tracking-[0.5px] mb-6">
           Last updated {new Date().toLocaleDateString('en-US', { timeZone: SITE_TIME_ZONE, month: 'long', day: 'numeric', year: 'numeric' })}

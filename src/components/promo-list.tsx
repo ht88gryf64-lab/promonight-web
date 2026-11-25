@@ -239,6 +239,7 @@ export function PromoList({
   gameContexts,
   afterNothingAnnounced = false,
   today: todayProp,
+  labelDay,
   appCard,
 }: {
   promos: Promo[];
@@ -275,6 +276,11 @@ export function PromoList({
    *  on exactly the day the rest of the page did (WEB6 G3 review). Both team
    *  page renders pass it; the default exists only for isolated renders. */
   today?: string;
+  /** The day the page labels its season by, when it has flipped early to the
+   *  next season (ClaimMode.labelDay, src/lib/season-scope.ts). Absent on every
+   *  other page. It moves the SEASON the headings and the archive name; what
+   *  is upcoming and what is past still turns on `today`. */
+  labelDay?: string;
   /** Whether this league's rollout gate has opened. Only the rollback-only dark
    *  variant reads it, for the Ticket Package pill. */
   scopeLive?: boolean;
@@ -320,8 +326,13 @@ export function PromoList({
   const pastSpan = seasonSpan(past.map((p) => p.date));
   const pastHeading = completedHeading(pastSpan);
   // The season the page names, from the windows (season rollover, 2026-11-05).
-  const namedStartYear = seasonStartYear(league, today);
-  const namedSeason = labeledSeason(league, today).season;
+  const labelBy = labelDay ?? today;
+  const namedStartYear = seasonStartYear(league, labelBy);
+  const namedSeason = labeledSeason(league, labelBy).season;
+  // The next season's printed name on a page that names it early, else null.
+  // Then the upcoming list is that season's so far, and says so; the season
+  // just played keeps its own "COMPLETED 2026 PROMOS" heading below.
+  const earlySeasonLabel = labelDay && labelDay !== today ? currentSeasonLabel(league, labelDay) : null;
   const inNamedSeason = (d: string) => seasonOfDate(league, d)?.season === namedSeason;
   const pastCount = completedSubline(past.length, pastSpan, namedStartYear, past.every((p) => inNamedSeason(p.date)));
   // Byte-identical to "See completed 2026 promos below." on a single-year
@@ -362,11 +373,11 @@ export function PromoList({
         c.game.seasonType !== 'preseason' &&
         c.game.status === 'scheduled' &&
         c.game.date >= today &&
-        seasonOfDate(league, c.game.date)?.season === labeledSeason(league, today).season,
+        seasonOfDate(league, c.game.date)?.season === namedSeason,
     );
   const seasonComplete =
     seasonScoped && upcoming.length === 0 && currentSeasonPast.length > 0 && !splitSeasonStillPlaying;
-  const seasonCompleteLabel = splitGroups ? currentSeasonLabel(league, today) : pastSpan?.yearLabel ?? '';
+  const seasonCompleteLabel = splitGroups ? currentSeasonLabel(league, labelBy) : pastSpan?.yearLabel ?? '';
 
   const upcomingVisible = upcoming.slice(0, UPCOMING_VISIBLE);
   const upcomingHidden = upcoming.slice(UPCOMING_VISIBLE);
@@ -656,14 +667,22 @@ export function PromoList({
               {seasonComplete ? 'The full season' : 'Coming up'}
             </span>
             <h2 className="rd-display text-3xl md:text-4xl text-rd-ink mt-1">
-              {seasonComplete ? `${seasonCompleteLabel} SEASON PROMOS`.trim() : 'UPCOMING PROMOS'}
+              {seasonComplete ? `${seasonCompleteLabel} SEASON PROMOS`.trim() : earlySeasonLabel ? `${earlySeasonLabel} SEASON PROMOS` : 'UPCOMING PROMOS'}
             </h2>
-            {upcoming.length > 0 && (
+            {/* Two whole paragraphs, not one with a conditional child: a page
+                that has not flipped keeps the element and the text nodes it
+                always had, byte for byte. */}
+            {upcoming.length > 0 && (earlySeasonLabel ? (
+              <p className="text-rd-ink-faint text-xs font-rd tracking-[0.02em] mt-2">
+                {`${upcoming.length} ${upcoming.length === 1 ? 'event' : 'events'} announced so far for the ${earlySeasonLabel} season`}
+                {upcomingHidden.length > 0 ? ' · full schedule below' : ''}
+              </p>
+            ) : (
               <p className="text-rd-ink-faint text-xs font-rd tracking-[0.02em] mt-2">
                 {upcoming.length} upcoming {upcoming.length === 1 ? 'event' : 'events'}
                 {upcomingHidden.length > 0 ? ' · full schedule below' : ''}
               </p>
-            )}
+            ))}
           </div>
 
           {upcoming.length > 0 ? (
@@ -763,14 +782,19 @@ export function PromoList({
             Coming up
           </span>
           <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mt-1">
-            UPCOMING PROMOS
+            {earlySeasonLabel ? `${earlySeasonLabel} SEASON PROMOS` : 'UPCOMING PROMOS'}
           </h2>
-          {upcoming.length > 0 && (
+          {upcoming.length > 0 && (earlySeasonLabel ? (
+            <p className="text-text-muted text-xs font-mono tracking-[0.5px] mt-2">
+              {`${upcoming.length} ${upcoming.length === 1 ? 'event' : 'events'} announced so far for the ${earlySeasonLabel} season`}
+              {upcomingHidden.length > 0 ? ' · full schedule below' : ''}
+            </p>
+          ) : (
             <p className="text-text-muted text-xs font-mono tracking-[0.5px] mt-2">
               {upcoming.length} upcoming {upcoming.length === 1 ? 'event' : 'events'}
               {upcomingHidden.length > 0 ? ' · full schedule below' : ''}
             </p>
-          )}
+          ))}
         </div>
 
         {upcoming.length > 0 ? (

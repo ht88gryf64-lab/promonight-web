@@ -491,7 +491,9 @@ export function generateTeamFAQs(
   // 2026-11-05), the same word the title and meta description carry. NOT
   // getFullYear(), which would flip every FAQ "{year} season" string at
   // midnight on Jan 1, before that season's promo data exists.
-  const year = currentSeasonLabel(team.league);
+  // On a page that has flipped early to the next season, that season's word
+  // (claim.labelDay, src/lib/season-scope.ts).
+  const year = currentSeasonLabel(team.league, claim.labelDay);
   const fullName = teamDisplayName(team);
   const venueName = venue?.name || 'their home stadium';
   const faqs: FAQItem[] = [];
@@ -613,7 +615,7 @@ export function generateTeamFAQs(
         answer: `The ${fullName} have ${kidsSeasonCount} kids and family ${kidsSeasonCount === 1 ? 'event' : 'events'} at ${venueName} in the ${claim.scope.label} season.${aheadClause ? ` ${aheadClause}` : ''} These events are designed for young fans and families attending games at ${venueName}.`,
       });
     } else {
-    const named = labeledSeason(team.league).season;
+    const named = labeledSeason(team.league, claim.labelDay).season;
     const kidsInNamedSeason = kidsPromos.every((p) => seasonOfDate(team.league, p.date)?.season === named);
     faqs.push({
       // The question names the season label when every row it asks about is a

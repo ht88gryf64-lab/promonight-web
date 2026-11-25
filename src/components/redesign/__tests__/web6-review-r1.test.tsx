@@ -88,7 +88,9 @@ describe('HIGH: every season the page names comes from the windows (season rollo
     const months = readFileSync('src/lib/schedule-months.ts', 'utf8');
     assert.match(label, /return seasonLabel\(league, today\);/);
     assert.match(label, /const isCurrent = startYear === currentStartYear;/);
-    assert.match(scope, /const season = labeledSeason\(league, today\);/);
+    // labelDay is today on every page except one that names the next season early (2026-11-25).
+    assert.match(scope, /const season = labeledSeason\(league, labelDay\);/);
+    assert.match(scope, /labelDay: string = today,/);
     assert.match(scope, /seasonOfDate\(league, p\.date\)\?\.season === season\.season/);
     assert.match(status, /const season = upcomingSeasonLabel\(league, today\);/);
     assert.match(fallback, /const upcoming = upcomingSeasonLabel\(team\.league\);/);
@@ -214,7 +216,8 @@ describe('MED: "THE FULL SEASON" waits for the last game', () => {
 describe('MED: the meta description names 2026-27 on NHL and NBA', () => {
   test('fallback and closer use the season word; MLB keeps the number', () => {
     const src = readFileSync('src/app/[sport]/[team]/page.tsx', 'utf8');
-    assert.match(src, /const seasonWord = currentSeasonLabel\(team\.league\);/);
+    assert.match(src, /const seasonWord = currentSeasonLabel\(team\.league, labelDay\);/);
+    assert.match(src, /const labelDay = teamLabelDay\(team\.league, todayYmd\(\),/);
     // One occurrence since 2026-11-05: the fallback is built from one shared
     // base (whole-clause candidates under the 155 cap), not two literals.
     assert.equal(src.match(/\$\{displayName\} \$\{seasonWord\} promotional schedule/g)?.length, 1);

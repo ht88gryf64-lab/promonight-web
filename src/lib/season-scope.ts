@@ -1,5 +1,5 @@
 import { countPromosByType, isPurchaseGated, isUpcomingPromo, todayYmd } from './promo-helpers';
-import { labeledSeason, seasonName, seasonOfDate } from './seasons/season-window';
+import { labeledSeason, seasonName, seasonOfDate, teamLabelDay } from './seasons/season-window';
 import type { Promo, PromoType } from './types';
 
 // ── Season scope ─────────────────────────────────────────────────────────────
@@ -152,10 +152,22 @@ export interface SeasonScope {
  *             never borrow the season's noun.
  *   season    state the season total and how much of it is left.
  */
-export type ClaimMode =
+export type ClaimMode = (
   | { kind: 'held' }
   | { kind: 'remaining' }
-  | { kind: 'season'; scope: SeasonScope };
+  | { kind: 'season'; scope: SeasonScope }
+) & {
+  /**
+   * The day the page labels its season by, PRESENT ONLY WHEN THE PAGE HAS
+   * FLIPPED to a season whose lead-in has not opened (teamLabelDay,
+   * src/lib/seasons/season-window.ts): the club has published next season's
+   * promotions and has nothing else ahead. Absent on every other page, so
+   * their serialized props are what they always were. Every surface that
+   * prints a season word reads it: the title, the hero line, the headings,
+   * the FAQ answers, the JSON-LD name.
+   */
+  labelDay?: string;
+};
 
 /**
  * The single entry point for consumers. Returns the mode AND, for convenience,
@@ -167,8 +179,10 @@ export function resolveClaimMode(
   today: string = todayYmd(),
 ): ClaimMode {
   if (!isSeasonScopeLive(league, today)) return { kind: 'held' };
-  const scope = resolveSeasonScope(promos, league, today);
-  return scope ? { kind: 'season', scope } : { kind: 'remaining' };
+  const labelDay = teamLabelDay(league, today, promos.filter((p) => isUpcomingPromo(p, today)).map((p) => p.date));
+  const flipped = labelDay !== today ? { labelDay } : {};
+  const scope = resolveSeasonScope(promos, league, today, labelDay);
+  return scope ? { kind: 'season', scope, ...flipped } : { kind: 'remaining', ...flipped };
 }
 
 /**
@@ -183,6 +197,10 @@ export function resolveSeasonScope(
   promos: Promo[],
   league: string,
   today: string = todayYmd(),
+  // The day the page labels by (teamLabelDay): today, or the next season's
+  // lead-in day on a page that has flipped early. Only the SEASON is read
+  // from it; upcoming and past still turn on `today`.
+  labelDay: string = today,
 ): SeasonScope | null {
   if (!isSeasonScopeLive(league, today)) return null;
 
@@ -205,7 +223,7 @@ export function resolveSeasonScope(
   // archive (the retired runbook-2027-01-15). Rows of another season stay in
   // the archive under their own heading and are never counted here, so a
   // finished 2026 season plus a fresh 2027 one can never be summed.
-  const season = labeledSeason(league, today);
+  const season = labeledSeason(league, labelDay);
   const inSeason = dated.filter((p) => seasonOfDate(league, p.date)?.season === season.season);
   if (inSeason.length === 0) return null;
   // EVERY UPCOMING ROW MUST BE A ROW OF THE NAMED SEASON, or the page makes no

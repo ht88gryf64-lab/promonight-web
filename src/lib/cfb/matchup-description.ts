@@ -39,6 +39,8 @@ export interface MatchupDescriptionInput {
   venueName: string | null;
   /** Clean city from CFB_VENUE_CITY or venueHubs. Never the raw scraped field. */
   venueCity: string | null;
+  /** The game's day has passed (matchupPlayed): past tense and no trip to plan. */
+  played?: boolean;
 }
 
 /** "washington-state" -> "Washington State", with the explicit map in
@@ -67,6 +69,28 @@ export function namesThePairing(displayName: string): boolean {
 export function matchupSideName(school: { shortName?: string | null; name?: string | null } | null | undefined, id: string): string {
   return school?.shortName || school?.name || prettySchoolId(id);
 }
+
+// ── the played state (2026-11 fix round) ────────────────────────────────────
+//
+// A rivalry page is a trip-planning page, and for most of the autumn its game
+// is ahead. After the game it kept saying "is Saturday, October 31, 2026 ...
+// Tickets, parking and hotels for the trip" and kept its ticket, hotel and
+// parking links: Florida vs Georgia, played 2026-10-31, was still doing so on
+// 2026-11-25. So the page has the promo page's played state (ruling
+// 2026-11-08): it says the game has been played, drops the offers, and its
+// SportsEvent stays EventScheduled with no offers.
+//
+// PLAYED IS THE DATE, never a stored status: the game's day is before today
+// in the venue's zone (the site's day when the venue has none). A game with no
+// date is not played; it is not scheduled.
+
+/** True when the game's day is before `today` (both YYYY-MM-DD). */
+export function matchupPlayed(gameDate: string | null | undefined, today: string): boolean {
+  return typeof gameDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(gameDate) && gameDate < today;
+}
+
+/** The line the played page prints above its facts. */
+export const MATCHUP_PLAYED_LINE = 'This game has been played';
 
 function longDate(iso: string): string {
   // Noon avoids the UTC rollover that would shift the weekday a day west.
@@ -112,6 +136,21 @@ export function buildMatchupDescription(input: MatchupDescriptionInput): string 
   const matchup = matchupPhrase(displayName, schoolA, schoolB);
   const place = venuePhrase(venueName, venueCity);
   const when = date ? longDate(date) : null;
+
+  // Played: past tense, the place it was played, and no trip to plan. No
+  // kickoff time either: a start time is for someone still going.
+  if (when && input.played) {
+    return longestFit(
+      [
+        `${matchup} was played ${when}${place ? ` at ${place}` : ''}. The rivalry, the trophy and the stadium, and how to plan the trip when the game returns.`,
+        `${matchup} was played ${when}${place ? ` at ${place}` : ''}. The rivalry, the trophy and the stadium.`,
+        `${matchup} was played ${when}${place ? ` at ${place}` : ''}.`,
+        `${matchup} was played ${when}.`,
+        `${displayName} was played ${when}.`,
+      ],
+      DESC_MAX,
+    );
+  }
 
   // Dormant rivalry: no 2026 meeting, so claim no date and no venue.
   if (!when) {

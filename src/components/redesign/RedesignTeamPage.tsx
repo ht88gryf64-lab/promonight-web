@@ -296,6 +296,7 @@ export function RedesignTeamPage({
         <PromoList
           league={team.league}
           today={today}
+          labelDay={claim.labelDay}
           promos={promos}
           teamSlug={team.id}
           teamName={displayName}
@@ -368,7 +369,7 @@ export function RedesignTeamPage({
         tint={team.primaryColor}
         eyebrow={eyebrow}
         title={displayName.toUpperCase()}
-        subtitle={teamTitleSubtitle(team)}
+        subtitle={teamTitleSubtitle(team, claim.labelDay)}
         venueLine={venue?.name ?? undefined}
         scoreboard={
           <StatScoreboard

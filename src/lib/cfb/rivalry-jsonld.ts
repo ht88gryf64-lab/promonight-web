@@ -10,7 +10,7 @@
 import type { MatchupPage } from '@/lib/cfb/matchups';
 import type { CfbGame } from '@/lib/cfb/types';
 import { buildMatchupDescription, prettySchoolId } from '@/lib/cfb/matchup-description';
-import { renderedKickoff, rivalryIndexTitle, rivalryIndexDescription, rivalryListName } from '@/lib/cfb/metadata';
+import { matchupIsPlayed, renderedKickoff, rivalryIndexTitle, rivalryIndexDescription, rivalryListName } from '@/lib/cfb/metadata';
 import { cfbSeasonLabel } from '@/lib/cfb/season';
 import type { RivalryFaq, RivalryIndexRow } from '@/lib/cfb/rivalry-index';
 // The pipeline's single time parser + tz tools (guards.ts). One parser
@@ -151,9 +151,13 @@ export function buildRivalryMatchupJsonLd(data: MatchupPage): Schema[] {
         kickoff: renderedKickoff(game, data.venueZone),
         venueName: data.resolvedVenue?.name ?? null,
         venueCity: data.resolvedVenue?.city ?? null,
+        played: matchupIsPlayed(data),
       }),
       url,
       startDate: sportsEventStartDate(game, data.venueZone),
+      // A played game keeps EventScheduled and carries no offers (ruling
+      // 2026-11-08, the promo page's played state): it happened as scheduled.
+      // This event never carries an `offers` key in either state.
       eventStatus: game.status === 'canceled' ? 'https://schema.org/EventCancelled' : 'https://schema.org/EventScheduled',
       image: EVENT_IMAGE,
       homeTeam: { '@type': 'SportsTeam', name: nameFor(game.homeSchoolId) },

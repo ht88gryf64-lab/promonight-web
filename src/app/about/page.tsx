@@ -1,3 +1,6 @@
+import { getAllTeams, getPromosFromDate } from '@/lib/data';
+import { siteTodayYmd } from '@/lib/site-today';
+import { aboutLeagueStateSentence, resolveAboutLeagueState } from '@/lib/about-league-state';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { pageOpenGraph } from '@/lib/og';
@@ -80,7 +83,14 @@ function Inline({ text, linkClass }: { text: string; linkClass: string }) {
 export default async function AboutPage() {
   const counts = await getAboutCounts();
   const lede = aboutLede(counts);
-  const sections = aboutSections(counts);
+  // Where each league stands today, derived (src/lib/about-league-state.ts):
+  // the season windows, and which teams have a promotion listed ahead.
+  const today = siteTodayYmd();
+  const [allTeams, upcoming] = await Promise.all([getAllTeams(), getPromosFromDate(today)]);
+  const leagueState = aboutLeagueStateSentence(
+    resolveAboutLeagueState(today, allTeams, upcoming.map((p) => ({ teamId: p.team.id, league: p.team.league, date: p.date }))),
+  );
+  const sections = aboutSections(counts, leagueState);
   const faqs = aboutFaqs(counts);
   const light = isRedesignEnabled();
 

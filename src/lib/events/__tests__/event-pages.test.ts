@@ -43,6 +43,8 @@ import {
   stopTimeline,
   stopTitle,
   stopYear,
+  runYearLabel,
+  hubYear,
   upcomingPerformances,
   weekdayLong,
   type EventPerformance,
@@ -195,7 +197,7 @@ test('the clock decides: a performance past its start time is past, whatever the
 
 test('titles: the search city leads, the year is the last upcoming performance, and "Bag Policy" needs a bag rule on the page', () => {
   const tl = stopTimeline(STOP, at('2026-11-18T00:00:00Z'));
-  assert.equal(stopYear(STOP, tl), 2027);
+  assert.equal(stopYear(STOP, tl), '2027');
   assert.equal(stopTitle('Monster Jam', 'Minneapolis', 2027, true), 'Monster Jam Minneapolis 2027: Dates, Tickets and Bag Policy');
   assert.equal(stopTitle('Monster Jam', 'Minneapolis', 2027, false), 'Monster Jam Minneapolis 2027: Dates and Tickets');
   assert.equal(stopTitle('Monster Jam', 'Minneapolis', null, false), 'Monster Jam Minneapolis: Dates and Tickets');
@@ -211,9 +213,16 @@ test('titles: the search city leads, the year is the last upcoming performance, 
   const desc = hubDescription('Monster Jam', 2027);
   for (const w of ['schedule', 'dates', 'tickets', 'venues PromoNight covers']) assert.ok(desc.includes(w), w);
   for (const text of [hubTitle('Monster Jam', 2027), hubH1('Monster Jam', 2027), desc, scope]) assert.doesNotMatch(text, /\b(full|complete|every|all|entire|official)\b(?! tour schedule\.)|\d{4}.*\btour\b(?! schedule\.)/i);
-  // A stop that spans New Year takes the LAST upcoming performance's year.
+  // A stop whose upcoming run crosses New Year is named like a season, "2026-27"
+  // (ruling 2026-11-25); it used to take the LAST performance's year alone.
   const span = { visits: [], performances: [perf('2026-12-30T1900'), perf('2027-01-02T1900')] };
-  assert.equal(stopYear(span, stopTimeline(span, at('2026-11-18T00:00:00Z'))), 2027);
+  assert.equal(stopYear(span, stopTimeline(span, at('2026-11-18T00:00:00Z'))), '2026-27');
+  // Once the December show has started, the run left is January's: the single year.
+  assert.equal(stopYear(span, stopTimeline(span, at('2026-12-31T06:00:00Z'))), '2027');
+  // Nothing upcoming: the year of the last stored show.
+  assert.equal(stopYear(span, stopTimeline(span, at('2027-03-01T00:00:00Z'))), '2027');
+  assert.equal(stopYear({ performances: [] }, stopTimeline({ visits: [], performances: [] }, at('2027-03-01T00:00:00Z'))), null);
+  assert.equal(stopTitle('Monster Jam', 'Anaheim', '2026-27', true), 'Monster Jam Anaheim 2026-27: Dates, Tickets and Bag Policy');
   assert.equal(formatClock('17:00'), '5:00 PM'); assert.equal(formatClock('00:30'), '12:30 AM'); assert.equal(formatClock('12:00'), '12:00 PM'); assert.equal(formatClock('5pm'), '');
   assert.equal(formatRange('2027-02-20', '2027-02-21'), 'Feb 20 to 21'); assert.equal(formatRange('2027-01-30', '2027-02-01'), 'Jan 30 to Feb 1'); assert.equal(formatRange('2027-02-27', '2027-02-27'), 'Feb 27');
   assert.equal(formatDatesLine(['2027-02-21', '2027-02-20']), 'Sat, Feb 20 and Sun, Feb 21, 2027');
@@ -479,3 +488,27 @@ test('6A hour-by-hour sources: one source keeps the plain line; a source per sho
   assert.deepEqual(mixed.map((x) => x.what), ['Sat, Feb 6 and Sun, Feb 7 Pit Party times', 'Sat, Feb 13 Pit Party time']);
   assert.deepEqual(timelineSourceLines('Gate', []), []);
 });
+
+test('the events year: one helper, "2026-27" only when the run crosses New Year (ruling 2026-11-25)', () => {
+  assert.equal(runYearLabel(['2027-01-16', '2027-02-21']), '2027');
+  assert.equal(runYearLabel(['2026-12-19', '2026-12-20']), '2026');
+  assert.equal(runYearLabel(['2026-12-19', '2027-02-21']), '2026-27');
+  assert.equal(runYearLabel(['2027-02-21', '2026-12-19']), '2026-27', 'order does not matter');
+  assert.equal(runYearLabel([]), null);
+  assert.equal(runYearLabel(['soon', '']), null);
+  // The hub, across stops: Anaheim opens Dec 19, 2026; every other stop is in 2027.
+  const anaheim = { nextDate: '2026-12-19', lastDate: '2027-02-21' };
+  const saltLake = { nextDate: '2027-01-08', lastDate: '2027-01-10' };
+  assert.equal(hubYear([saltLake, anaheim]), '2026-27');
+  assert.equal(hubTitle('Monster Jam', hubYear([saltLake, anaheim])), 'Monster Jam 2026-27 Schedule: Dates, Cities and Tickets');
+  assert.equal(hubH1('Monster Jam', hubYear([saltLake, anaheim])), 'Monster Jam 2026-27 schedule');
+  assert.match(hubDescription('Monster Jam', hubYear([saltLake, anaheim])), /^Monster Jam 2026-27 schedule at venues PromoNight covers/);
+  // After Anaheim's December shows the hub's run is all 2027: the single year again.
+  assert.equal(hubYear([saltLake, { nextDate: '2027-01-16', lastDate: '2027-02-21' }]), '2027');
+  assert.equal(hubYear([]), null);
+  // Every title is fed by it: the hub page calls hubYear, and the stop head calls stopYear.
+  const hubPage = readFileSync(join(SRC, 'app/events/[show]/page.tsx'), 'utf8');
+  assert.match(hubPage, /year: hubYear\(stops\)/);
+  assert.doesNotMatch(hubPage, /lastYear/);
+});
+

@@ -17,7 +17,8 @@ import { getVenueLinksForTeams } from '@/lib/venue-hub';
 import { getPlayoffsInboundOrNone } from '@/lib/postseason/data';
 import { leagueCard, leagueFinalCard, leagueHeroLine } from '@/lib/postseason/inbound';
 import { LeagueFinalBracketCard, LeaguePlayoffsCard, LeaguePlayoffsHeroLine } from '@/components/playoffs/inbound/LeaguePlayoffsCard';
-import { seasonLabel } from '@/lib/seasons/season-window';
+import { getLeagueHubSeason } from '@/lib/data';
+import { HubSeasonNote } from '@/components/hub/HubSeasonNote';
 
 // League hub accent (house palette, mirrors LEAGUE_HUB_REGISTRY MLB entry).
 const ACCENT = '#7c4a3a';
@@ -41,8 +42,7 @@ const HUB_URL = 'https://www.getpromonight.com/mlb';
 // it moves on the first day of the next season's lead-in without a deploy.
 // Never new Date().getFullYear(), which would flip the copy at midnight on
 // Jan 1, before the new season's data exists.
-function hubCopy() {
-  const YEAR = seasonLabel('MLB');
+function hubCopy(YEAR: string) {
   return {
     YEAR,
     TITLE: `MLB Promotions & Giveaways ${YEAR}`,
@@ -50,8 +50,10 @@ function hubCopy() {
   };
 }
 
-export function generateMetadata(): Metadata {
-  const { TITLE, DESCRIPTION } = hubCopy();
+export async function generateMetadata(): Promise<Metadata> {
+  // The season the hub names: the labelled one, or the next one early once
+  // this season has ended and a club has published (getLeagueHubSeason).
+  const { TITLE, DESCRIPTION } = hubCopy((await getLeagueHubSeason('MLB')).label);
   return {
     title: TITLE,
     description: DESCRIPTION,
@@ -90,7 +92,8 @@ const FAQS: HubFaqItem[] = [
 
 
 export default async function MlbHubPage() {
-  const { YEAR, TITLE, DESCRIPTION } = hubCopy();
+  const hubSeason = await getLeagueHubSeason('MLB');
+  const { YEAR, TITLE, DESCRIPTION } = hubCopy(hubSeason.label);
   const [slate, stats, divisions, today] = await Promise.all([
     getLeagueSlate('MLB'),
     getLeagueHubStats('MLB'),
@@ -137,7 +140,7 @@ export default async function MlbHubPage() {
         subtitle="Giveaways, bobblehead nights, theme nights and food deals across the 30 MLB clubs, grouped by division."
         freshness="Rechecked weekly and updated as clubs announce promotions."
         accent={ACCENT}
-        notice={heroLine ? <LeaguePlayoffsHeroLine line={heroLine} surface="web_mlb_hub" /> : undefined}
+        notice={heroLine ? <LeaguePlayoffsHeroLine line={heroLine} surface="web_mlb_hub" /> : hubSeason.note ? <HubSeasonNote text={hubSeason.note} /> : undefined}
       >
         <HubStatBar stats={stats} leagueLabel="MLB" />
       </HubHero>

@@ -4478,3 +4478,16 @@ One line each.
 - **Bobblehead page layout shift (ux-review D7f).** CLS at 390 is 0.0593 on the upcoming list against 0.0294 on production's record.
 - **Bobblehead FAQ, MLB answers (ux-review D8).** "Which MLB team gives away the most bobbleheads?" and the weekend-timing answer describe MLB while the winter list is NBA and NHL; their claims about the Diamondbacks, Cubs and Braves are not derived from data.
 
+
+## 129. Deferred from feature/season-state (logged 2026-11-25)
+
+One line each.
+
+- **Events link with Playoffs or World Cup in the bar.** The top bar shows Events from 860px, from 980px while Playoffs or World Cup is also in the bar, and from 1100px with both. Between 768px and that width the link is in the footer only (ruling: keep as built).
+- **Schedule block on a page that names next season early.** A team page that has flipped to 2027 still shows the 2026 game schedule under its own 2026 heading; the games spine has no 2027 games yet. It moves on the day the lead-in opens.
+- **Promos-per-game on an early season.** On a flipped page "By the numbers" divides the promotions announced so far by a full season of home games, as every page does in a lead-in.
+- **A club flips while its league is still playing.** The team rule is row-based: the Galaxy name 2027 although MLS 2026 runs to Dec 18. The hub rule is league-based, so /mls stays on 2026 until Dec 19.
+- **Venue page titles.** Per-venue titles still carry the hardcoded season ("Bag Policy 2026", `SEASON_YEAR` in `src/lib/venue-hub.ts`), including NBA and NHL arenas in 2026-27. Only the /venues index was reworded.
+- **Rivalry pages after the game.** The whole "Plan the trip" section goes, including its internal link to the stadium guide; the page has no other link to that guide.
+- **/about, teams with promotions ahead.** The count includes a club whose only upcoming rows are next season's.
+- **Monster Jam stop past state.** Covered by a render test on a fixture; the first live case is Anaheim on Dec 19 and 20, 2026.

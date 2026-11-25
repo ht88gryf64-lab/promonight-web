@@ -62,7 +62,7 @@ function StopRow({ s, last, ym }: { s: EventStopSummary; last: boolean; ym?: str
   );
 }
 
-export function EventHubView({ show, stops, year, facts }: { show: EventShow; stops: EventStopSummary[]; year: number | null; facts: { runTime: HubVenueFact[]; kids: HubVenueFact[] } }) {
+export function EventHubView({ show, stops, year, facts }: { show: EventShow; stops: EventStopSummary[]; year: string | null; facts: { runTime: HubVenueFact[]; kids: HubVenueFact[] } }) {
   // A stop is listed under EVERY month one of its visits starts in, so a
   // building with four weekends is found in each of their months.
   const months = [...new Set(stops.flatMap((s) => s.visits.map((v) => v.start.slice(0, 7))))].sort();

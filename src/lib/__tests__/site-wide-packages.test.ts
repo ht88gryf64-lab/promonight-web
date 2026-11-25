@@ -279,6 +279,9 @@ test('the feed fallback path keeps the team page order (twins never selected)', 
 test('the /nhl hub season comes from the windows, per render', async () => {
   const { readFileSync } = await import('node:fs');
   const src = readFileSync(new URL('../../app/nhl/page.tsx', import.meta.url), 'utf8');
-  assert.match(src, /const SEASON = seasonLabel\('NHL'\);/);
-  assert.match(src, /export function generateMetadata\(\): Metadata \{/, 'computed per render, not at module load');
+  // Through getLeagueHubSeason (src/lib/data.ts), which reads seasonLabel from
+  // the windows and may name the next season early (2026-11 fix round).
+  assert.match(src, /const hubSeason = await getLeagueHubSeason\('NHL'\);/);
+  assert.match(src, /export async function generateMetadata\(\): Promise<Metadata> \{/, 'computed per render, not at module load');
+  assert.doesNotMatch(src, /^const \w+ = .*getLeagueHubSeason/m, 'never at module load');
 });
