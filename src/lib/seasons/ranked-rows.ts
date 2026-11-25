@@ -3,7 +3,8 @@ import { cache } from 'react';
 import { getScoredPromosByItemType, getScoredPromosInDateRange } from '../data';
 import { addDaysYmd, siteYmd } from '../site-today';
 import type { ScoredPromoWithTeam } from '../types';
-import { isBestPromoRow } from '../scoring-weights';
+import { BEST_PROMO_MIN_ROWS, isBestPromoRow } from '../scoring-weights';
+import { PROMO_SCORED_LEAGUES } from '../types';
 import { getCurrentSeasonPredicate, getSeasonFinals } from './finals';
 import { effectiveEnd, leadInStart, leagueWindows, mostRecentlyEndedWindow, seasonName } from './season-window';
 
@@ -13,7 +14,8 @@ import { effectiveEnd, leadInStart, leagueWindows, mostRecentlyEndedWindow, seas
 // in one fetch and the <title> can never name a year the list does not show.
 //
 //   Upcoming mode  the season-gated forward window has ENOUGH rows (below).
-//                  The label is the calendar year of the earliest row shown.
+//                  The label is the calendar year of the rows shown, or the
+//                  span "2026-27" when they cross New Year (upcomingLabel).
 //   Retrospective  it does not. The rows are the most recently ENDED season
 //                  (src/lib/seasons/windows.json), across every scored
 //                  league's window for that season, and the label is that
@@ -32,14 +34,19 @@ import { effectiveEnd, leadInStart, leagueWindows, mostRecentlyEndedWindow, seas
 // `theme` and scoring 15 to 18, as the best promo nights of 2026.
 // /best-promos/bobbleheads is unchanged: every forward row, and one is enough.
 
+// The leagues whose SEASON WINDOWS decide the retrospective, and whose rows
+// it lists: the three with a finished season on file. The upcoming list on
+// /best-promos is wider (PROMO_SCORED_LEAGUES adds NBA and NHL). An NBA or NHL
+// season is never the retrospective's: on a calendar-year label it would put
+// the back half of one season and the front half of the next under one name.
 export const RANKED_LEAGUES = ['MLB', 'MLS', 'WNBA'] as const;
 export const SERVER_FETCH_CAP = 300;
 /** /best-promos/bobbleheads fetched up to 500 before the shared loader. */
 export const BOBBLEHEAD_FETCH_CAP = 500;
 export const SERVER_FETCH_DAYS = 180;
-/** Qualifying upcoming rows /best-promos needs before it leaves the retrospective.
- *  2026-11-25 simulation at the floor of 65: the count fell under 10 on 2026-10-18 and goes from 0 to 71 the day the MLB 2027 lead-in opens, so 10 ends the 25 thin days (1 to 9 rows) of autumn 2026 and costs nothing in spring. */
-export const RANKED_MIN_UPCOMING_ROWS = 10;
+/** Qualifying upcoming rows /best-promos needs before it leaves the retrospective:
+ *  the shared minimum of the ranked "best" surfaces (src/lib/scoring-weights.ts). */
+export const RANKED_MIN_UPCOMING_ROWS = BEST_PROMO_MIN_ROWS;
 
 /** The mode for a count of qualifying forward rows: upcoming at `minRows` or
  *  more, the retrospective below it. */
@@ -59,6 +66,20 @@ export interface RankedRows {
 
 function asLabel(s: string): number | string {
   return /^\d{4}$/.test(s) ? Number(s) : s;
+}
+
+/** The label of the UPCOMING list: the calendar year its rows fall in, or,
+ *  when they cross New Year, the span written the way a season is named
+ *  ("2026-27"). On 2026-11-25 the 192 qualifying NBA and NHL rows ran from
+ *  November 2026 to April 2027; labelled by the earliest row alone the page
+ *  would have been titled 2026 with three rows in four dated 2027. Dates are
+ *  YYYY-MM-DD; an empty list has no label. */
+export function upcomingLabel(dates: readonly string[]): number | string {
+  const years = dates.map((d) => Number(d.slice(0, 4))).filter((y) => Number.isInteger(y) && y > 0);
+  if (years.length === 0) return '';
+  const first = Math.min(...years);
+  const last = Math.max(...years);
+  return last === first ? first : `${first}-${String(last % 100).padStart(2, '0')}`;
 }
 
 /** The off-season range: every scored league's window for the most recently
@@ -100,10 +121,9 @@ export const loadRankedRows = cache(async (itemType: string | null): Promise<Ran
   // theme night never takes a qualifying giveaway's slot under the cap.
   const forward = itemType
     ? await getScoredPromosByItemType(todayYMD, endYMD, itemType, BOBBLEHEAD_FETCH_CAP, gate)
-    : (await getScoredPromosInDateRange(todayYMD, endYMD, Number.MAX_SAFE_INTEGER, gate)).filter(isBestPromoRow).slice(0, SERVER_FETCH_CAP);
+    : (await getScoredPromosInDateRange(todayYMD, endYMD, Number.MAX_SAFE_INTEGER, gate, PROMO_SCORED_LEAGUES)).filter(isBestPromoRow).slice(0, SERVER_FETCH_CAP);
   if (rankedMode(forward.length, itemType ? 1 : RANKED_MIN_UPCOMING_ROWS) === 'upcoming') {
-    const earliest = forward.reduce((acc, p) => (p.date < acc ? p.date : acc), forward[0].date);
-    return { promos: forward, retrospective: false, label: Number(earliest.slice(0, 4)), todayYMD };
+    return { promos: forward, retrospective: false, label: upcomingLabel(forward.map((p) => p.date)), todayYMD };
   }
   // The bobblehead page keeps the range rule it had (ended season or nothing).
   const finals = await getSeasonFinals();

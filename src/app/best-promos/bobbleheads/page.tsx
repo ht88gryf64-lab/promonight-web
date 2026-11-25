@@ -173,9 +173,9 @@ export default async function BobbleheadsPage() {
     ? `Bobblehead giveaways of the ${label} season across MLB, MLS, and WNBA, ranked by score.`
     : `Bobblehead giveaways across MLB, MLS, and WNBA in ${label}, ranked by score.`;
   const stampLine = retrospective
-    ? `${label} season · no ranked bobbleheads ahead${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} bobbleheads ranked`
+    ? `${label} season · no ranked MLB, MLS or WNBA bobbleheads ahead${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} bobbleheads ranked`
     : null;
-  const capsuleRetro = `These are the ${promos.length} top-scored bobblehead giveaways of the ${label} season across MLB, MLS, and WNBA. Nothing here is upcoming: none of the three leagues we score has a ranked bobblehead still to come this season, so this is the year ranked rather than a list of what is on next. MLB clubs run the majority of bobblehead programs. Each listed event is scored on attendance cap, item value, sponsor presence, and highlight tier. Upcoming bobbleheads return here from ${LEAD_IN_DAYS} days before each league's Opening Day, as clubs announce them.`;
+  const capsuleRetro = `These are the ${promos.length} top-scored bobblehead giveaways of the ${label} season across MLB, MLS, and WNBA. Nothing here is upcoming: none of the three leagues this page covers has a ranked bobblehead still to come this season, so this is the year ranked rather than a list of what is on next. MLB clubs run the majority of bobblehead programs. Each listed event is scored on attendance cap, item value, sponsor presence, and highlight tier. Upcoming bobbleheads return here from ${LEAD_IN_DAYS} days before each league's Opening Day, as clubs announce them.`;
 
   if (isRedesignEnabled()) {
     return (

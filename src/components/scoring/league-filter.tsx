@@ -2,7 +2,7 @@
 
 import { FilterChips, FilterChipsView, type FilterChipOption } from './filter-chips';
 
-export type LeagueFilterValue = 'All' | 'MLB' | 'MLS' | 'WNBA';
+export type LeagueFilterValue = 'All' | 'MLB' | 'MLS' | 'WNBA' | 'NBA' | 'NHL';
 
 const OPTIONS: readonly FilterChipOption<LeagueFilterValue>[] = [
   { value: 'All', label: 'All' },
@@ -17,8 +17,24 @@ export const LEAGUE_FILTER_VALUES: readonly LeagueFilterValue[] = OPTIONS.map(
   (o) => o.value,
 );
 
-// League chips. NBA / NHL intentionally absent; they're not in the scoring
-// scope and the option set is closed.
+// The chips /best-promos shows when its list holds NBA or NHL rows (the
+// upcoming list, since the 2026-11 fix round). A caller passes the leagues its
+// rows actually hold; the default set above is unchanged, and it is the only
+// set /team-rankings ever shows, since NBA and NHL teams are not ranked.
+const EXTRA_OPTIONS: readonly FilterChipOption<LeagueFilterValue>[] = [
+  { value: 'NBA', label: 'NBA' },
+  { value: 'NHL', label: 'NHL' },
+];
+
+/** The default chips (All, MLB, MLS, WNBA), always, plus NBA and NHL when
+ *  `present` holds them. A list without NBA or NHL rows shows exactly the
+ *  chips it always did. */
+export function leagueFilterOptions(present?: ReadonlySet<string>): readonly FilterChipOption<LeagueFilterValue>[] {
+  if (!present) return OPTIONS;
+  return [...OPTIONS, ...EXTRA_OPTIONS.filter((o) => present.has(o.value))];
+}
+
+// League chips. The default option set is closed at MLB, MLS and WNBA.
 //
 // Two modes:
 // - URL-synced (default): FilterChips owns the ?league= param. Default
@@ -32,13 +48,15 @@ type LeagueFilterProps = {
   variant?: 'dark' | 'light';
   value?: LeagueFilterValue;
   onSelect?: (next: LeagueFilterValue) => void;
+  /** Controlled mode only: the leagues the caller's rows hold (see leagueFilterOptions). */
+  leagues?: ReadonlySet<string>;
 };
 
-export function LeagueFilter({ onChange, variant = 'dark', value, onSelect }: LeagueFilterProps = {}) {
+export function LeagueFilter({ onChange, variant = 'dark', value, onSelect, leagues }: LeagueFilterProps = {}) {
   if (value !== undefined && onSelect) {
     return (
       <FilterChipsView
-        options={OPTIONS}
+        options={leagueFilterOptions(leagues)}
         current={value}
         onSelect={onSelect}
         ariaLabel="Filter by league"

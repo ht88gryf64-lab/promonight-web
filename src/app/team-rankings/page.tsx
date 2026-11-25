@@ -13,7 +13,7 @@ import { teamDisplayName } from '@/lib/promo-helpers';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { siteYmd } from '@/lib/site-today';
-import { UNSCORED_LEAGUES_ANSWER } from '@/lib/scoring-weights';
+import { TEAM_RANKINGS_NBA_NHL_ANSWER } from '@/lib/scoring-weights';
 
 export const revalidate = 86400;
 
@@ -117,7 +117,7 @@ const FAQS = [
   {
     question: 'Why are NBA and NHL not on this ranking?',
     answer:
-      UNSCORED_LEAGUES_ANSWER,
+      TEAM_RANKINGS_NBA_NHL_ANSWER,
   },
   {
     question: 'What does variety bonus mean?',

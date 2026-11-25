@@ -60,6 +60,12 @@ export const BEST_PROMO_SCORE_FLOOR = 65;
  *  the floor. A theme night never qualifies, whatever it scores (on
  *  2026-11-25 the rail's only rows were three MLS playoff fixtures typed
  *  `theme`, scoring 15 to 18, under a lede about giveaways). */
+/** Qualifying rows a ranked "best" surface needs before it shows any: the
+ *  homepage rail renders nothing below it, and /best-promos stays in its
+ *  retrospective (RANKED_MIN_UPCOMING_ROWS, src/lib/seasons/ranked-rows.ts).
+ *  2026-11-25 simulation at the floor of 65: the count fell under 10 on 2026-10-18 and goes from 0 to 71 the day the MLB 2027 lead-in opens, so 10 ends the 25 thin days (1 to 9 rows) of autumn 2026 and costs nothing in spring. */
+export const BEST_PROMO_MIN_ROWS = 10;
+
 export function isBestPromoRow(p: { type?: string | null; score?: number | null }): boolean {
   return p.type === 'giveaway' && typeof p.score === 'number' && p.score >= BEST_PROMO_SCORE_FLOOR;
 }
@@ -120,7 +126,12 @@ export const SMALL_CAP_ANSWER =
   `Small runs score higher. A stated cap under ${n(CAP_THRESHOLD_HIGH)} fans adds ${CAP_POINTS} points and a cap under ${n(CAP_THRESHOLD_LOW)} adds ${CAP_POINTS} more, while a run of ${n(10000)} or ${n(15000)} at a larger venue earns no cap points. ` +
   `A WNBA bobblehead capped in the low thousands can therefore outscore a bobblehead from a much larger program.`;
 
-/** "Why are NBA and NHL not included?" The reason is that they are not
- *  scored. No mechanism is cited and no date is promised. */
-export const UNSCORED_LEAGUES_ANSWER =
-  'NBA and NHL promos are not scored yet. PromoNight lists them on the team pages, the league hubs and the daily boards, but this ranking only includes leagues whose promos carry a score, which today is MLB, MLS, and WNBA.';
+/** /best-promos, "Which leagues are ranked?" True in both modes: the upcoming
+ *  list draws on all five, the season record on the three with a finished
+ *  season on file. No mechanism is cited and no date is promised. */
+export const RANKED_LEAGUES_ANSWER =
+  'The upcoming list ranks giveaways from MLB, MLS, WNBA, NBA, and NHL. NFL promos are not scored. When the page shows a finished season instead, that record covers MLB, MLS, and WNBA.';
+
+/** /team-rankings, "Why are NBA and NHL not on this ranking?" */
+export const TEAM_RANKINGS_NBA_NHL_ANSWER =
+  'NBA and NHL promos are scored, and the upcoming list on the best promos page ranks them. Their teams are not ranked yet. An NBA or NHL season runs across two calendar years, and the team score, which weighs a schedule against a single season of home games, is not calibrated for that.';

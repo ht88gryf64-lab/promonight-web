@@ -6,7 +6,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import type { ScoredPromoWithTeam } from '@/lib/types';
 import { track, type AnalyticsSurface, type ScoringPageSurface } from '@/lib/analytics';
 import { ScoredPromoCard } from './scored-promo-card';
-import { LeagueFilter, LEAGUE_FILTER_VALUES, type LeagueFilterValue } from './league-filter';
+import { LeagueFilter, leagueFilterOptions, type LeagueFilterValue } from './league-filter';
 import { DateRangeFilter, DATE_RANGE_FILTER_VALUES, type DateRangeFilterValue } from './date-range-filter';
 import type { TicketsBlockPlacement } from '../affiliates/TicketsBlock';
 import { AffiliateDisclosure } from '../affiliates/AffiliateDisclosure';
@@ -112,11 +112,16 @@ export function BestPromosBrowser({
   // valid URL param flips the chips right after via ScoreParamsReader.
   const [league, setLeague] = useState<LeagueFilterValue>('All');
   const [range, setRange] = useState<DateRangeFilterValue>('90d');
+  // The NBA and NHL chips appear when the server's rows hold those leagues:
+  // the upcoming list on /best-promos does, the retrospective and the
+  // bobblehead page do not. Derived from the prop, so server and client agree.
+  const leaguesPresent = useMemo(() => new Set(initialPromos.map((p) => p.team.league)), [initialPromos]);
+  const leagueValues = useMemo(() => leagueFilterOptions(leaguesPresent).map((o) => o.value as string), [leaguesPresent]);
 
   const syncFromParams = useCallback(
     (leagueParam: string | null, rangeParam: string | null) => {
       setLeague(
-        leagueParam && (LEAGUE_FILTER_VALUES as readonly string[]).includes(leagueParam)
+        leagueParam && leagueValues.includes(leagueParam)
           ? (leagueParam as LeagueFilterValue)
           : 'All',
       );
@@ -126,7 +131,7 @@ export function BestPromosBrowser({
           : '90d',
       );
     },
-    [],
+    [leagueValues],
   );
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -232,7 +237,7 @@ export function BestPromosBrowser({
 
       <div className="mb-6">
         <div className={labelClass}>Filter by league</div>
-        <LeagueFilter value={league} onSelect={handleLeagueSelect} variant={variant} />
+        <LeagueFilter value={league} onSelect={handleLeagueSelect} variant={variant} leagues={leaguesPresent} />
       </div>
 
       {!retrospective && (

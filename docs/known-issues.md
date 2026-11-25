@@ -4426,3 +4426,34 @@ At 21:31 ET on 2026-11-22, six hours after the Hawks-Pistons 3:30 PM tip, `/nba/
 ## 126. /best-promos/bobbleheads has no score floor or minimum row count (logged 2026-11-25, feature/best-promos-stopgap, deferred)
 
 `/best-promos` now lists upcoming rows only when 10 or more giveaways score 65 or above (`RANKED_MIN_UPCOMING_ROWS` in `src/lib/seasons/ranked-rows.ts`, `BEST_PROMO_SCORE_FLOOR` in `src/lib/scoring-weights.ts`). `/best-promos/bobbleheads` reads through the same loader and was left as it was by ruling: any one forward bobblehead row still takes it out of the retrospective, and a bobblehead row typed `theme` (45 points) can be listed. Its retrospective capsule also still says nothing is upcoming, which stays true only under that one-row rule. Decide a threshold for it (bobblehead counts are far smaller than the main list's) when the NBA and NHL scoring branch lands.
+
+## 127. Deferred from the 2026-11 fix round, scoring branches (logged 2026-11-25)
+
+One line each. None blocks the release; each needs its own change or ruling.
+
+- **Threshold window.** `/best-promos` counts its 10 qualifying rows over 180 days, while the default view shows 90. Ten rows all dated 91 to 180 days out would leave the retrospective and show an empty default list.
+- **Rail window.** The homepage rail counts its 10 over the whole in-season future, not 180 days. The two counts can differ only when qualifying rows sit more than 180 days ahead.
+- **Pre-existing ux items.** Ten low-severity contrast and hit-size items on `/`, `/best-promos` and `/team-rankings` are listed as P1 to P10 in `docs/ux-review/2026-11-25-feature-best-promos-stopgap.md`.
+- **MLB package rows.** 537 visible MLB rows carry `ticketPackageRequired: true` and are scored and ranked; the flag is ignored on MLB by rule. NHL and NBA package rows are never scored.
+- **Thunder.** `oklahoma-city-thunder` has a `null` source URL in the pipeline's `nba-urls.js` and no promo rows.
+- **Jazz G League rows.** `utah-jazz` holds two "West Valley City Night" rows about the Salt Lake City Stars' jersey (first 500 fans), each scoring 100.
+- **NHL theme rows that are giveaways.** Rows such as the Blackhawks centennial nights (a bobblehead for the first 8,000 fans) are typed `theme`, score 70 and are excluded from the best list by the giveaway filter.
+- **No-item giveaways.** 61 upcoming NBA and NHL giveaways reach 65 to 73 with no recognized item, through highlight plus limited quantity. Some are real items the scorer has no word for; some are labels ("90s Night").
+- **Item vocabulary gap.** Real items lost points when `signed` gained its word boundary because the scorer has no word for them: hoodie, puffer vest, mug, belt bag, tote bag, scarf, bobblecard, tribute card, cobija. Follow-up scorer change with its own all-league diff.
+- **Scorer fix 4.** Beanie and toque are not hats to the scorer (13 of 17 NBA and NHL beanie titles earn no item points).
+- **Scorer fix 5.** An item named in the description outranks nothing in the title; a title-first rule would stop description-only matches (41 of 51 NHL jersey matches).
+- **Scorer fix 6, sponsor capture.** The text fallback stores trailing words with the sponsor ("RONA First 8", "Modelo with TBA giveaway for first 2").
+- **Bare item titles.** The generic-title check exempts any title that names an item, so the Kraken row titled only "Bobblehead" takes no penalty and scores 98.
+- **Video selection, packages.** Unconfirmed whether `promo-video` `src/select.ts` filters NHL and NBA ticket-package rows.
+- **Video selection, playoff fixture.** The Whitecaps "Audi 2026 MLS Cup Playoffs" theme row sits at the 100th percentile of a two-row MLS week. Entity-model release.
+- **Homepage after a scoring run.** `/api/revalidate` rejects the bare root by design, so the rail picks up new scores on the homepage's six-hour window, not when the scan finishes.
+- **NBA and NHL retrospective.** `/best-promos` has no season record for NBA or NHL: its retrospective covers MLB, MLS and WNBA. In July, with no NBA or NHL rows ahead, the page shows the three-league record.
+- **JSON-LD location on NBA rows.** `getSchemaLocationsForTeams` finds no address for six NBA clubs (Celtics, Bulls, Pistons, Lakers, Raptors, Wizards), so their `SportsEvent` entries on `/best-promos` carry no `location` (15 of the first 50 in the dry-run preview). The renderer omits the field; it does not invent one.
+- **Jersey and signed false positives that remain.** Still typed jersey: "Jersey Mike's", "Jersey City", "Jersey Shore", "jersey retirement", "jersey no. 30". Still typed premium: "re-signed", "co-signed", "newly signed free agent". Fixes 1 to 3 covered only the named cases.
+- **Unflagged package twin.** Nashville, 2027-02-18: "Billy Strings Bobblehead" (95, "Ticket package includes a guaranteed Billy Strings bobblehead") is not flagged `ticketPackageRequired` and lists beside "Music City Billy Strings Bobblehead" (98).
+- **Copy between the web deploy and the score write.** For that interval `/team-rankings` says NBA and NHL promos are scored while their rows carry no score yet. The final-gate sequence keeps the interval short.
+- **Rail card titles (ux-review D1).** The ticket-stub card clamps its title at three lines of 27px type. "Evgeni Malkin Talking Bobblehead" renders as "Evgeni Malkin Talking..." and "Cutter Gauthier Bobblehead Giveaway" is cut mid-word. The card is shared with the Tonight rail; a smaller size for long titles needs its own ux pass.
+- **Rail at 1280 (ux-review D5).** With eight cards the rail overflows at 1280 with no arrows and no scrollbar; wheel and keyboard scroll work. The Tonight rail has the same build.
+- **NBA game times (ux-review D7).** The NBA rows on the rail show a date and no game time; their promo pages have none either.
+- **Empty league chips (ux-review D8).** On `/best-promos` the MLB, MLS and WNBA chips return no rows while those leagues have nothing ahead, and the empty state suggests a wider date range even at "Rest of season".
+- **Team coverage.** NBA and NHL clubs with no scored rows on 2026-11-25: Knicks, Thunder, Utah (NHL). Withheld clubs are `active:false` in the pipeline's `team-configs/nba.js` and `team-configs/nhl.js`. If NBA and NHL teams are ever ranked, a club with no rows is listed as not ranked, never last.
