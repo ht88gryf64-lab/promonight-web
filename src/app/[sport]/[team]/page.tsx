@@ -427,8 +427,7 @@ export default async function TeamPage({
     // with the PromoNight Predicts line inside it for a club in a bracket.
     // Never throws: a failed read is no module, a failed line is no line.
     const postseason = await getTeamPostseason(team.sportSlug, team.id);
-    return (
-      <TicketTestProvider value={ticketTestPage}>
+    const page = (
       <RedesignTeamPage
         ticketTestPage={ticketTestPage}
         postseason={
@@ -462,12 +461,14 @@ export default async function TeamPage({
         playoffContext={playoffContext}
         ticketPackages={packagesAhead}
       />
-      </TicketTestProvider>
     );
+    // The provider (a client boundary) is mounted only on a test team's page:
+    // every other page's payload is exactly what it was.
+    return ticketTestPage ? <TicketTestProvider value={ticketTestPage}>{page}</TicketTestProvider> : page;
   }
 
-  return (
-    <TicketTestProvider value={ticketTestPage}>
+  const legacy = (
+    <>
       <JsonLd
         team={team}
         upcomingPromos={upcomingPromos}
@@ -686,6 +687,7 @@ export default async function TeamPage({
       <section className="px-6 py-4">
         <AdSlot config={AD_SLOTS.ADHESION_FOOTER} pageType="team_page" />
       </section>
-    </TicketTestProvider>
+    </>
   );
+  return ticketTestPage ? <TicketTestProvider value={ticketTestPage}>{legacy}</TicketTestProvider> : legacy;
 }

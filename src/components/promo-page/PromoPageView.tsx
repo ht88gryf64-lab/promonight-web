@@ -462,7 +462,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
             <TrackedAffiliateLink
               href={rowHref}
               partner={rowPartner}
-              ticketTest={ticketTest && testRow ? ticketTestClickProps(ticketTest, testRow) : undefined}
+              {...(ticketTest && testRow ? { ticketTest: ticketTestClickProps(ticketTest, testRow) } : {})}
               teamId={team.id}
               sport={team.league}
               promoId={row.promoId}
@@ -693,7 +693,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
                 surface={PROMO_PAGE_SURFACE}
                 placement="promo_page_primary"
                 ticketLinkLevel={ticketsLevel}
-                ticketTest={ticketTest && testPrimary ? ticketTestClickProps(ticketTest, testPrimary) : undefined}
+                {...(ticketTest && testPrimary ? { ticketTest: ticketTestClickProps(ticketTest, testPrimary) } : {})}
                 target="_blank"
                 rel="noopener noreferrer sponsored"
                 ariaLabel={ticketAriaLabel(`for ${teamName}${(ticketsLevel === 'event' || !multi) && primary.displayOpponent ? ` vs ${primary.displayOpponent}` : ''}`, ticketsBrand)}

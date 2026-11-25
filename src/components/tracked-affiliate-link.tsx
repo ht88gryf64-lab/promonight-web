@@ -13,7 +13,7 @@ import {
 } from '@/lib/analytics';
 import { withShareSubId2 } from '@/lib/promo-share';
 import { useShareSession } from '@/lib/promo-share-session';
-import type { TicketTestClickProps } from '@/lib/ticket-test';
+import type { TicketTestClickProps } from '@/lib/ticket-test-link';
 
 const TICKET_PARTNERS: readonly string[] = ['ticketmaster', 'ticketnetwork', 'stubhub'];
 

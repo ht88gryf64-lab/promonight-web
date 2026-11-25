@@ -22,9 +22,13 @@
 // `ranking` and `seed`. The literal below is that function's output, and the
 // pairing test fails when the two disagree. `arm` is the partner a club shows
 // in phase A; it shows the other one in phase B.
+//
+// SERVER ONLY in effect: only src/lib/ticket-test.ts (server-only) and tests
+// import this file, so nothing here enters a client bundle.
 import type { TicketTestPair, TicketTestRankRow } from '@/lib/ticket-test-pairing';
+import type { TicketTestLeague } from '@/lib/ticket-test-link';
 
-export type TicketTestLeague = 'nba' | 'nhl' | 'nfl';
+export type { TicketTestLeague };
 
 export const TICKET_TEST = {
   seed: 'stubhub-ticketnetwork-2026-11-25',
@@ -37,7 +41,11 @@ export const TICKET_TEST = {
   leagues: ['nba', 'nhl', 'nfl'] as readonly TicketTestLeague[],
   /** Always StubHub on the test's surfaces, outside the pairs: TicketNetwork
    *  lists no home events at these clubs' buildings (tnHomeUnavailable). */
-  alwaysStubHub: ['ottawa-senators', 'toronto-maple-leafs', 'toronto-raptors'] as readonly string[],
+  alwaysStubHub: [
+    { team: 'ottawa-senators', league: 'nhl' },
+    { team: 'toronto-maple-leafs', league: 'nhl' },
+    { team: 'toronto-raptors', league: 'nba' },
+  ] as readonly { team: string; league: TicketTestLeague }[],
 } as const;
 
 // Ranking snapshot: PostHog affiliate_click, Regular traffic, ticket partners,

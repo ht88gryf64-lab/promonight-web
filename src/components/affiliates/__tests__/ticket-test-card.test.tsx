@@ -7,7 +7,7 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Team } from '@/lib/types';
-import type { TicketTestResolution } from '@/lib/ticket-test';
+import type { TicketTestResolution } from '@/lib/ticket-test-link';
 
 mock.module('server-only', { namedExports: {} });
 

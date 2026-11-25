@@ -152,15 +152,22 @@ export async function GET(request: Request) {
   const revalidated = await revalidateViaFanOut(origin, paths, fanOutSecret);
   // The ticket test's boundary fan-out (site batch only): revalidated in the
   // endpoint's 100-path chunks, NOT warmed and not part of this job's own
-  // verdict. A promo page renders on its next request with the new partner.
-  // A failure here adds nothing and never fails the batch.
+  // freshness check. A promo page renders on its next request with the new
+  // partner. A failed batch is retried once, runs again the next night (the
+  // day after a boundary is a boundary too) and is reported as
+  // ticketTest.failedBatches; it never stops the site batch.
   let ticketTest: { boundary: string; paths: number; revalidated: number; failedBatches: number } | null = null;
   if (batch === 'site') {
     try {
       const flip = await ticketTestBoundaryPaths();
       if (flip) {
         const sent = flip.paths.filter((p) => isRevalidatePath(p));
-        const r = await revalidateViaFanOut(origin, sent, fanOutSecret);
+        let r = await revalidateViaFanOut(origin, sent, fanOutSecret);
+        if (r.failedBatches.length) {
+          // One more pass over everything: revalidation is idempotent.
+          const again = await revalidateViaFanOut(origin, sent, fanOutSecret);
+          if (again.failedBatches.length < r.failedBatches.length) r = again;
+        }
         ticketTest = { boundary: flip.boundary, paths: sent.length, revalidated: r.revalidated, failedBatches: r.failedBatches.length };
         console.log(`[cron:nightly-refresh] ticket-test boundary=${flip.boundary} promoPaths=${sent.length} revalidated=${r.revalidated} failedBatches=${r.failedBatches.length}`);
       }

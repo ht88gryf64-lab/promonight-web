@@ -39,7 +39,7 @@ import type { Game, Promo, PromoWithTeam, Team } from './types';
 import type { GameContext } from './data';
 import { formatGameTime } from './format-game-time';
 import { isTicketNetworkEventUrl } from './affiliates';
-import { isStubHubEventUrl } from './ticket-test';
+import { isStubHubEventUrl } from './ticket-test-link';
 
 export interface ResolvedGame {
   /** "7:10 PM" in venue time, or '' when the join cannot state one. */

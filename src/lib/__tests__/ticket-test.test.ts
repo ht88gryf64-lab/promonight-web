@@ -4,11 +4,16 @@
 // fallback, the always-StubHub clubs and the boundary fan-out.
 //
 // Run with: TSX_TSCONFIG_PATH=tsconfig.test.json node --import tsx --experimental-test-module-mocks --test <this file>
-import { test } from 'node:test';
+import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { TICKET_TEST, TICKET_TEST_PAIRS, TICKET_TEST_RANKING, type TicketTestLeague } from '@/config/ticket-test';
+
+mock.module('server-only', { namedExports: {} });
 import { generatePairs, rankForPairing } from '@/lib/ticket-test-pairing';
-import {
+// Loaded after the mock above (the module is server-only), so by require: a
+// static import would be hoisted over the mock.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const {
   PUBREF_RE,
   STUBHUB,
   TICKET_TEST_NOTE,
@@ -23,7 +28,7 @@ import {
   ticketTestPhase,
   ticketTestPromoPaths,
   ticketTestTeamIds,
-} from '@/lib/ticket-test';
+} = require('@/lib/ticket-test') as typeof import('@/lib/ticket-test');
 
 const LEAGUES: TicketTestLeague[] = ['nba', 'nhl', 'nfl'];
 const HEAT_URL = 'https://www.stubhub.com/miami-heat-miami-tickets-12-3-2026/event/161666863/';
@@ -92,7 +97,8 @@ test('scope: 91 paired clubs in NBA, NHL and NFL, no club twice, no MLB, MLS or 
   const paired = LEAGUES.flatMap((lg) => TICKET_TEST_PAIRS[lg].flatMap((p) => p.teams.map((t) => t.team)));
   assert.equal(paired.length, 29 + 30 + 32);
   assert.equal(new Set(paired).size, paired.length);
-  for (const id of TICKET_TEST.alwaysStubHub) assert.ok(!paired.includes(id), id);
+  for (const c of TICKET_TEST.alwaysStubHub) assert.ok(!paired.includes(c.team), c.team);
+  assert.deepEqual(TICKET_TEST.alwaysStubHub.map((c) => `${c.team}:${c.league}`), ['ottawa-senators:nhl', 'toronto-maple-leafs:nhl', 'toronto-raptors:nba']);
   assert.deepEqual([...TICKET_TEST.leagues], ['nba', 'nhl', 'nfl']);
   assert.equal(ticketTestTeamIds().length, 94);
   for (const id of ['minnesota-twins', 'minnesota-united', 'minnesota-lynx', 'ohio-state']) assert.equal(resolveTicketTest(id, A_DAY, true), null, id);
@@ -197,6 +203,9 @@ test('TicketNetwork day: the TicketNetwork link as it was, never a StubHub link 
   const link = pickTestTicketLink(tnDay, { stubHubEventUrl: HEAT_URL, ticketNetwork: 'https://tn.example/x', ticketmaster: 'https://tm.example/x' })!;
   assert.deepEqual(link, { partner: 'ticketnetwork', href: 'https://tn.example/x', fallback: false });
   assert.equal(ticketTestClickProps(tnDay, link).pubref, null);
+  // A control that never had a TicketNetwork link (an away row at a building
+  // TicketNetwork does not list) keeps Ticketmaster, and that is not a fallback.
+  assert.deepEqual(pickTestTicketLink(tnDay, { stubHubEventUrl: HEAT_URL, ticketNetwork: null, ticketmaster: 'https://tm.example/x' }), { partner: 'ticketmaster', href: 'https://tm.example/x', fallback: false });
 });
 
 // ── the boundary fan-out and the copy ────────────────────────────────────────
@@ -205,6 +214,10 @@ test('boundary: the start, the flip and the end are boundary days only while the
   assert.equal(ticketTestBoundary(TICKET_TEST.startDate, true), 'start');
   assert.equal(ticketTestBoundary(TICKET_TEST.flipDate, true), 'flip');
   assert.equal(ticketTestBoundary(TICKET_TEST.endDate, true), 'end');
+  // The day after each boundary runs the fan-out again (a missed night is made good).
+  const next = (ymd: string) => new Date(Date.parse(`${ymd}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
+  assert.deepEqual([next(TICKET_TEST.startDate), next(TICKET_TEST.flipDate), next(TICKET_TEST.endDate)].map((d) => ticketTestBoundary(d, true)), ['start', 'flip', 'end']);
+  assert.equal(ticketTestBoundary(next(next(TICKET_TEST.flipDate)), true), null);
   assert.equal(ticketTestBoundary('2026-12-15', true), null);
   assert.equal(ticketTestBoundary(TICKET_TEST.flipDate, false), null);
 });
@@ -224,4 +237,29 @@ test('boundary paths: every promo page of a test club once, no page of any other
 test('the line under the button: the ruled sentence, no partner name, no price, no long dash', () => {
   assert.equal(TICKET_TEST_NOTE, 'PromoNight may earn a commission on ticket purchases made through these links. Resale prices may differ from face value.');
   assert.doesNotMatch(TICKET_TEST_NOTE, /StubHub|TicketNetwork|Ticketmaster|\$|\u2014|\u2013/);
+});
+
+test('the client bundle never sees the config: the resolver is server-only and client files import the link file', async () => {
+  const { readFileSync } = await import('node:fs');
+  const read = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf-8');
+  assert.match(read('../ticket-test.ts'), /^import 'server-only';$/m);
+  const link = read('../ticket-test-link.ts');
+  assert.doesNotMatch(link, /config\/ticket-test|TICKET_TEST_PAIRS|from '\.\/ticket-test'/);
+  for (const f of ['../../components/affiliates/TicketmasterCTA.tsx', '../../components/affiliates/TicketsBlock.tsx', '../../components/affiliates/TicketTestContext.tsx', '../../components/tracked-affiliate-link.tsx', '../promo-game-join.ts']) {
+    assert.doesNotMatch(read(f), /lib\/ticket-test'|from '\.\/ticket-test'|config\/ticket-test/, f);
+  }
+});
+
+test('no test, no prop: a ticket link outside the test passes no ticketTest key to the client link (not even undefined)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const read = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf-8');
+  const card = read('../../components/affiliates/TicketmasterCTA.tsx');
+  assert.equal(card.split('{...(testClick ? { ticketTest: testClick } : {})}').length - 1, 2, 'the Ticketmaster and TicketNetwork cards');
+  assert.equal(card.split('ticketTest={testClick}').length - 1, 1, 'only the StubHub card, which exists only in the test');
+  const promo = read('../../components/promo-page/PromoPageView.tsx');
+  assert.doesNotMatch(promo, /ticketTest=\{/);
+  // The provider is a client boundary: mounted only when the page is in the test.
+  const route = read('../../app/[sport]/[team]/page.tsx');
+  assert.equal(route.split('<TicketTestProvider').length - 1, 2);
+  assert.equal(route.split('ticketTestPage ? <TicketTestProvider value={ticketTestPage}>').length - 1, 2);
 });

@@ -159,8 +159,8 @@ test('every emitter of a TicketNetwork link takes its words from ticket-labels, 
   walk(root);
   const body = (f: string) => readFileSync(f, 'utf-8');
   // A file that emits a TicketNetwork link itself (not through the shared card), by any spelling of the partner.
-  // lib/ticket-test.ts renders nothing: it picks which of a card's existing links the card carries.
-  const emitters = files.filter((f) => /partner=["{]'?ticketnetwork|partner: 'ticketnetwork'|partner=\{ticketsPartner\}|solidButton\(ticketUrl/.test(body(f))).map((f) => f.slice(root.length)).filter((f) => f !== 'lib/ticket-test.ts').sort();
+  // lib/ticket-test-link.ts renders nothing: it picks which of a card's existing links the card carries.
+  const emitters = files.filter((f) => /partner=["{]'?ticketnetwork|partner: 'ticketnetwork'|partner=\{ticketsPartner\}|solidButton\(ticketUrl/.test(body(f))).map((f) => f.slice(root.length)).filter((f) => f !== 'lib/ticket-test-link.ts').sort();
   assert.deepEqual(emitters, [
     'components/affiliates/TicketmasterCTA.tsx',
     'components/cfb/rivalry/RivalryMatchupPage.tsx',

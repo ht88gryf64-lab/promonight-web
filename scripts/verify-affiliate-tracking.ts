@@ -42,7 +42,7 @@ import { KNOWN_SURFACE_VALUES } from '../src/lib/analytics';
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { dirname, join, relative, resolve } from 'path';
 import { AFFILIATE_TRACKING_CONSTANTS } from '../src/lib/affiliates';
-import { STUBHUB, buildStubHubLink } from '../src/lib/ticket-test';
+import { STUBHUB, buildStubHubLink } from '../src/lib/ticket-test-link';
 import { FUBO_LEAGUES, FUBO_LIVE_LEAGUES, FUBO_ORIGIN, FUBO_PUBLISHER_ID, FUBO_SURFACES, buildFuboUrl } from '../src/lib/affiliates/fubo';
 
 // Mirror `next build`'s env loading for the one var this guard shape-checks:

@@ -13,7 +13,7 @@
 // The homepage modal reuses the same game expand without one, so its cards
 // render exactly as before (Gate 0 ruling 2), and so does every other page.
 import { createContext, useContext, type ReactNode } from 'react';
-import type { TicketTestResolution } from '@/lib/ticket-test';
+import type { TicketTestResolution } from '@/lib/ticket-test-link';
 import { TicketsBlock, type TicketsBlockProps } from './TicketsBlock';
 
 export interface TicketTestPageValue {

@@ -5,7 +5,7 @@ import { buildTicketmasterUrl, buildTicketNetworkLink, ticketNetworkLinkLevel } 
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 import { TICKET_CTA_LABEL } from '@/lib/ticket-labels';
 import { ResaleNote, TicketTestNote } from './AffiliateDisclosure';
-import { pickTestTicketLink, ticketTestClickProps, type TicketTestResolution } from '@/lib/ticket-test';
+import { pickTestTicketLink, ticketTestClickProps, type TicketTestResolution } from '@/lib/ticket-test-link';
 
 // Two-button ticket CTA — Ticketmaster + TicketNetwork. Each button is an
 // independent branded white-card link that visually breaks from PromoNight's
@@ -193,7 +193,7 @@ export function TicketmasterCTA({
       // The accessible name is the visible text: brand, then the descriptor.
       ariaLabel={`Ticketmaster ${TICKET_CTA_LABEL}`}
       ticketLinkLevel="team"
-      ticketTest={testClick}
+      {...(testClick ? { ticketTest: testClick } : {})}
       className={cardClass}
     >
       <span className={wordmarkClass} style={{ letterSpacing: '-0.3px' }}>
@@ -220,7 +220,7 @@ export function TicketmasterCTA({
       rel="noopener noreferrer sponsored"
       ariaLabel={`TicketNetwork ${TICKET_CTA_LABEL}`}
       ticketLinkLevel={tnLevel}
-      ticketTest={testClick}
+      {...(testClick ? { ticketTest: testClick } : {})}
       className={cardClass}
     >
       <Image

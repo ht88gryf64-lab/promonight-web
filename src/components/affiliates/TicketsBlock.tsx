@@ -2,7 +2,7 @@ import type { Team } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
 import { TicketmasterCTA } from './TicketmasterCTA';
 import { teamDisplayName } from '@/lib/team-display-name';
-import type { TicketTestResolution } from '@/lib/ticket-test';
+import type { TicketTestResolution } from '@/lib/ticket-test-link';
 
 export type TicketsBlockPlacement =
   | 'team_page_hero'
