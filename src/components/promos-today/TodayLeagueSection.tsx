@@ -1,3 +1,5 @@
+import { buildTicketNetworkLink, ticketNetworkForGame } from '@/lib/affiliates';
+import { ResaleNote } from '@/components/affiliates/AffiliateDisclosure';
 import Link from 'next/link';
 import { IconArrowRight } from '@tabler/icons-react';
 import type { Venue } from '@/lib/types';
@@ -57,6 +59,10 @@ export function TodayLeagueSection({
           />
         ))}
       </div>
+      {/* One resale line for the group's TicketNetwork tiles, never one per card. */}
+      {promos.some((p) => ticketNetworkForGame(null, p.team) && buildTicketNetworkLink({ team: p.team, surface })) ? (
+        <ResaleNote tone="light" className="mt-3" />
+      ) : null}
     </section>
   );
 }

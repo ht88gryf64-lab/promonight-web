@@ -15,6 +15,7 @@ import { barlowCondensed } from '@/components/cfb/rivalry/fonts';
 import { Spine, spineVars, CONDENSED } from '@/components/cfb/rivalry/spine';
 import type { Team, Venue } from '@/lib/types';
 import { cfbSeasonLabel } from '@/lib/cfb/season';
+import { TICKET_CTA_LABEL, TICKETNETWORK_RESALE_NOTE } from '@/lib/ticket-labels';
 
 const PAGE_BG = '#08070d';
 
@@ -23,8 +24,9 @@ const PAGE_BG = '#08070d';
 // The tickets and hotels steps carry no blurb: the earlier sentences ("Rivalry
 // games sell out", "Rooms near campus go early") were generalities no field
 // backs, and a claim either derives from data or it comes out.
-const STEP_COPY: Record<TripStepKey, { title: string; blurb?: string; cta: string }> = {
-  tickets: { title: 'Get in', cta: 'Find tickets' },
+const STEP_COPY: Record<TripStepKey, { title: string; blurb?: string; note?: string; cta: string }> = {
+  // TicketNetwork: the one label every ticket button carries, and the resale line under it (src/lib/ticket-labels.ts).
+  tickets: { title: 'Get in', cta: TICKET_CTA_LABEL, note: TICKETNETWORK_RESALE_NOTE },
   hotels: { title: 'Book a room', cta: 'Find hotels' },
   parking: { title: 'Park', blurb: 'Reserve ahead and walk in.', cta: 'Reserve parking' },
   gates: { title: 'Gates and bags', blurb: 'Bag rules, gate times and transit for this stadium.', cta: 'Gameday guide' },
@@ -323,6 +325,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
                 isLast: i === steps.length - 1,
                 title: copy.title,
                 blurb: copy.blurb,
+                note: copy.note,
                 cta: copy.cta,
                 tone: (i === 0 ? 'solid' : 'ghost') as 'solid' | 'ghost',
               };

@@ -3,6 +3,8 @@ import type { Team } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
 import { buildTicketmasterUrl, buildTicketNetworkLink, ticketNetworkLinkLevel } from '@/lib/affiliates';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
+import { TICKET_CTA_LABEL } from '@/lib/ticket-labels';
+import { ResaleNote } from './AffiliateDisclosure';
 
 // Two-button ticket CTA — Ticketmaster + TicketNetwork. Each button is an
 // independent branded white-card link that visually breaks from PromoNight's
@@ -170,14 +172,16 @@ export function TicketmasterCTA({
       placement={placement}
       target="_blank"
       rel="noopener noreferrer sponsored"
-      ariaLabel="Get tickets on Ticketmaster"
+      // The accessible name is the visible text: brand, then the descriptor.
+      ariaLabel={`Ticketmaster ${TICKET_CTA_LABEL}`}
       ticketLinkLevel="team"
       className={cardClass}
     >
       <span className={wordmarkClass} style={{ letterSpacing: '-0.3px' }}>
         ticketmaster
       </span>
-      <span className={descriptorClass}>Get Tickets</span>
+      {' '}
+      <span className={descriptorClass}>{TICKET_CTA_LABEL}</span>
       <span aria-hidden="true" className={arrowClass}>
         →
       </span>
@@ -195,7 +199,7 @@ export function TicketmasterCTA({
       placement={placement}
       target="_blank"
       rel="noopener noreferrer sponsored"
-      ariaLabel="Get tickets on TicketNetwork"
+      ariaLabel={`TicketNetwork ${TICKET_CTA_LABEL}`}
       ticketLinkLevel={tnLevel}
       className={cardClass}
     >
@@ -206,7 +210,8 @@ export function TicketmasterCTA({
         height={logoHeight}
         className="shrink-0"
       />
-      <span className={descriptorClass}>Get Tickets</span>
+      {' '}
+      <span className={descriptorClass}>{TICKET_CTA_LABEL}</span>
       <span aria-hidden="true" className={arrowClass}>
         →
       </span>
@@ -216,13 +221,23 @@ export function TicketmasterCTA({
   // Ticketmaster leads on every surface (stacked = top, inline = leftmost).
   if (primaryOnly) {
     // The same order as the pair: whichever button would have been first.
-    return <div className={wrapperClass}>{ticketmasterButton ?? ticketNetworkButton}</div>;
+    const lead = ticketmasterButton ?? ticketNetworkButton;
+    return (
+      <div className={wrapperClass}>
+        {lead}
+        {lead === ticketNetworkButton && ticketNetworkButton && !inline ? <ResaleNote className="px-1" /> : null}
+      </div>
+    );
   }
 
+  // One line under the group when it holds a TicketNetwork button. Stacked
+  // only: an inline row belongs to a list of rows, and the list prints the
+  // line once (TodayLeagueSection).
   return (
     <div className={wrapperClass}>
       {ticketmasterButton}
       {ticketNetworkButton}
+      {ticketNetworkButton && !inline ? <ResaleNote className="px-1" /> : null}
     </div>
   );
 }

@@ -4508,3 +4508,12 @@ One line each.
 - **Homepage venue total moved.** The hero's "Venue guides" stat and the `venue_count` analytics property now count the 203 listed buildings, not the 213 flagged ones; dashboards reading `venue_count` will see the step.
 - **Today tile and /promos/today.** The tile now prints the Tonight rail's pool, which includes postseason rows; the /promos/today board it links to builds its own list and can differ when postseason rows exist.
 - **Hub card mark is text only.** On a hub naming next season early, a published club's card reads "2027 promotions published"; the selector cannot filter to those clubs.
+- **Disclosure names TicketNetwork on every page.** The page disclosure's new last sentence about TicketNetwork prints wherever the disclosure does, including pages of clubs that have no TicketNetwork button.
+- **Daily board inline tiles.** On /promos/today the tiles show the brand mark alone until the row is wide enough for "Get Tickets"; the resale line prints once under each league group.
+- **Per-date links share the primary's line.** On a promo page the small per-date "Get Tickets" links have no line of their own.
+- **The app is not covered.** The Flutter app's ticket buttons are outside this repo.
+- **Early team page calendar is inert.** On a page naming next season early the calendar opens on the first promo's month, but with no 2027 games in the schedule every day is disabled and only highlighted promos show a dot (ux-review 2026-11-25).
+- **/promos/today lede.** It says "15 games today have promotions" where there are 15 promos at 9 games (ux-review 2026-11-25; on production too).
+- **A canceled rivalry row has no marker.** It is never tagged "Played", and it shows its date with nothing saying it was canceled.
+- **Transit tile predicate.** The homepage transit tile counts raw transit data less suppressed buildings; the /venues index uses the page's own render rule. They agree today (103) by data, not by code.
+- **Team-page bytes in season.** The resale line adds about 170 bytes per prerendered game block; at the 35-block cap that is about 6 KB against the 950,000-byte cap. The live battery is the check.

@@ -55,7 +55,7 @@ The resale market:
 The real risk to this revenue: the team is actively fighting resale and could restrict transfers. That would cut off resale inventory quickly. Gate refusal of real tickets looks like the smaller risk.
 
 ## Ticket block rules for the page
-- The resale button is labeled plainly as resale above face value.
+- Button and resale line follow the site-wide rule of 2026-11-25 (`src/lib/ticket-labels.ts`, `docs/cta-registry.md`), which replaces the earlier wording of this bullet: the button reads "Get Tickets", never "Resale tickets", and one line under the button or button group says "TicketNetwork is a resale marketplace. Prices may differ from face value." One line per group, not per button. The words come from that file, not from the page.
 - The official routes are on the page too: the lottery and its status, and the team's face-value marketplace.
 - The page says what a good delivery looks like: tickets arrive as a transfer into the buyer's own Fans First Tickets account. A screenshot or PDF is a warning sign.
 - The page notes that scannable tickets appear about 24 hours before the game, so a late delivery is not automatically a problem.

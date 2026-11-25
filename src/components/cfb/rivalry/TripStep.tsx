@@ -21,6 +21,8 @@ export interface TripStepProps {
   /** Generic by design and identical on all 32 pages. No per-rivalry variants.
    *  Optional: a step with nothing true to say says nothing. */
   blurb?: string;
+  /** One line UNDER the button (the resale line on the tickets step). */
+  note?: string;
   cta: string;
   /** Solid for the primary step, ghost for the rest. */
   tone: 'solid' | 'ghost';
@@ -44,7 +46,7 @@ function buttonClass(tone: 'solid' | 'ghost'): string {
     : `${base} border border-white/25 text-white hover:bg-white/10`;
 }
 
-function Shell({ index, isLast, title, blurb, children }: TripStepProps & { children: ReactNode }) {
+function Shell({ index, isLast, title, blurb, note, children }: TripStepProps & { children: ReactNode }) {
   return (
     <li className="flex gap-3 pb-6 last:pb-0">
       <Rail index={index} isLast={isLast} />
@@ -52,6 +54,7 @@ function Shell({ index, isLast, title, blurb, children }: TripStepProps & { chil
         <h3 className="text-base font-semibold text-white">{title}</h3>
         {blurb && <p className="mt-1 text-sm leading-snug text-white/60">{blurb}</p>}
         {children}
+        {note && <p data-resale-note="" className="mt-2 text-[12px] leading-snug text-white/65">{note}</p>}
       </div>
     </li>
   );
