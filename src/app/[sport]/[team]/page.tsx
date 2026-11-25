@@ -660,7 +660,7 @@ export default async function TeamPage({
 
       <section className="py-6 px-6 border-t border-border-subtle">
         <div className="max-w-3xl mx-auto">
-          <AffiliateDisclosure />
+          <AffiliateDisclosure resale={ticketNetworkForGame(null, team)} />
         </div>
       </section>
 

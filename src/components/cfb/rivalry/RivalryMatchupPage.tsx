@@ -416,7 +416,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
             and SpotHero links, so the same disclosure the pro team pages carry
             ships here too. */}
         {/* The disclosure travels with the affiliate links: none on a played page. */}
-        {!played && <AffiliateDisclosure tone="dark" className="mt-10 text-center" />}
+        {!played && <AffiliateDisclosure tone="dark" className="mt-10 text-center" resale={steps.some((s) => s.partner === 'ticketnetwork')} />}
       </div>
     </div>
   );

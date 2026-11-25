@@ -4508,8 +4508,8 @@ One line each.
 - **Homepage venue total moved.** The hero's "Venue guides" stat and the `venue_count` analytics property now count the 203 listed buildings, not the 213 flagged ones; dashboards reading `venue_count` will see the step.
 - **Today tile and /promos/today.** The tile now prints the Tonight rail's pool, which includes postseason rows; the /promos/today board it links to builds its own list and can differ when postseason rows exist.
 - **Hub card mark is text only.** On a hub naming next season early, a published club's card reads "2027 promotions published"; the selector cannot filter to those clubs.
-- **Disclosure names TicketNetwork on every page.** The page disclosure's new last sentence about TicketNetwork prints wherever the disclosure does, including pages of clubs that have no TicketNetwork button.
-- **Daily board inline tiles.** On /promos/today the tiles show the brand mark alone until the row is wide enough for "Get Tickets"; the resale line prints once under each league group.
+- **Disclosure sentence is on by default.** The disclosure's TicketNetwork sentence is switched off for Ticketmaster-only clubs, eBay-only blocks, the event stop and promo or rivalry pages without a TicketNetwork link; the homepage, /best-promos and /playoffs keep it because their ticket cards load on interaction or sit in a panel.
+- **Daily board: label and line are far from the tap.** On /promos/today below about 416px of row width the inline tiles show brand marks only, so neither reads "Get Tickets", and the one resale line per league group can sit screens below the first TicketNetwork tile (ux-review 2026-11-25, D2). Needs a ruling: a line per card, or a marked tile.
 - **Per-date links share the primary's line.** On a promo page the small per-date "Get Tickets" links have no line of their own.
 - **The app is not covered.** The Flutter app's ticket buttons are outside this repo.
 - **Early team page calendar is inert.** On a page naming next season early the calendar opens on the first promo's month, but with no 2027 games in the schedule every day is disabled and only highlighted promos show a dot (ux-review 2026-11-25).
@@ -4517,3 +4517,7 @@ One line each.
 - **A canceled rivalry row has no marker.** It is never tagged "Played", and it shows its date with nothing saying it was canceled.
 - **Transit tile predicate.** The homepage transit tile counts raw transit data less suppressed buildings; the /venues index uses the page's own render rule. They agree today (103) by data, not by code.
 - **Team-page bytes in season.** The resale line adds about 170 bytes per prerendered game block; at the 35-block cap that is about 6 KB against the 950,000-byte cap. The live battery is the check.
+- **Event stop resale line placement.** With eight showtimes the one line sits after the last button, about 800px below the first (ux-review 2026-11-25, D3).
+- **Event stop at 360px.** "12:00 PM" wraps on 12 rows at 8 stops with the "Get Tickets" button; by geometry production wraps the same rows.
+- **Two identical ticket cards.** On team pages the Ticketmaster and TicketNetwork cards both read "Get Tickets" and differ by logo and the line under the pair (ux-review 2026-11-25, D5; by ruling).
+- **Hub card name and subtitle run together for axe.** The two spans have no whitespace between them, so the cards still fail label-content-name-mismatch on every hub (on production too).

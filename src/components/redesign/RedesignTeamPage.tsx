@@ -1,3 +1,4 @@
+import { ticketNetworkForGame } from '@/lib/affiliates';
 import type { Team, Venue, Promo, PromoType, PlayoffPromo } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 import type { PlayoffFAQContext, TeamFaqCoverage } from '@/lib/promo-helpers';
@@ -672,7 +673,8 @@ export function RedesignTeamPage({
 
       {/* Fine print — minimal treatment in the cream flow (reads fine at #444). */}
       <div className="mx-auto max-w-6xl px-6 pb-8">
-        <AffiliateDisclosure className="text-center" />
+        {/* No TicketNetwork sentence for a club TicketNetwork lists no home events for. */}
+        <AffiliateDisclosure className="text-center" resale={ticketNetworkForGame(null, team)} />
       </div>
 
       <div className="mx-auto max-w-6xl px-6 py-4">

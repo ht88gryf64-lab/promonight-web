@@ -98,11 +98,24 @@ test('one line per group on a page with several buttons: the event stop and the 
   assert.equal(count(promo, '{TICKET_CTA_LABEL}'), 2, 'the primary and the per-date link');
 });
 
-test('the disclosure says it in its own words', async () => {
-  const { AFFILIATE_DISCLOSURE_TEXT } = await import('../AffiliateDisclosure');
-  assert.match(AFFILIATE_DISCLOSURE_TEXT, /Tickets on TicketNetwork are resold by other sellers, so a price there can be above or below face value\.$/);
-  assert.ok(!AFFILIATE_DISCLOSURE_TEXT.includes(NOTE), 'its own wording, not the line repeated');
-  assert.match(AFFILIATE_DISCLOSURE_TEXT, /^PromoNight may earn a commission on purchases made through links on this page\./);
+test('the disclosure says it in its own words, and only where the page can carry a TicketNetwork link', async () => {
+  const { renderToStaticMarkup } = await import('react-dom/server');
+  const d = await import('../AffiliateDisclosure');
+  assert.equal(d.AFFILIATE_DISCLOSURE_RESALE_SENTENCE, 'Tickets on TicketNetwork are resold by other sellers, so a price there can be above or below face value.');
+  assert.ok(!d.AFFILIATE_DISCLOSURE_TEXT.includes('TicketNetwork'), 'the base text names no partner');
+  const on = renderToStaticMarkup(<d.AffiliateDisclosure />);
+  assert.ok(on.includes(`${d.AFFILIATE_DISCLOSURE_TEXT} ${d.AFFILIATE_DISCLOSURE_RESALE_SENTENCE}`));
+  assert.ok(!on.includes(NOTE), 'its own wording, not the line repeated');
+  const off = renderToStaticMarkup(<d.AffiliateDisclosure resale={false} />);
+  assert.ok(off.includes(d.AFFILIATE_DISCLOSURE_TEXT) && !/TicketNetwork/.test(off));
+  // Off where there is no TicketNetwork link: a Ticketmaster-only club, an eBay-only block, a promo page or rivalry page without one.
+  const src = (rel: string) => readFileSync(new URL(rel, import.meta.url), 'utf-8');
+  assert.match(src('../../redesign/RedesignTeamPage.tsx'), /<AffiliateDisclosure className="text-center" resale=\{ticketNetworkForGame\(null, team\)\} \/>/);
+  assert.match(src('../../redesign/PastBobbleheadsSection.tsx'), /<AffiliateDisclosure className="mt-8" resale=\{false\} \/>/);
+  assert.match(src('../../promo-page/PromoPageView.tsx'), /<AffiliateDisclosure className="mt-6" resale=\{!!ticketNetwork\} \/>/);
+  assert.match(src('../../cfb/rivalry/RivalryMatchupPage.tsx'), /resale=\{steps\.some\(\(s\) => s\.partner === 'ticketnetwork'\)\}/);
+  // The event stop prints the resale line under its buttons and the base disclosure after it: never the same thing twice.
+  assert.doesNotMatch(src('../../events/EventStopView.tsx'), /AFFILIATE_DISCLOSURE_RESALE_SENTENCE/);
 });
 
 test('analytics is unchanged: partner, surface and placement on the links are what they were', () => {

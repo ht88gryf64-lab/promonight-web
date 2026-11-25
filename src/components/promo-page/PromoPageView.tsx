@@ -1057,7 +1057,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
           </section>
         ) : null}
 
-        <AffiliateDisclosure className="mt-6" />
+        <AffiliateDisclosure className="mt-6" resale={!!ticketNetwork} />
       </article>
     </>
   );
