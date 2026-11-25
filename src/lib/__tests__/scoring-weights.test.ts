@@ -171,7 +171,7 @@ test('the FAQ copy states the real numbers and none of the retired claims', () =
   }
   // The leagues: NBA and NHL promos ARE scored now; NFL is not. No mechanism
   // cited, no date or release promised, on either page.
-  assert.match(RANKED_LEAGUES_ANSWER, /Promos from MLB, MLS, WNBA, NBA, and NHL are scored/);
+  assert.match(RANKED_LEAGUES_ANSWER, /The upcoming list ranks giveaways from MLB, MLS, WNBA, NBA, and NHL/);
   assert.match(RANKED_LEAGUES_ANSWER, /NFL promos are not scored/);
   assert.match(RANKED_LEAGUES_ANSWER, /that record covers MLB, MLS, and WNBA/);
   assert.match(TEAM_RANKINGS_NBA_NHL_ANSWER, /NBA and NHL promos are scored/);
@@ -211,6 +211,9 @@ test('the pages take these answers from the module and carry no second copy', ()
   assert.match(bobble, /NINETY_EIGHT_VS_HUNDRED_ANSWER,/);
   assert.match(bobble, /SMALL_CAP_ANSWER,/);
   assert.doesNotMatch(bobble, /player likeness|miss the sponsor signal|capped at 10,000 covers/);
+  // The bobblehead page covers three leagues; it no longer says those are all the leagues scored.
+  assert.doesNotMatch(bobble, /the three leagues we score/);
+  assert.match(bobble, /none of the three leagues this page covers/);
 });
 
 test('isBestPromoRow: a scored giveaway at the floor or above, and never a theme night', () => {

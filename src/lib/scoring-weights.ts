@@ -130,8 +130,8 @@ export const SMALL_CAP_ANSWER =
  *  list draws on all five, the season record on the three with a finished
  *  season on file. No mechanism is cited and no date is promised. */
 export const RANKED_LEAGUES_ANSWER =
-  'Promos from MLB, MLS, WNBA, NBA, and NHL are scored, and the upcoming list ranks giveaways from all five. NFL promos are not scored. When the page shows a finished season instead, that record covers MLB, MLS, and WNBA.';
+  'The upcoming list ranks giveaways from MLB, MLS, WNBA, NBA, and NHL. NFL promos are not scored. When the page shows a finished season instead, that record covers MLB, MLS, and WNBA.';
 
 /** /team-rankings, "Why are NBA and NHL not on this ranking?" */
 export const TEAM_RANKINGS_NBA_NHL_ANSWER =
-  'NBA and NHL promos are scored, and the best of them are ranked on the best promos page. Their teams are not ranked yet. An NBA or NHL season runs across two calendar years, and the team score, which weighs a schedule against a single season of home games, is not calibrated for that.';
+  'NBA and NHL promos are scored, and the upcoming list on the best promos page ranks them. Their teams are not ranked yet. An NBA or NHL season runs across two calendar years, and the team score, which weighs a schedule against a single season of home games, is not calibrated for that.';

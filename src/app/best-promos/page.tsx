@@ -57,7 +57,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const leagues = rankedLeaguesText(retrospective);
   return {
     title: `Best Sports Promo Nights of ${label}: Score-Ranked Giveaways`,
-    description: `Score-ranked promo nights across ${leagues} in ${label}. Bobbleheads, jerseys, and theme nights ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. Rescored with each league's weekly scan.`,
+    description: `Score-ranked promo nights across ${leagues} in ${label}. ${retrospective ? 'Bobbleheads, jerseys, and theme nights' : 'Bobbleheads, jerseys, and other giveaways'} ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. Rescored with each league's weekly scan.`,
     alternates: { canonical: PAGE_URL },
     openGraph: {
       title: `Best Sports Promo Nights of ${label}`,
@@ -255,7 +255,7 @@ export default async function BestPromosPage() {
           <div className="mx-auto max-w-4xl px-6 pb-20 pt-10">
             <p className="rounded-2xl border border-rd-line bg-rd-card p-5 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
               {retrospective ? capsuleRetro : (
-                <>The {promos.length} best-scored giveaway nights of {label}, each scoring {BEST_PROMO_SCORE_FLOOR} or more, are ranked below from 100 down. Every entry pulls from official {leaguesText} team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. The list refreshes with each league&apos;s weekly scan.</>
+                <>The {promos.length} best-scored giveaway nights of {label}, each scoring {BEST_PROMO_SCORE_FLOOR} or more, are ranked below, highest score first. Every entry pulls from official {leaguesText} team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. The list refreshes with each league&apos;s weekly scan.</>
               )}
             </p>
 
@@ -326,7 +326,7 @@ export default async function BestPromosPage() {
           <p className="mt-5 text-text-secondary text-base leading-relaxed max-w-3xl">
             {retrospective ? capsuleRetro : (
               <>The {promos.length} best-scored giveaway nights of {label}, each scoring {BEST_PROMO_SCORE_FLOOR} or more, are
-              ranked below from 100 down. Every entry pulls from official {leaguesText}
+              ranked below, highest score first. Every entry pulls from official {leaguesText}
               {' '}team-promotion announcements and is scored 0 to 100
               on attendance cap, item value, sponsor presence, and highlight
               tier. The list refreshes with each league&apos;s weekly scan.</>

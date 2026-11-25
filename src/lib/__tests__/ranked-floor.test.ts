@@ -217,6 +217,11 @@ test('/best-promos: the league copy follows the mode, and the stamp reads the ro
   assert.equal(typed, 1, 'the only typed list left is the bobblehead page pointer, which is about that page');
   assert.match(page, /across MLB, MLS, and WNBA, with its own ranked list/);
   assert.doesNotMatch(page, /MLB rescored weekly|MLB year-round, WNBA and MLS in season/);
+  // The upcoming list does not promise a 100 at the top (on 2026-11-25 its best row was 98),
+  // and its meta description does not promise theme nights, which it cannot list.
+  assert.equal(page.match(/ranked below, highest score first/g)?.length, 2);
+  assert.doesNotMatch(page, /ranked below from 100 down/);
+  assert.match(page, /retrospective \? 'Bobbleheads, jerseys, and theme nights' : 'Bobbleheads, jerseys, and other giveaways'/);
   assert.match(page, /retrospective \? RANKED_LEAGUES : PROMO_SCORED_LEAGUE_LIST/);
   // "Scores last computed" comes from the listed rows' scoredAt before any team-score stamp.
   assert.match(page, /const latestComputedAt = latestRowScoredAt \|\| latestTeamComputedAt;/);

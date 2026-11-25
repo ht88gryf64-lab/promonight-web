@@ -217,6 +217,14 @@ const PROMOS = [
   scored('shrek', 'la-galaxy', '2027-03-06', 'Shrek Hawaiian Shirt', 90),
   scored('galaxy-now', 'la-galaxy', '2026-11-08', 'Galaxy Scarf', 40),
   scored('beanie', 'san-diego-fc', '2026-11-07', 'Camo Beanie', 68),
+  // A SCORED NHL row, in season on 2026-11-05 and the highest score in the
+  // corpus (the state after the 2026-11 fix round's write), and its scored
+  // ticket-package twin. Every assertion in this file written before they
+  // existed still holds, which is the proof that the default readers (the
+  // social feed's scored pass, the bobblehead page, the retrospective, the
+  // team-rankings tease) do not see NHL rows.
+  scored('wings-bobble', 'detroit-red-wings', '2026-11-20', 'Dylan Larkin Bobblehead', 98),
+  fakeDoc('wings-pack', { date: '2026-11-21', title: 'Larkin Bobblehead Ticket Pack', type: 'giveaway', time: '7:00 PM', opponent: 'Visitors', description: 'd', highlight: true, ticketPackageRequired: true, score: 99, scoreBreakdown: { baseType: 10 }, derivedSignals: { itemType: 'generic' } }, 'detroit-red-wings'),
 ];
 
 let bracketDocs: Record<string, Data> = {};
@@ -296,6 +304,24 @@ test('/team-rankings reader: a team\'s tease is its best IN-SEASON row, not drop
   assert.equal(top.get('san-diego-fc')?.title, 'Camo Beanie');
   const ungated = await getTopPromosPerTeam('2026-11-05');
   assert.equal(ungated.get('la-galaxy')?.title, 'Shrek Hawaiian Shirt', 'the gate is what changed it');
+});
+
+test('scored NHL rows: only a caller that names the promo-scored leagues reads them, and never a ticket package', async () => {
+  const { getScoredPromosInDateRange, getScoredPromosByItemType, getTopPromosPerTeam } = await import('../data');
+  const { PROMO_SCORED_LEAGUES, SCORED_LEAGUES } = await import('../types');
+  const gate = currentSeasonPredicate('2026-11-05', REAL_FINALS);
+  const end = '2027-05-04';
+  // Default (the social feed, the retrospective): three leagues, no NHL row.
+  assert.ok(!titles(await getScoredPromosInDateRange('2026-11-05', end, 300, gate)).includes('Dylan Larkin Bobblehead'));
+  assert.ok(!titles(await getScoredPromosInDateRange('2026-11-05', end, 300)).includes('Dylan Larkin Bobblehead'));
+  assert.deepEqual(titles(await getScoredPromosInDateRange('2026-11-05', end, 300, gate, SCORED_LEAGUES)), ['Camo Beanie', 'Galaxy Scarf']);
+  // The bobblehead reader takes no league argument at all.
+  assert.ok(!titles(await getScoredPromosByItemType('2026-11-05', end, 'generic', 300, gate)).includes('Dylan Larkin Bobblehead'));
+  assert.equal((await getTopPromosPerTeam('2026-11-05', gate)).has('detroit-red-wings'), false, 'the team-rankings tease stays on the team-score leagues');
+  // /best-promos in upcoming mode names the wider set: the NHL row leads, and
+  // its ticket-package twin (score 99) is left out although it carries a score.
+  const wide = titles(await getScoredPromosInDateRange('2026-11-05', end, 300, gate, PROMO_SCORED_LEAGUES));
+  assert.deepEqual(wide, ['Dylan Larkin Bobblehead', 'Camo Beanie', 'Galaxy Scarf']);
 });
 
 test('homepage best rail: the gated readers feed it, and this four-row corpus is under its ten-row minimum', async () => {

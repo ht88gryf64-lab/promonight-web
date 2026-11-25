@@ -1361,6 +1361,11 @@ async function fetchScoredPromos(
     // Visibility guard before building the scored object: only true hides;
     // absent and false pass (same predicate as isVisiblePromo). Postseason
     // rows are kept off this surface the same way.
+    // An NHL or NBA ticket package is not a promotion anywhere the site ranks
+    // or lists promotions (dropTicketPackageRows above; WEB6 G2). The pipeline
+    // never scores one, so this is the second lock: a row flagged after it
+    // was scored is still left out here, as it is on the homepage rail.
+    if (isTicketPackageLeague(team.league) && isTicketPackageDoc(data)) continue;
     if (data.tombstoned === true) continue;
     if (data.isPostseason === true) continue;
     if (typeof data.score !== 'number') continue;
@@ -1420,8 +1425,9 @@ async function fetchScoredPromos(
     if (b.score !== a.score) return b.score - a.score;
     return a.date.localeCompare(b.date);
   });
-  // Only MLB rows can resolve here (MLS and WNBA have no games spine), and
-  // only the ones with an empty slot cost the read; see withGameDisplay.
+  // Only rows of a league with a games spine can resolve here (MLS and WNBA
+  // have none), and only the ones with an empty slot cost the read; see
+  // withGameDisplay.
   return withGameDisplay(out);
 }
 
