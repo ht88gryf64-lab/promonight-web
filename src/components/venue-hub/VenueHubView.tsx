@@ -608,7 +608,7 @@ export function VenueHubView({
             rendered" test, so the disclosure appears on exactly the venue pages
             that monetise. A held building renders neither card and makes no
             commercial claim to disclose. */}
-        {hasRail ? <AffiliateDisclosure className="mt-10 text-center" /> : null}
+        {hasRail ? <AffiliateDisclosure className="mt-10 text-center" resale={!!ticketTeam && ticketNetworkForGame(null, ticketTeam)} /> : null}
       </div>
     </>
   );

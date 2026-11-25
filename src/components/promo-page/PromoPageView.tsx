@@ -1057,7 +1057,8 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
           </section>
         ) : null}
 
-        <AffiliateDisclosure className="mt-6" resale={!!ticketNetwork} />
+        {/* The TicketNetwork sentence only while the page carries the link: not once played, not when removed. */}
+        <AffiliateDisclosure className="mt-6" resale={!!ticketNetwork && !past && !removed} />
       </article>
     </>
   );
