@@ -1,3 +1,4 @@
+import { promoDisplayTitle } from '@/lib/promo-display-title';
 import type { PromoWithTeam } from '@/lib/types';
 import { categoryForPromo } from '@/components/redesign/categories';
 import { teamDisplayName, synthPromoId, promoAnchorId, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
@@ -147,7 +148,7 @@ export function HubThisWeek({
                                 }}
                                 className="mt-1.5 inline-block min-h-[24px] font-rd font-semibold text-rd-ink transition-colors hover:text-rd-red hover:underline"
                               >
-                                {p.title}
+                                {promoDisplayTitle(p.title, team)}
                               </HubPromoLink>
                             </li>
                           );

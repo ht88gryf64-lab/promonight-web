@@ -1,3 +1,4 @@
+import { promoDisplayTitle } from '@/lib/promo-display-title';
 import { TICKET_CTA_LABEL, ticketAriaLabel } from '@/lib/ticket-labels';
 import { ResaleNote } from '@/components/affiliates/AffiliateDisclosure';
 import Link from 'next/link';
@@ -283,7 +284,17 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
   // FAQPage schema carries the stored-field FAQs ONLY (ruling 2026-11-07):
   // structured data states facts about this promotion, and a library FAQ is
   // general knowledge about its kind.
-  const storedFaqs = promoFaqs({ row: primary, teamName, dates, removed, removedOn, past });
+  // ONE NAME ON THIS PAGE (src/lib/promo-display-title.ts): a bare item title
+  // ("Bobblehead") is shown as "Kraken Bobblehead" in every place the page
+  // names the promo: the H1, the breadcrumb, the FAQ, the timeline, the rail,
+  // the share text and the JSON-LD name. The stored title still feeds the
+  // <title> and og:title (which carry the team), the slug and every id.
+  const shownName = promoDisplayTitle(cleanText(primary.title), team) || 'Untitled promotion';
+  const shown = <T extends { title: string }>(r: T): T => {
+    const t = promoDisplayTitle(r.title, team);
+    return t === r.title ? r : { ...r, title: t };
+  };
+  const storedFaqs = promoFaqs({ row: shown(primary), teamName, dates, removed, removedOn, past });
   const faqs = [...storedFaqs, ...(explainer?.faqs.map((f) => ({ question: f.q, answer: f.a })) ?? [])];
   const sourceHost = hostOf(primary.sourceUrl);
   // A special-ticket package page (NHL and NBA, the stored flag): "Get
@@ -386,7 +397,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
   // to a client component is published in the flight payload).
   const shareProps: PromoShareProps = {
     canonical,
-    facts: { promoName: cleanText(primary.title) || 'Untitled promotion', teamName, displayOpponent: cleanText(primary.displayOpponent), date: primary.date },
+    facts: { promoName: shownName, teamName, displayOpponent: cleanText(primary.displayOpponent), date: primary.date },
     promoId: primary.promoId,
     team: team.id,
     league: team.league,
@@ -397,7 +408,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
     canonical,
     title: head.title,
     description: head.description,
-    promoName: cleanText(primary.title),
+    promoName: promoDisplayTitle(cleanText(primary.title), team),
     teamName,
     rows: removed ? page.removedRows : page.rows,
     removed,
@@ -418,7 +429,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
     breadcrumbs: [
       { name: team.league, url: `${SITE_URL}${leagueHref ?? '/'}` },
       { name: teamName, url: `${SITE_URL}${teamHref}` },
-      { name: cleanText(primary.title) || 'Untitled promotion', url: canonical },
+      { name: shownName, url: canonical },
     ],
   });
 
@@ -483,7 +494,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
   // THE RAIL (spec Visuals 3): the team's next promos as cards, through the
   // one shaper the email digest uses. Below two cards the shaper returns
   // nothing and the section keeps a single card.
-  const railItems = promoRailItems(ctx.nextTeamPromos.map((p) => ({ href: p.href, title: p.title, date: p.date, type: p.type, themeKey: p.themeKey, ticketPackage: p.ticketPackage })));
+  const railItems = promoRailItems(ctx.nextTeamPromos.map((p) => ({ href: p.href, title: promoDisplayTitle(p.title, team), date: p.date, type: p.type, themeKey: p.themeKey, ticketPackage: p.ticketPackage })));
 
   // THIS GAME (spec item 7). Every row is a stored field, a stored game or a
   // count over stored rows, and a row without data is not a row. The other
@@ -511,7 +522,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
           <ul className="m-0 flex flex-col gap-1 p-0">
             {ctx.alsoAtGame.map((p) => (
               <li key={p.href} className="list-none">
-                <Link href={p.href} className="font-medium text-rd-link no-underline hover:underline">{p.title}</Link>
+                <Link href={p.href} className="font-medium text-rd-link no-underline hover:underline">{promoDisplayTitle(p.title, team)}</Link>
                 <span className="font-rd text-[12px] text-rd-ink-faint">{` · ${multi ? formatMonDay(p.date) : (PROMO_TYPE_LABELS[p.type] ?? '')}`}</span>
               </li>
             ))}
@@ -538,7 +549,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
         <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(s) }} />
       ))}
       {ctx.short && !removed ? (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(shortJsonLd(ctx.short, { name: cleanText(primary.title), description: head.description, url: canonical })) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(shortJsonLd(ctx.short, { name: promoDisplayTitle(cleanText(primary.title), team), description: head.description, url: canonical })) }} />
       ) : null}
       {/* Renders nothing: on a shared-link landing it records the share
           session, then cleans the address bar. Outside the article, so the
@@ -558,7 +569,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
           <span aria-hidden="true">/</span>
           <Link href={teamHref} className="no-underline hover:text-rd-ink">{teamDisplayName(team)}</Link>
           <span aria-hidden="true">/</span>
-          <span aria-current="page" className="text-rd-ink-soft">{cleanText(primary.title) || 'Untitled promotion'}</span>
+          <span aria-current="page" className="text-rd-ink-soft">{shownName}</span>
         </nav>
 
         <header className="flex flex-col gap-2.5 pt-3">
@@ -570,7 +581,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
             <span className={`rounded-md px-2 py-1 font-rd text-[11px] font-semibold uppercase tracking-[0.12em] ${removed ? 'bg-rd-ink-soft text-white' : 'bg-[var(--pp-accent)] text-[var(--pp-accent-ink)]'}`}>{badge}</span>
             {quantity ? <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">{quantity}</span> : null}
           </div>
-          <h1 className="rd-display m-0 text-[40px] uppercase leading-[0.95] tracking-[-0.01em] text-rd-ink">{cleanText(primary.title) || 'Untitled promotion'}</h1>
+          <h1 className="rd-display m-0 text-[40px] uppercase leading-[0.95] tracking-[-0.01em] text-rd-ink">{shownName}</h1>
           {removed ? (
             <p className="m-0 text-[15px] leading-[1.45] text-rd-ink-soft">
               <strong className="text-rd-ink">{`Removed from the ${teamName} schedule${removedOn ? ` on ${removedOn}` : ''}.`}</strong>
@@ -863,7 +874,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
             </dl>
             {/* The season timeline (spec Visuals 4), derived from the spine:
                 null below three home games, so nothing renders. */}
-            {ctx.timeline ? <SeasonTimeline games={ctx.timeline.games} promos={ctx.timeline.promos} thisDate={primary.date} thisHref={promoPagePath(team.sportSlug, team.id, page.slug)} teamName={teamName} /> : null}
+            {ctx.timeline ? <SeasonTimeline games={ctx.timeline.games} promos={ctx.timeline.promos.map(shown)} thisDate={primary.date} thisHref={promoPagePath(team.sportSlug, team.id, page.slug)} teamName={teamName} /> : null}
           </section>
         ) : null}
 

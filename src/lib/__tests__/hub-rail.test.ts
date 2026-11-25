@@ -103,7 +103,7 @@ test('hub promo links: the promo page when the row has one, else its row on the 
   assert.match(week, /<a href=\{teamHref\}[^>]*>\s*\{name\}\s*<\/a>/);
   // Both plain links in the card are at least 24px tall.
   assert.equal(week.match(/<a href=\{teamHref\} className="[^"]*min-h-\[24px\]/g)?.length, 2);
-  assert.match(week, /href=\{pageHref \?\? `\$\{teamHref\}#promo-\$\{promoAnchorId\(p\)\}`\}[\s\S]{0,1400}\{p\.title\}/);
+  assert.match(week, /href=\{pageHref \?\? `\$\{teamHref\}#promo-\$\{promoAnchorId\(p\)\}`\}[\s\S]{0,1400}\{promoDisplayTitle\(p\.title, team\)\}/);
   // The hub link fires the hub's tap event always, and the shared inbound event for a promo page.
   const link = readFileSync(new URL('../../components/hub/HubPromoLink.tsx', import.meta.url), 'utf-8');
   assert.match(link, /track\('this_week_card_tap', tap\);/);

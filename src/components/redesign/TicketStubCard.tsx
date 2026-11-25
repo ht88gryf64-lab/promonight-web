@@ -1,5 +1,6 @@
 'use client';
 
+import { promoDisplayTitle } from '@/lib/promo-display-title';
 import { stubTitleTier } from '@/lib/stub-title';
 import type { MouseEvent } from 'react';
 import { IconFlame, IconTicket } from '@tabler/icons-react';
@@ -89,6 +90,8 @@ export function TicketStubCard({
   const openModal = useUpcomingPromoModal();
   const { color: catColor, label: catLabel, ink: catInk } = categoryForPromo(promo);
   const teamName = teamDisplayName(promo.team);
+  // A bare item title prints with the club in front (src/lib/promo-display-title.ts); the size tier is chosen for what is printed.
+  const displayTitle = promoDisplayTitle(promo.title, promo.team);
   const spine = spineColor(promo.team.primaryColor);
   const spineInk = chipInk(spine);
   // The promo's own page (Phase 3c). Null leaves the stub body inert: nowhere
@@ -157,8 +160,8 @@ export function TicketStubCard({
             A LONG title steps down in size until it fits (stubTitleTier,
             src/lib/stub-title.ts): 27px is the default and every title that
             fit it is unchanged; the block stays 81px tall at every size. */}
-        <p className={`${stubTitleTier(promo.title).className} min-h-[81px] font-rd font-bold tracking-[0.004em] text-rd-ink transition-colors group-hover:text-rd-red`}>
-          {promo.title}
+        <p className={`${stubTitleTier(displayTitle).className} min-h-[81px] font-rd font-bold tracking-[0.004em] text-rd-ink transition-colors group-hover:text-rd-red`}>
+          {displayTitle}
         </p>
 
         <div className="mt-3 flex items-center gap-2 text-[12.5px] text-rd-ink-soft">

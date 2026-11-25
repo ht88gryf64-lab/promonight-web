@@ -80,5 +80,5 @@ test('every tier fits the 81px title block, and a title no tier fits takes the s
   assert.equal(stubTitleTier(huge), STUB_TITLE_TIERS[STUB_TITLE_TIERS.length - 1]);
   assert.equal(stubTitleTier('Supercalifragilisticexpialidocious'), STUB_TITLE_TIERS[STUB_TITLE_TIERS.length - 1], 'one word wider than the column at every size');
   const card = readFileSync(new URL('../../components/redesign/TicketStubCard.tsx', import.meta.url), 'utf-8');
-  assert.match(card, /\$\{stubTitleTier\(promo\.title\)\.className\} min-h-\[81px\]/);
+  assert.match(card, /\$\{stubTitleTier\(displayTitle\)\.className\} min-h-\[81px\]/);
 });
