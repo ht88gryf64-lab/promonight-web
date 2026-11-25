@@ -31,6 +31,8 @@ import { getAllMatchupSlugs } from '@/lib/cfb/matchups';
 import { submitToIndexNow } from '@/lib/indexnow';
 import { isPromoPagesLive, promoPagePath } from '@/lib/promo-page-copy';
 import { addDaysYmd, siteTodayYmd } from '@/lib/site-today';
+import { ticketTestBoundary, ticketTestPromoPaths } from '@/lib/ticket-test';
+import { isRevalidatePath } from '@/lib/revalidate-paths';
 
 /** The promo pages with a game on the site day that just ended (see
  *  NightlyLoaders.promoPagesDatedYesterday). Empty while promo pages are off. */
@@ -48,6 +50,19 @@ async function promoPagesDatedYesterday(): Promise<string[]> {
     if (p.date === yesterday && sport) out.add(promoPagePath(sport, p.teamId, p.pageSlug));
   }
   return [...out];
+}
+/** TICKET PARTNER TEST (2026-11-25): on a boundary day (the test's start, its
+ *  flip, its end) every upcoming promo page of the test's clubs, whose ticket
+ *  button changes partner at this midnight. Null on every other night and
+ *  while the switch is off. Team pages need nothing here: the site batch
+ *  already refreshes every one of them tonight. */
+async function ticketTestBoundaryPaths(): Promise<{ boundary: string; paths: string[] } | null> {
+  const today = siteTodayYmd();
+  const boundary = ticketTestBoundary(today);
+  if (!boundary || !isPromoPagesLive()) return null;
+  const { getUpcomingPromoIndex } = await import('@/lib/promo-pages');
+  const [index, teams] = await Promise.all([getUpcomingPromoIndex(today), getAllTeams()]);
+  return { boundary, paths: ticketTestPromoPaths(index, new Map(teams.map((t) => [t.id, t.sportSlug])), promoPagePath) };
 }
 /** The nightly Shorts sync and the promo pages whose Short changed (the
  *  social bridge, 2026-11-05; src/lib/youtube-shorts-sync.ts). Loaded on the
@@ -135,6 +150,31 @@ export async function GET(request: Request) {
   );
   const origin = refreshOrigin(request.url);
   const revalidated = await revalidateViaFanOut(origin, paths, fanOutSecret);
+  // The ticket test's boundary fan-out (site batch only): revalidated in the
+  // endpoint's 100-path chunks, NOT warmed and not part of this job's own
+  // freshness check. A promo page renders on its next request with the new
+  // partner. A failed batch is retried once, runs again the next night (the
+  // day after a boundary is a boundary too) and is reported as
+  // ticketTest.failedBatches; it never stops the site batch.
+  let ticketTest: { boundary: string; paths: number; revalidated: number; failedBatches: number } | null = null;
+  if (batch === 'site') {
+    try {
+      const flip = await ticketTestBoundaryPaths();
+      if (flip) {
+        const sent = flip.paths.filter((p) => isRevalidatePath(p));
+        let r = await revalidateViaFanOut(origin, sent, fanOutSecret);
+        if (r.failedBatches.length) {
+          // One more pass over everything: revalidation is idempotent.
+          const again = await revalidateViaFanOut(origin, sent, fanOutSecret);
+          if (again.failedBatches.length < r.failedBatches.length) r = again;
+        }
+        ticketTest = { boundary: flip.boundary, paths: sent.length, revalidated: r.revalidated, failedBatches: r.failedBatches.length };
+        console.log(`[cron:nightly-refresh] ticket-test boundary=${flip.boundary} promoPaths=${sent.length} revalidated=${r.revalidated} failedBatches=${r.failedBatches.length}`);
+      }
+    } catch (err) {
+      console.error('[cron:nightly-refresh] ticket-test boundary fan-out failed', err);
+    }
+  }
   await sleep(SETTLE_MS);
   const warmed = await warmPaths(origin, paths, { deadline: started + WARM_BUDGET_MS });
   // A warm HIT or PRERENDER is ambiguous (see warmTookRevalidation): send those
@@ -196,6 +236,7 @@ export async function GET(request: Request) {
       notFresh: verified.notFresh.slice(0, 20),
       verifyRounds: verified.rounds,
       warmMs,
+      ticketTest,
       indexnow,
       ms,
     },

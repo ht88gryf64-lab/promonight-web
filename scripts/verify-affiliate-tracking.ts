@@ -42,6 +42,7 @@ import { KNOWN_SURFACE_VALUES } from '../src/lib/analytics';
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { dirname, join, relative, resolve } from 'path';
 import { AFFILIATE_TRACKING_CONSTANTS } from '../src/lib/affiliates';
+import { STUBHUB, buildStubHubLink } from '../src/lib/ticket-test-link';
 import { FUBO_LEAGUES, FUBO_LIVE_LEAGUES, FUBO_ORIGIN, FUBO_PUBLISHER_ID, FUBO_SURFACES, buildFuboUrl } from '../src/lib/affiliates/fubo';
 
 // Mirror `next build`'s env loading for the one var this guard shape-checks:
@@ -367,6 +368,27 @@ for (const pageFile of routeFiles(APP).sort()) {
   if (fuboSample !== fuboExpected) failures.push(`Fubo URL drifted: expected=${JSON.stringify(fuboExpected)} actual=${JSON.stringify(fuboSample)}`);
 }
 
+// ── 7. StubHub (Partnerize, the ticket partner test, 2026-11-25) ─────────────
+//
+// The click base and the camref live in src/lib/ticket-test.ts; the blessed
+// copies are HERE, typed out again. Also checked: one built link matches the
+// approved deep-link shape byte for byte (camref, pubref, destination LAST,
+// the destination encoded once, nothing appended), and the builder refuses a
+// destination that is not a StubHub event page.
+{
+  const STUBHUB_BLESSED = { clickBase: 'https://stubhub.prf.hn/click', camref: '1101l6zbdB' };
+  if (STUBHUB.clickBase !== STUBHUB_BLESSED.clickBase) failures.push(`StubHub click base drifted: ${JSON.stringify(STUBHUB.clickBase)}`);
+  if (STUBHUB.camref !== STUBHUB_BLESSED.camref) failures.push(`StubHub camref drifted: ${JSON.stringify(STUBHUB.camref)}`);
+  const shSample = buildStubHubLink({ eventUrl: 'https://www.stubhub.com/miami-heat-miami-tickets-12-3-2026/event/161666863/', pubref: 'web-nba-a' });
+  const shExpected =
+    'https://stubhub.prf.hn/click/camref:1101l6zbdB/pubref:web-nba-a/destination:' +
+    'https%3A%2F%2Fwww.stubhub.com%2Fmiami-heat-miami-tickets-12-3-2026%2Fevent%2F161666863%2F';
+  if (shSample !== shExpected) failures.push(`StubHub link drifted: expected=${JSON.stringify(shExpected)} actual=${JSON.stringify(shSample)}`);
+  if (buildStubHubLink({ eventUrl: 'https://www.stubhub.com/miami-heat-miami-tickets-12-3-2026/event/161666863/?utm_source=x', pubref: 'web-nba-a' }) !== null) {
+    failures.push('StubHub builder accepted a destination with a query string.');
+  }
+}
+
 if (failures.length > 0) {
   console.error('[verify-affiliate-tracking] BUILD BLOCKED: affiliate tracking would be broken or unattributed.');
   for (const f of failures) console.error(`  - ${f}`);
@@ -377,5 +399,5 @@ console.log(
   `[verify-affiliate-tracking] OK: ${Object.keys(BLESSED).length} hardcoded tracking constants match; ` +
     `Ticketmaster wrap ${wrap ? 'present and well-formed' : 'absent (tolerated on this non-production target)'}; ` +
     `${routesWithCtas} of ${routesChecked} routes render affiliate CTAs and every one reaches AffiliateDisclosure; ` +
-    `Fubo table, live leagues, surfaces and sample URL match.`,
+    `Fubo table, live leagues, surfaces and sample URL match; StubHub camref and sample link match.`,
 );

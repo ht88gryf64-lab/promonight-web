@@ -1,4 +1,4 @@
-import { TICKETNETWORK_RESALE_NOTE } from '@/lib/ticket-labels';
+import { TICKETNETWORK_RESALE_NOTE, TICKET_TEST_NOTE } from '@/lib/ticket-labels';
 
 // FTC-compliant disclosure. One per page is enough; place it near the bottom
 // of any page that renders affiliate CTAs.
@@ -41,6 +41,18 @@ export function ResaleNote({ className = '', tone = 'inherit' }: { className?: s
   return (
     <p data-resale-note="" className={`m-0 font-rd text-[12px] leading-[1.4] ${ink} ${className}`}>
       {TICKETNETWORK_RESALE_NOTE}
+    </p>
+  );
+}
+
+/** The one line under a test team's ticket button or button group (ticket
+ *  partner test, Gate 0 ruling 4): the same sentence on both arms, in place of
+ *  ResaleNote, with ResaleNote's own type and tones. */
+export function TicketTestNote({ className = '', tone = 'inherit' }: { className?: string; tone?: 'inherit' | 'light' }) {
+  const ink = tone === 'light' ? 'text-rd-ink-soft' : 'opacity-75';
+  return (
+    <p data-ticket-test-note="" className={`m-0 font-rd text-[12px] leading-[1.4] ${ink} ${className}`}>
+      {TICKET_TEST_NOTE}
     </p>
   );
 }

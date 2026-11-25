@@ -362,6 +362,10 @@ export interface Game {
   // (tnEventId, tnEventDate, tnObservedAt, tnCheckedAt) are never mapped, so
   // they never reach a client component or the RSC payload.
   tnEventUrl?: string;
+  /** The game's StubHub event page (games.shEventUrl), mapped only while the
+   *  ticket partner test is on and only when shEventDate is the game's date
+   *  (src/lib/ticket-test.ts stubHubEventUrlFor). A public URL. */
+  shEventUrl?: string;
 }
 
 // Which games a team page counts and renders. Regular season only.

@@ -39,7 +39,8 @@ import { VENUE_RESOLUTION_MAP } from './venue-resolution-map';
 import { VENUE_LOCATIONS_STATIC } from './venue-locations';
 import { resolveMlbZone } from './mlb-venue-tz';
 import { gameZoneAbbrev } from './format-game-time';
-import { JOIN_LEAGUES, applyGameDisplay, buildGameIndex, gameEventLinkUrl, needsGameDisplay } from './promo-game-join';
+import { JOIN_LEAGUES, applyGameDisplay, buildGameIndex, gameEventLinkUrl, gameStubHubLinkUrl, needsGameDisplay } from './promo-game-join';
+import { isTicketTestActive, stubHubEventUrlFor, type TicketTestResolution } from './ticket-test';
 import { attachPromoPageFields, stampPromoPageCanonical } from './promo-page-stamp';
 import { isSplitSeasonLeague } from './season-label';
 import type { SeasonEligible } from './seasons/season-window';
@@ -924,6 +925,17 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
   // ruling, 2026-11-13).
   const tnUrl = ticketNetworkEventLinkFor({ tnEventUrl: d.tnEventUrl, tnEventId: d.tnEventId, tnEventDate: d.tnEventDate }, game.date);
   if (tnUrl) game.tnEventUrl = tnUrl;
+  // shEventUrl ONLY, and only while the ticket partner test is RUNNING: the
+  // switch on and the site day inside the test's dates (Gate 3 ruling 2: the
+  // switch is on from the merge, and before the start date every page must
+  // be exactly what main renders). Otherwise no game object, and no RSC
+  // payload, gains a key.
+  // shEventId and shEventDate stay unmapped; the URL is exposed only when
+  // shEventDate is the game's date and the id is the one in the URL.
+  if (isTicketTestActive()) {
+    const shUrl = stubHubEventUrlFor({ shEventUrl: d.shEventUrl, shEventId: d.shEventId, shEventDate: d.shEventDate }, game.date);
+    if (shUrl) game.shEventUrl = shUrl;
+  }
   return game;
 }
 
@@ -1202,7 +1214,15 @@ export async function enrichGamesForTeam(
    *  (and so in the RSC payload and the game detail's TicketNetwork button)
    *  only when gameEventLinkUrl says it may link: upcoming, scheduled, not a
    *  doubleheader game. Without it no context carries an event link. */
-  opts: { today?: string } = {},
+  opts: {
+    today?: string;
+    /** The page team's ticket test resolution (resolveTicketTest), or null.
+     *  Only a team on StubHub today keeps a game's shEventUrl, and such a game
+     *  then drops its tnEventUrl (the StubHub link replaces it, so the page's
+     *  payload does not grow by a second URL per game). Without it, or on the
+     *  TicketNetwork arm, no context carries shEventUrl. */
+    ticketTest?: TicketTestResolution | null;
+  } = {},
 ): Promise<GameContext[]> {
   const opponentSlugs = Array.from(new Set(
     games.map((g) => (g.homeTeamSlug === teamSlug ? g.awayTeamSlug : g.homeTeamSlug)),
@@ -1276,6 +1296,18 @@ export async function enrichGamesForTeam(
       const { tnEventUrl: _drop, ...rest } = g;
       void _drop;
       game = rest;
+    }
+    if (game.shEventUrl) {
+      const keepSh = opts.ticketTest?.partner === 'stubhub' && !!gameStubHubLinkUrl(game, opts.today);
+      if (keepSh) {
+        const { tnEventUrl: _dropTn, ...rest } = game;
+        void _dropTn;
+        game = rest;
+      } else {
+        const { shEventUrl: _dropSh, ...rest } = game;
+        void _dropSh;
+        game = rest;
+      }
     }
     return { game, isHome, opponentTeam, opponentVenue, promos };
   });

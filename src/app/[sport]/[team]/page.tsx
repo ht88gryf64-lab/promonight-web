@@ -51,6 +51,8 @@ import { teamLabelDay } from '@/lib/seasons/season-window';
 import { partitionTicketPackages, upcomingTicketPackages } from '@/lib/ticket-packages';
 import { RedesignTeamPage } from '@/components/redesign/RedesignTeamPage';
 import { ticketNetworkForGame } from '@/lib/affiliates';
+import { resolveTicketTest, teamLevelEventUrls } from '@/lib/ticket-test';
+import { TicketTestProvider, type TicketTestPageValue } from '@/components/affiliates/TicketTestContext';
 
 export const revalidate = 86400;
 
@@ -389,9 +391,25 @@ export default async function TeamPage({
   // MLB + NFL today: full schedule overlays onto the calendar. Other leagues
   // fall through to the legacy promo-only rendering inside TeamCalendar.
   const games = await getGamesForTeam(team.id, team.sportSlug);
+  // TICKET PARTNER TEST (2026-11-25): resolved here, on the page's one clock
+  // read, and handed down. Null while the switch is off, outside the test's
+  // dates, and for a club the test does not cover: the page is then exactly
+  // as before.
+  const ticketTest = resolveTicketTest(team.id, todayStr);
   const gameContexts = games.length > 0
-    ? await enrichGamesForTeam(team.id, games, promos, { today: todayStr })
+    ? await enrichGamesForTeam(team.id, games, promos, { today: todayStr, ticketTest })
     : undefined;
+  // The team-level card (the sidebar, the legacy hero, a promo card with no
+  // game) links the team's next upcoming home game that has a matched event
+  // for today's partner (Gate 3 ruling 1): the first home context that kept
+  // that partner's event URL. enrichGamesForTeam keeps a URL only for an
+  // upcoming scheduled game that is not half of a doubleheader, and keeps the
+  // StubHub one only on a StubHub day, so the same date gates apply as on the
+  // rows. No such game: both are null and the card falls back to the
+  // TicketNetwork team performer page.
+  const ticketTestPage: TicketTestPageValue | null = ticketTest
+    ? { test: ticketTest, ...teamLevelEventUrls(ticketTest, (gameContexts ?? []).filter((c) => c.isHome).map((c) => c.game)) }
+    : null;
   // Time and opponent slots from the contexts just built, so a promo shows the
   // same time here as on /promos/today (src/lib/promo-game-join.ts). No read:
   // the index is this page's own home games and the opponent names are the
@@ -413,8 +431,9 @@ export default async function TeamPage({
     // with the PromoNight Predicts line inside it for a club in a bracket.
     // Never throws: a failed read is no module, a failed line is no line.
     const postseason = await getTeamPostseason(team.sportSlug, team.id);
-    return (
+    const page = (
       <RedesignTeamPage
+        ticketTestPage={ticketTestPage}
         postseason={
           // An MLS nickname is a fragment ("United"); the module says
           // "Minnesota United vs Seattle Sounders". Other leagues as before.
@@ -447,9 +466,12 @@ export default async function TeamPage({
         ticketPackages={packagesAhead}
       />
     );
+    // The provider (a client boundary) is mounted only on a test team's page:
+    // every other page's payload is exactly what it was.
+    return ticketTestPage ? <TicketTestProvider value={ticketTestPage}>{page}</TicketTestProvider> : page;
   }
 
-  return (
+  const legacy = (
     <>
       <JsonLd
         team={team}
@@ -520,6 +542,9 @@ export default async function TeamPage({
               placement="team_page_hero"
               size="full"
               ticketNetwork={ticketNetworkForGame(null, team)}
+              ticketTest={ticketTest}
+              stubHubEventUrl={ticketTestPage?.teamStubHubEventUrl ?? null}
+              {...(ticketTestPage ? { eventUrl: ticketTestPage.teamTicketNetworkEventUrl, teamLevelCard: true } : {})}
             />
           </div>
         </div>
@@ -660,7 +685,7 @@ export default async function TeamPage({
 
       <section className="py-6 px-6 border-t border-border-subtle">
         <div className="max-w-3xl mx-auto">
-          <AffiliateDisclosure resale={ticketNetworkForGame(null, team)} />
+          <AffiliateDisclosure resale={!ticketTest && ticketNetworkForGame(null, team)} />
         </div>
       </section>
 
@@ -669,4 +694,5 @@ export default async function TeamPage({
       </section>
     </>
   );
+  return ticketTestPage ? <TicketTestProvider value={ticketTestPage}>{legacy}</TicketTestProvider> : legacy;
 }

@@ -2,6 +2,7 @@ import type { Team } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
 import { TicketmasterCTA } from './TicketmasterCTA';
 import { teamDisplayName } from '@/lib/team-display-name';
+import type { TicketTestResolution } from '@/lib/ticket-test-link';
 
 export type TicketsBlockPlacement =
   | 'team_page_hero'
@@ -14,7 +15,7 @@ export type TicketsBlockPlacement =
   | 'best_promos_card'
   | 'best_promos_bobbleheads_card';
 
-type TicketsBlockProps = {
+export type TicketsBlockProps = {
   team: Team;
   surface: AnalyticsSurface;
   placement: TicketsBlockPlacement;
@@ -28,6 +29,11 @@ type TicketsBlockProps = {
   /** false: Ticketmaster only (the game's home club is flagged
    *  tnHomeUnavailable; ticketNetworkForGame). Default true. */
   ticketNetwork?: boolean;
+  /** Ticket partner test: forwarded to TicketmasterCTA (see there). Only the
+   *  test team's own team page passes them. */
+  ticketTest?: TicketTestResolution | null;
+  stubHubEventUrl?: string | null;
+  teamLevelCard?: boolean;
   /** 'section' (default): full team-page section with eyebrow + h2 + CTA.
    *  'card': modal/playoffs row look — eyebrow + CTA only, no h2; matchup
    *  context is supplied by the surrounding card. */
@@ -67,6 +73,9 @@ export function TicketsBlock({
   subKey,
   eventUrl = null,
   ticketNetwork = true,
+  ticketTest = null,
+  stubHubEventUrl = null,
+  teamLevelCard = false,
   variant = 'section',
 }: TicketsBlockProps) {
   if (variant === 'card') {
@@ -84,6 +93,9 @@ export function TicketsBlock({
           subKey={subKey}
           eventUrl={eventUrl}
           ticketNetwork={ticketNetwork}
+          ticketTest={ticketTest}
+          stubHubEventUrl={stubHubEventUrl}
+          teamLevelCard={teamLevelCard}
           size="compact"
         />
       </div>
@@ -114,6 +126,9 @@ export function TicketsBlock({
             subKey={subKey}
             eventUrl={eventUrl}
             ticketNetwork={ticketNetwork}
+            ticketTest={ticketTest}
+            stubHubEventUrl={stubHubEventUrl}
+            teamLevelCard={teamLevelCard}
             size="full"
           />
         </div>

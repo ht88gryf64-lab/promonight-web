@@ -1,4 +1,7 @@
 import { notFound } from 'next/navigation';
+import { STUBHUB, isTicketTestOn, resolveTicketTest } from '@/lib/ticket-test';
+import { TICKET_TEST } from '@/config/ticket-test';
+import { siteTodayYmd } from '@/lib/site-today';
 import { getAllTeams } from '@/lib/data';
 import {
   buildTicketmasterUrl,
@@ -25,6 +28,7 @@ export default async function AffiliateCheckPage() {
     notFound();
   }
 
+  const ticketTestToday = siteTodayYmd();
   const teams = await getAllTeams();
   const wrapActive = isPartnerActive('ticketmaster');
   const wrapTemplate = process.env.NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP ?? '';
@@ -72,6 +76,13 @@ export default async function AffiliateCheckPage() {
         )}
       </section>
 
+      <section style={{ marginBottom: 16, fontSize: 12 }}>
+        <strong>Ticket partner test (StubHub vs TicketNetwork):</strong>{' '}
+        switch NEXT_PUBLIC_TICKET_TEST is {isTicketTestOn() ? 'ON' : 'OFF'}; start {TICKET_TEST.startDate}, flip {TICKET_TEST.flipDate}, end {TICKET_TEST.endDate};
+        site day {ticketTestToday}; StubHub click base {STUBHUB.clickBase}, camref {STUBHUB.camref}. The table column shows each
+        club&apos;s assignment as it would resolve today with the switch on.
+      </section>
+
       <p style={{ fontSize: 12, color: '#444', marginBottom: 12 }}>
         {teams.length} teams. Each row shows the URL each team would receive on each surface. Click
         any URL to spot-check the destination.
@@ -86,6 +97,7 @@ export default async function AffiliateCheckPage() {
             <th style={cellStyle}>tm slug override</th>
             <th style={cellStyle}>tn landing (resolved)</th>
             <th style={cellStyle}>tn tracked (web_team_page)</th>
+            <th style={cellStyle}>ticket test (today)</th>
             {surfaces.map((s) => (
               <th key={s} style={cellStyle}>
                 tm: {s}
@@ -118,6 +130,14 @@ export default async function AffiliateCheckPage() {
                   ) : (
                     '—'
                   );
+                })()}
+              </td>
+              <td style={cellStyle}>
+                {(() => {
+                  // Read as if the switch were on, so the assignment is
+                  // visible before launch; the line above says whether it is.
+                  const r = resolveTicketTest(t.id, ticketTestToday, true);
+                  return r ? `${r.partner} · phase ${r.phase} · ${r.pairId} · ${r.arm} · pubref ${r.pubref}` : 'not in the test today';
                 })()}
               </td>
               {surfaces.map((s) => {

@@ -415,6 +415,8 @@ export type AffiliatePartner =
   | 'expedia'
   | 'ticketmaster'
   | 'ticketnetwork'
+  // StubHub through Partnerize: the ticket partner test (2026-11-25).
+  | 'stubhub'
   // Streaming (2026-11-20, src/lib/affiliates/fubo.ts). destination_url is
   // the on-site /go/fubo hop; the route adds irad, sharedid and subId1.
   | 'fubo';
@@ -449,6 +451,20 @@ export type AffiliateClickProperties = {
   venue_slug?: string;
   performance_key?: string;
   provider?: string;
+  // Ticket partner test (2026-11-25). in_test rides EVERY ticket click
+  // (ticketmaster, ticketnetwork, stubhub): true on a test team's own team
+  // page and promo pages while the test runs, false everywhere else, so the
+  // analysis reads in-test surfaces only. The rest ride in-test clicks only:
+  // the club's sequence (stubhub_first, ticketnetwork_first, fixed_stubhub),
+  // its pair, the phase (a or b), the Partnerize pubref when the link is
+  // StubHub's (null otherwise), and whether the link is a fallback (the team
+  // is on StubHub today and this control had no matched StubHub event).
+  in_test?: boolean;
+  test_arm?: string;
+  test_pair_id?: string;
+  test_phase?: 'a' | 'b';
+  pubref?: string | null;
+  fallback?: boolean;
 };
 
 // event_link_click: surface is the page the click happened on; link_surface
@@ -1585,6 +1601,12 @@ export type AffiliateClickPayload = {
   venue_slug?: string;
   performance_key?: string;
   provider?: string;
+  in_test?: boolean;
+  test_arm?: string;
+  test_pair_id?: string;
+  test_phase?: 'a' | 'b';
+  pubref?: string | null;
+  fallback?: boolean;
 };
 
 export const trackAffiliateClick = (payload: AffiliateClickPayload) => {
@@ -1622,6 +1644,11 @@ export const trackAffiliateClick = (payload: AffiliateClickPayload) => {
     ...(payload.venue_slug ? { venue_slug: payload.venue_slug } : {}),
     ...(payload.performance_key ? { performance_key: payload.performance_key } : {}),
     ...(payload.provider ? { provider: payload.provider } : {}),
+    // Ticket clicks only: in_test always, the rest on in-test clicks.
+    ...(typeof payload.in_test === 'boolean' ? { in_test: payload.in_test } : {}),
+    ...(payload.in_test === true
+      ? { test_arm: payload.test_arm, test_pair_id: payload.test_pair_id, test_phase: payload.test_phase, pubref: payload.pubref ?? null, fallback: payload.fallback === true }
+      : {}),
   });
 };
 

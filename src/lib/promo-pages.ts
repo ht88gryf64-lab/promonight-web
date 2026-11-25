@@ -26,7 +26,7 @@ import { cache } from 'react';
 import { Timestamp } from 'firebase-admin/firestore';
 import { db } from './firebase';
 import { getAllTeams, getGamesForTeam, getTeamPromos, getVenueForTeam, isTicketPackagePromo, mapPromoDoc } from './data';
-import { applyGameDisplay, buildGameIndex, resolveTnEventUrl } from './promo-game-join';
+import { applyGameDisplay, buildGameIndex, resolveShEventUrl, resolveTnEventUrl } from './promo-game-join';
 import { makeKeyedTtlCache, STATIC_TTL_MS } from './collection-cache';
 import { getVenueHub, getVenueHubForTeam, type TeamVenueHubLink } from './venue-hub';
 import { beforeYouGoUnion } from './before-you-go-rows';
@@ -133,8 +133,14 @@ const loadTeamPageRows = cache(async (team: Team): Promise<PromoPageRow[]> => {
   const mapped = docs.map((d) => ({ id: d.id, data: d.data, promo: { ...mapPromoDoc({ id: d.id, data: () => d.data } as FirebaseFirestore.DocumentSnapshot), team } as PromoWithTeam }));
   const index = buildGameIndex(games);
   applyGameDisplay(mapped.map((m) => m.promo), index, new Map(teams.map((t) => [t.id, t])));
-  return mapped.map((m) => ({ ...toPageRow(m.id, m.promo, m.data, team.league), tnEventUrl: resolveTnEventUrl(m.promo, index) }));
+  return mapped.map((m) => ({ ...toPageRow(m.id, m.promo, m.data, team.league), tnEventUrl: resolveTnEventUrl(m.promo, index), ...shEventUrlKey(resolveShEventUrl(m.promo, index)) }));
 });
+
+/** shEventUrl only when there is one: with the ticket partner test off no row
+ *  gains a key. */
+function shEventUrlKey(u: string | null): { shEventUrl?: string } {
+  return u ? { shEventUrl: u } : {};
+}
 
 // ── the page ─────────────────────────────────────────────────────────────────
 

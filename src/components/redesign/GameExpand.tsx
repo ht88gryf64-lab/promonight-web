@@ -3,7 +3,7 @@ import type { AnalyticsSurface } from '@/lib/analytics';
 import type { Promo, Team } from '@/lib/types';
 import { SPORT_ICONS } from '@/lib/types';
 import { ShareButton, formatShareDate, type ShareItem } from '@/components/share';
-import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
+import { GameTicketsBlock } from '@/components/affiliates/TicketTestContext';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
 import { FuboTrayCTA } from '@/components/affiliates/FuboTrayCTA';
@@ -208,13 +208,14 @@ function GameExpandRow({
        *  so the dark CTA styling reads as intentional. */}
       <CtaTray>
         {team && (
-          <TicketsBlock
+          <GameTicketsBlock
             team={team}
             surface={surface}
             placement={placement}
             promoId={teamSlug ? `${teamSlug}:${game.date}:${game.id}` : undefined}
             subKey={awaySubKey}
             eventUrl={game.tnEventUrl ?? null}
+            gameStubHubEventUrl={game.shEventUrl ?? null}
             ticketNetwork={ticketNetworkForGame(game, isHome ? team : opponentTeam)}
             variant="card"
           />
@@ -371,10 +372,11 @@ export function LegacyPromoExpand({
             )}
             {team && teamSlug && (
               <CtaTray>
-                <TicketsBlock
+                <GameTicketsBlock
                   team={team}
                   surface={surface}
                   placement="promo_card"
+                  teamLevel
                   promoId={`${teamSlug}:${p.date}:${p.title}`}
                   ticketNetwork={ticketNetworkForGame(null, team)}
                   variant="card"

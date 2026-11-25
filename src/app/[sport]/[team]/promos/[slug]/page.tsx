@@ -7,6 +7,7 @@ import { isPromoPagesLive, loadPromoPageContext, resolvePreviousSlug, resolvePro
 import { promoPagePath } from '@/lib/promo-page-copy';
 import { PromoPageView, heroImage, promoPageHead } from '@/components/promo-page/PromoPageView';
 import { storedImageSize, type ImageSize } from '@/lib/image-dimensions';
+import { resolveTicketTest } from '@/lib/ticket-test';
 
 // Per-promo pages (Phase 3b, 2026-10-29): /{league}/{team}/promos/{pageSlug}.
 //
@@ -119,5 +120,6 @@ export default async function PromoPage({ params }: { params: Params }) {
   // 308, the permanent redirect the App Router issues (a 301 is not
   // available to a page); search engines treat the two alike.
   if (r.kind === 'redirect') permanentRedirect(r.to);
-  return <PromoPageView page={r.page} ctx={r.ctx} today={r.today} now={r.now} imageSize={r.imageSize} />;
+  // Ticket partner test: resolved here, on the request's one site day.
+  return <PromoPageView page={r.page} ctx={r.ctx} today={r.today} now={r.now} imageSize={r.imageSize} ticketTest={resolveTicketTest(r.page.team.id, r.today)} />;
 }

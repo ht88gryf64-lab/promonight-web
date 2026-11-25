@@ -1,6 +1,7 @@
 import { promoDisplayTitle } from '@/lib/promo-display-title';
 import { TICKET_CTA_LABEL, ticketAriaLabel } from '@/lib/ticket-labels';
-import { ResaleNote } from '@/components/affiliates/AffiliateDisclosure';
+import { ResaleNote, TicketTestNote } from '@/components/affiliates/AffiliateDisclosure';
+import { pickTestTicketLink, ticketTestClickProps, type TestTicketLink, type TicketTestResolution } from '@/lib/ticket-test-link';
 import Link from 'next/link';
 import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
@@ -103,6 +104,9 @@ export const PROMO_PAGE_SURFACE = 'web_promo_page' as const;
 const PROMO_DATE_SUBID_SURFACE = 'web_promo_date' as const;
 
 export interface PromoPageViewProps {
+  /** The page team's ticket partner test resolution for `today`
+   *  (resolveTicketTest, src/lib/ticket-test.ts), from the route. */
+  ticketTest?: TicketTestResolution | null;
   page: PromoPage;
   ctx: PromoPageContext;
   /** The site's day, the route's one clock read. */
@@ -241,7 +245,7 @@ function monthName(ym: string): string {
 // The date is the tile; the subtitle never repeats it. A cross-team card
 // names the club, a same-team card the opponent and the time (ruling
 // 2026-10-29).
-export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageViewProps) {
+export function PromoPageView({ page, ctx, today, now, imageSize, ticketTest = null }: PromoPageViewProps) {
   const { team, primary, dates } = page;
   const removed = page.state === 'removed';
   const head = promoPageHead(page, ctx, today, imageSize);
@@ -353,10 +357,21 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
   // Ticketmaster tagging is unchanged.
   const tnAllowed = ticketNetworkForGame(null, team);
   const ticketNetwork = tnAllowed ? buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: primaryEventUrl, pageSlug: page.slug }) : null;
-  const tickets = ticketNetwork ?? ticketmaster;
-  const ticketsPartner = ticketNetwork ? 'ticketnetwork' : 'ticketmaster';
-  const ticketsLevel = ticketNetwork ? ticketNetworkLinkLevel(primaryEventUrl) : 'team';
-  const ticketsBrand: 'TicketNetwork' | 'Ticketmaster' = ticketNetwork ? 'TicketNetwork' : 'Ticketmaster';
+  // TICKET PARTNER TEST (2026-11-25, src/lib/ticket-test.ts). On a test
+  // team's promo page the primary button and the per-date links follow the
+  // team's partner today: StubHub's event page for the date when the pipeline
+  // matched one, else that date's TicketNetwork link as before (a fallback,
+  // said so on the click; Ticketmaster for a club TicketNetwork does not
+  // list). "Also on Ticketmaster" is gone on both arms and the test's line
+  // replaces the resale line. The ROUTE resolves it (the resolver is
+  // server-only) and passes it in; null or absent: the page is exactly as
+  // before.
+  const shEventUrlOf = (r: { date: string; shEventUrl?: string | null }) => (r.date >= today ? r.shEventUrl ?? null : null);
+  const testPrimary: TestTicketLink | null = ticketTest ? pickTestTicketLink(ticketTest, { stubHubEventUrl: shEventUrlOf(primary), ticketNetwork, ticketmaster }) : null;
+  const tickets = testPrimary?.href ?? ticketNetwork ?? ticketmaster;
+  const ticketsPartner = testPrimary?.partner ?? (ticketNetwork ? 'ticketnetwork' : 'ticketmaster');
+  const ticketsLevel = ticketsPartner === 'stubhub' ? 'event' : ticketsPartner === 'ticketnetwork' ? ticketNetworkLinkLevel(primaryEventUrl) : 'team';
+  const ticketsBrand: 'TicketNetwork' | 'Ticketmaster' | 'StubHub' = ticketsPartner === 'stubhub' ? 'StubHub' : ticketsPartner === 'ticketnetwork' ? 'TicketNetwork' : 'Ticketmaster';
   const parking = buildSpotHeroUrl({ latitude: ctx.coords?.lat, longitude: ctx.coords?.lng, subKey: `${PROMO_PAGE_SURFACE}_${team.id}` });
   const hotels = resolveHotelLink({ team, venue: ctx.venue, surface: PROMO_PAGE_SURFACE, gameDate: multi ? null : primary.date || null });
 
@@ -437,34 +452,41 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
   // date; a series names it per date (ruling 2026-10-29).
   // A series row still to be played carries its own small "Tickets" link to
   // that date's event (team performer page when unmatched).
-  const gameLine = (date: string, row: { displayTime: string; displayOpponent: string; promoId: string; tnEventUrl?: string | null }, key: string, withOpponent: boolean) => {
+  const gameLine = (date: string, row: { displayTime: string; displayOpponent: string; promoId: string; tnEventUrl?: string | null; shEventUrl?: string | null }, key: string, withOpponent: boolean) => {
     // subId1 web_promo_date_{team}: the per-date link, told apart from the
     // primary CTA partner-side (the click event keeps surface web_promo_page).
     const rowTickets = tnAllowed && withOpponent && !removed && date >= today ? buildTicketNetworkLink({ team, surface: PROMO_DATE_SUBID_SURFACE, eventUrl: row.tnEventUrl ?? null, pageSlug: page.slug }) : null;
     // <time> with the zone offset, the venue zone's abbreviation after the
     // time (ruling 2026-11-08): the building's zone is the game's zone on
     // every date of a series.
+    // The test picks the per-date link the same way as the primary; a club
+    // TicketNetwork does not list has no per-date link unless StubHub has the
+    // date (it never had one before).
+    const testRow = ticketTest && withOpponent && !removed && date >= today ? pickTestTicketLink(ticketTest, { stubHubEventUrl: row.shEventUrl ?? null, ticketNetwork: rowTickets, ticketmaster: null }) : null;
+    const rowHref = ticketTest ? testRow?.href ?? null : rowTickets;
+    const rowPartner = testRow?.partner === 'stubhub' ? 'stubhub' : 'ticketnetwork';
     const when = gameTimeMarkup(date, row.displayTime, ctx.game?.timeZone);
     return (
       <li key={key} className="m-0 list-none text-[15px] leading-[1.45] text-rd-ink-soft">
         <strong className="text-rd-ink">
           <time dateTime={when.dateTime}>{`${formatLongDate(date)}${row.displayTime ? ` · ${row.displayTime}${when.zone ? ` ${when.zone}` : ''}` : ''}`}</time>
         </strong>
-        {rowTickets ? (
+        {rowHref ? (
           <>
             {' '}
             <TrackedAffiliateLink
-              href={rowTickets}
-              partner="ticketnetwork"
+              href={rowHref}
+              partner={rowPartner}
+              {...(ticketTest && testRow ? { ticketTest: ticketTestClickProps(ticketTest, testRow) } : {})}
               teamId={team.id}
               sport={team.league}
               promoId={row.promoId}
               surface={PROMO_PAGE_SURFACE}
               placement="promo_page_date"
-              ticketLinkLevel={ticketNetworkLinkLevel(row.tnEventUrl)}
+              ticketLinkLevel={rowPartner === 'stubhub' ? 'event' : ticketNetworkLinkLevel(row.tnEventUrl)}
               target="_blank"
               rel="noopener noreferrer sponsored"
-              ariaLabel={ticketAriaLabel(`for ${formatLongDate(date)}${row.displayOpponent ? ` vs ${row.displayOpponent}` : ''}`, 'TicketNetwork')}
+              ariaLabel={ticketAriaLabel(`for ${formatLongDate(date)}${row.displayOpponent ? ` vs ${row.displayOpponent}` : ''}`, rowPartner === 'stubhub' ? 'StubHub' : 'TicketNetwork')}
               className="ml-1 font-rd text-[13px] font-semibold text-rd-link no-underline hover:underline"
             >
               {TICKET_CTA_LABEL}
@@ -686,6 +708,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
                 surface={PROMO_PAGE_SURFACE}
                 placement="promo_page_primary"
                 ticketLinkLevel={ticketsLevel}
+                {...(ticketTest && testPrimary ? { ticketTest: ticketTestClickProps(ticketTest, testPrimary) } : {})}
                 target="_blank"
                 rel="noopener noreferrer sponsored"
                 ariaLabel={ticketAriaLabel(`for ${teamName}${(ticketsLevel === 'event' || !multi) && primary.displayOpponent ? ` vs ${primary.displayOpponent}` : ''}`, ticketsBrand)}
@@ -696,7 +719,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
               <PromoShareRowButton {...shareProps} />
             </div>
             {/* One line under a TicketNetwork primary; none when the link is Ticketmaster's. */}
-            {ticketNetwork ? <ResaleNote tone="light" className="text-center" /> : null}
+            {ticketTest ? <TicketTestNote tone="light" className="text-center" /> : ticketNetwork ? <ResaleNote tone="light" className="text-center" /> : null}
             {packagePage ? (
               <div data-package-disclosure="" className="flex flex-col gap-1">
                 <p className="m-0 font-rd text-[14px] leading-[1.45] text-rd-ink-soft">{PACKAGE_CTA_DISCLOSURE}</p>
@@ -707,7 +730,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
                 ) : null}
               </div>
             ) : null}
-            {ticketNetwork ? (
+            {ticketNetwork && !ticketTest ? (
               <TrackedAffiliateLink
                 href={ticketmaster}
                 partner="ticketmaster"
@@ -1069,7 +1092,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
         ) : null}
 
         {/* The TicketNetwork sentence only while the page carries the link: not once played, not when removed. */}
-        <AffiliateDisclosure className="mt-6" resale={!!ticketNetwork && !past && !removed} />
+        <AffiliateDisclosure className="mt-6" resale={!ticketTest && !!ticketNetwork && !past && !removed} />
       </article>
     </>
   );

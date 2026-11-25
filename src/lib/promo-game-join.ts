@@ -39,6 +39,7 @@ import type { Game, Promo, PromoWithTeam, Team } from './types';
 import type { GameContext } from './data';
 import { formatGameTime } from './format-game-time';
 import { isTicketNetworkEventUrl } from './affiliates';
+import { isStubHubEventUrl } from './ticket-test-link';
 
 export interface ResolvedGame {
   /** "7:10 PM" in venue time, or '' when the join cannot state one. */
@@ -130,6 +131,31 @@ export function gameEventLinkUrl(
   if (!today || !isTicketNetworkEventUrl(game.tnEventUrl)) return null;
   if (game.date < today || game.status !== 'scheduled' || game.doubleheaderGame) return null;
   return game.tnEventUrl;
+}
+
+/** The StubHub event link a single-game surface may render for this game, or
+ *  null: the same rule as gameEventLinkUrl (upcoming, still scheduled, never
+ *  one game of a doubleheader). */
+export function gameStubHubLinkUrl(
+  game: Pick<Game, 'date' | 'status' | 'doubleheaderGame' | 'shEventUrl'>,
+  today: string | null | undefined,
+): string | null {
+  if (!today || !isStubHubEventUrl(game.shEventUrl)) return null;
+  if (game.date < today || game.status !== 'scheduled' || game.doubleheaderGame) return null;
+  return game.shEventUrl;
+}
+
+/** The StubHub event page of the home game behind a promo (Game.shEventUrl),
+ *  or null: the same one-live-home-game rule as resolveTnEventUrl. */
+export function resolveShEventUrl(
+  promo: { date: string; team: Pick<Team, 'id' | 'sportSlug'> },
+  index: GameIndex,
+): string | null {
+  const games = (index.get(gameIndexKey(promo.team.sportSlug, promo.date, promo.team.id)) ?? []).filter(
+    (g) => g.status !== 'postponed' && g.status !== 'canceled',
+  );
+  if (games.length !== 1 || games[0].status === 'completed') return null;
+  return isStubHubEventUrl(games[0].shEventUrl) ? games[0].shEventUrl : null;
 }
 
 /** The TicketNetwork event page of the home game behind a promo
