@@ -46,6 +46,10 @@ interface CalendarGridProps {
    * no analytics are lost. Only the prerendering changes.
    */
   homeOnlyPrerender?: boolean;
+  /** YYYY-MM-DD. When given, the grid opens on that day's month instead of
+   *  today's: a page naming next season early would otherwise open on an
+   *  empty current month. Absent on every other page. */
+  openOn?: string;
   /**
    * Today as YYYY-MM-DD, computed ONCE by the page's server render and passed
    * down. NOT read from the clock here, and that is the whole point.
@@ -100,6 +104,7 @@ export function CalendarGrid({
   gameContexts,
   activeCategory = 'all',
   homeOnlyPrerender = false,
+  openOn,
   today: todayKey,
 }: CalendarGridProps) {
   // Parsed once from the prop. No clock read in render, see the prop's doc.
@@ -183,7 +188,10 @@ export function CalendarGrid({
     return set;
   }, [promos, gameContexts]);
 
-  const [view, setView] = useState({ year: today.year, month: today.month });
+  const [view, setView] = useState(() => {
+    const open = openOn ? parseYMD(openOn) : null;
+    return open ? { year: open.year, month: open.month } : { year: today.year, month: today.month };
+  });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const viewedMonthHasContent = monthsWithContent.has(monthKey(view.year, view.month));

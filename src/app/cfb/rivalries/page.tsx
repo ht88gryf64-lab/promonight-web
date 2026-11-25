@@ -51,7 +51,7 @@ function gamesLabel(n: number): string {
 // unchanged — this pass must be invisible to the three-way count check.
 function RivalryRow({ r, variant, today }: { r: RivalryIndexRow; variant: 'week' | 'list'; today: string }) {
   const week = variant === 'week';
-  const played = matchupPlayed(r.date, today);
+  const played = !r.canceled && matchupPlayed(r.date, today);
   // matchup is built by joining exactly two school names with ' vs '
   // (matchups.ts), so this split only restyles; textContent is unchanged.
   const [schoolA, schoolB] = r.matchup.split(' vs ');

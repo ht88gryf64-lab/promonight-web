@@ -21,11 +21,18 @@ const CANONICAL = 'https://www.getpromonight.com/venues';
 // NO SEASON IS NAMED HERE (2026-11 fix round). The page said "for the 2026
 // season" over buildings whose NBA and NHL tenants are playing 2026-27, and
 // one year cannot be true of an index that spans every league's calendar.
-// The claim that is true of all of them is that each guide is verified.
+// NO "VERIFIED" EITHER (2026-11-25). The stored `verified` flag is read here
+// as a boolean and checks nothing by itself; the pipeline's current rule for
+// setting it (a bag link, a bag answer and parking, each confirmed on the
+// operator's own page) is met by 43 of the 203 listed buildings, the rest
+// carrying the flag from earlier seed passes. One word cannot claim that for
+// all of them, so the page says what the listing rule in code does check
+// (venueHubIsIndexable): coordinates and at least two of bag policy, parking
+// and transit.
 // Retitled off "Bag Policies" so the head term consolidates on the child
 // aggregator (/venues/bag-policies) instead of splitting relevance with it.
 const TITLE = 'Stadium Guides: Parking & Gameday Rules';
-const DESCRIPTION = `Bag policies, parking, gate times, and transit for MLB, NFL, MLS, WNBA, NBA, NHL, and college football stadiums and arenas, one verified guide per building.`;
+const DESCRIPTION = `Bag policies, parking, gate times, and transit for MLB, NFL, MLS, WNBA, NBA, NHL, and college football stadiums and arenas, one guide per building.`;
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -45,9 +52,11 @@ export default async function VenuesIndexPage() {
           STADIUM &amp; ARENA GUIDES
         </h1>
         <p className="mt-4 max-w-2xl font-rd text-[15px] leading-relaxed text-rd-ink-soft">
-          {entries.length} verified gameday guides: bag
-          policies, parking, gate times, and transit, one page per building. Pick
-          a venue for the full rundown, or jump to its league below.
+          {entries.length} gameday guides: bag
+          policies, parking, gate times, and transit, one page per building. A
+          building is listed here once its guide covers at least two of bag
+          policy, parking and transit. Pick a venue for the full rundown, or
+          jump to its league below.
         </p>
         {/* The bag-policy aggregator: the namespace's comparison layer over the
             per-building guides. Prominent by design (aggregator plan Build 2). */}

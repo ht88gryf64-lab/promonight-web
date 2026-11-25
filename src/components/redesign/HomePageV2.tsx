@@ -3,6 +3,7 @@ import { IconArrowRight } from '@tabler/icons-react';
 import type { PromoWithTeam, Team } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 import type { HeroBuckets } from '@/components/tonight-strip';
+import { tonightLede } from '@/components/tonight-strip';
 import type { VenueUtilityCounts } from '@/lib/venue-hub';
 
 import { archivoHouse } from './fonts-house';
@@ -124,7 +125,7 @@ export function HomePageV2({
       eyebrow="Happening now"
       dotColor="var(--color-rd-red)"
       heading="Tonight"
-      lede={`${tonight.length} promo${tonight.length === 1 ? '' : 's'} at games starting today.`}
+      lede={tonightLede(tonight.length, heroBuckets.tonightTotal ?? tonight.length)}
       seeAllHref="/promos/today"
       seeAllLabel="All tonight's promos"
       items={tonight.map((p) => ({ promo: p, contexts: contextsFor(p) }))}

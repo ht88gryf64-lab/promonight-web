@@ -10,6 +10,8 @@ export interface RivalryIndexRow {
   name: string;
   /** YYYY-MM-DD of the 2026 meeting, or null when the rivalry is dormant. */
   date: string | null;
+  /** The game was canceled: never tagged "Played", whatever its date. Absent reads as not canceled. */
+  canceled?: boolean;
   matchup: string;
   /** Stadium the 2026 game is played in (campus via the home school, venueHubs
    *  for a neutral site). Plain text on the index, never a link, so it carries

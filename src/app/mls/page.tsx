@@ -191,6 +191,11 @@ export default async function MlsHubPage() {
           sectionId="mls-browse-team"
           surface="web_mls_hub_team_card"
           collection="mls_hub"
+          // On a hub naming next season early, the cards of the clubs that
+          // have published say so; the rest keep the default line.
+          {...(hubSeason.early
+            ? { subtitleByTeamId: Object.fromEntries(hubSeason.publishedTeamIds.map((id) => [id, `${hubSeason.label} promotions published`])) }
+            : {})}
           intro={hubSeason.early ? 'All 30 MLS clubs by conference. Open any club for its promotional schedule.' : `All 30 MLS clubs by conference. Open any club for its full ${YEAR} promotional schedule.`}
           selectorLabel="Filter teams by conference"
           allLabel="All clubs"

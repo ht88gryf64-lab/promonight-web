@@ -258,6 +258,10 @@ export function RedesignTeamPage({
         promoCounts={upcomingCounts}
         seasonScoped={!!seasonScope}
         homeOnlyPrerender={scopeLive}
+        // Next season named early: open the calendar on the first upcoming promo's month.
+        {...(claim.labelDay && upcomingPromos.length > 0
+          ? { openOn: upcomingPromos.map((p) => p.date).sort()[0] }
+          : {})}
         teamName={displayName}
         teamSlug={team.id}
         sport={team.league}

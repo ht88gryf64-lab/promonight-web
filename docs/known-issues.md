@@ -4490,15 +4490,21 @@ One line each.
 - **Monster Jam stop past state.** Covered by a render test on a fixture; the first live case is Anaheim on Dec 19 and 20, 2026.
 - **Head and body gate the early label differently.** The head computes the label day for every league; the body only where the season scope is live. They agree today (every scope gate is open) and would differ if a gate were closed again.
 - **Postseason rows and the early label.** Rows flagged `isPostseason` are dropped before the team rule reads them, so a club still in a postseason whose only other upcoming rows are next season's would name next season.
-- **Rivalry index day.** The index tags "Played" on the site's Eastern day; the rivalry page flips on the venue's day, so a Pacific game can be tagged up to three hours before its page changes. A canceled game is not treated as played on its page, but the index row carries no status and would still be tagged.
+- **Rivalry index day.** The index tags "Played" on the site's Eastern day; the rivalry page flips on the venue's day, so a Pacific game can be tagged up to three hours before its page changes.
 - **Events hub lag.** /events/monster-jam revalidates daily and stop pages hourly, so the hub can keep "2026-27" for up to a day after the last December show.
-- **Flipped team page has no rendered test.** The early-season tests read source and pure helpers; the served checks at the gate are the only rendered evidence.
 - **MLS home games constant.** `HOME_GAMES_BY_LEAGUE` says 17 for MLS, which will be wrong for the 2027 Sprint Season; the ratio sentence is suppressed on an early page and must be checked before MLS 2027 opens.
-- **Hub does not say which clubs have published.** /mlb leads with 2027 and "8 of 30 clubs" but the team cards are unmarked; a card for a club with nothing published lands on a finished 2026 page (ux-review 2026-11-25, D3).
-- **Calendar on an early page opens on the current month.** On a flipped team page the month grid opens on an empty November 2026 and takes four taps to reach March 2027 (D4).
 - **Early page repeats its counts and mixes certainty.** With nothing completed, sentences read "11 giveaway nights, 11 still to come", and the three question blocks and one FAQ still read as season totals beside "announced so far" (D5, D6).
 - **"Still to come" label spacing on an early page.** The label sits flush against the hero's bottom edge at 390 and 768 (D8).
 - **Division rivals intro says "this season"** on a page naming next season (D9).
 - **Past promos count mismatch.** The team page says "All 114 past promos" and the archive page says "102 promotions already played" (D10, on production too).
 - **Played rivalry page has no result** and says played three times in the first screen; the sibling list on a rivalry page shows a played game with no mark (D11, D12).
 - **Hub FAQ names a this-week rail** that does not exist in the offseason (D14, on production too).
+
+## 130. Deferred from feature/counts-and-cta (logged 2026-11-25)
+
+One line each.
+
+- **"Verified" elsewhere.** /venues no longer says "verified" (43 of the 203 listed buildings meet the pipeline's current verification rule; the rest carry the flag from earlier seed passes). /about still says "the buildings we have verified", and per-venue pages and descriptions still use the word.
+- **Homepage venue total moved.** The hero's "Venue guides" stat and the `venue_count` analytics property now count the 203 listed buildings, not the 213 flagged ones; dashboards reading `venue_count` will see the step.
+- **Today tile and /promos/today.** The tile now prints the Tonight rail's pool, which includes postseason rows; the /promos/today board it links to builds its own list and can differ when postseason rows exist.
+- **Hub card mark is text only.** On a hub naming next season early, a published club's card reads "2027 promotions published"; the selector cannot filter to those clubs.

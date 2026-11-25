@@ -14,7 +14,7 @@ import type { VenueUtilityCounts } from '@/lib/venue-hub';
 // the league-agnostic constraint. Links are plain; event names come at wiring.
 
 const CARDS: Array<{
-  key: keyof Omit<VenueUtilityCounts, 'verifiedTotal'>;
+  key: keyof Omit<VenueUtilityCounts, 'guideTotal'>;
   label: string;
   blurb: string;
   Icon: typeof IconParking;
@@ -50,7 +50,7 @@ export function GamedayUtilityGrid({ counts }: { counts: VenueUtilityCounts }) {
           trackProps={{
             surface: 'web_home',
             card: 'all_venues',
-            venue_count: counts.verifiedTotal,
+            venue_count: counts.guideTotal,
             destination_url: '/venues',
           }}
           className="inline-flex items-center gap-1.5 pb-1 font-mono text-xs font-semibold uppercase tracking-[0.06em] text-rd-red-dark transition-colors hover:text-rd-red"
