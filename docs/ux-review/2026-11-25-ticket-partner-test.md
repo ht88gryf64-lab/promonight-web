@@ -321,3 +321,25 @@ Nothing on these pages needs the site's vocabulary to read. The only thing that 
 ## 8. One recommendation
 
 Settle defect 1 before the test starts: decide whether the Red Wings sidebar card is a team-level control or a next-game control, and make its label and both arms agree, because as built the StubHub arm's sidebar tap lands on a single game while the TicketNetwork arm's lands on the team's listings, and the test would be comparing two different destinations as well as two partners. While that is open, read one production build's served HTML for the two promo pages to close defect 2.
+
+
+## 9. Dispositions (added by the build session, 2026-11-25)
+
+Every defect above is fixed, deferred with a known-issues entry, or waived with its reason.
+
+| # | Disposition | Reason |
+|---|---|---|
+| 1 | Deferred, known-issues 134, and raised at Gate 3 for a ruling | The sidebar card belongs to no game. On a StubHub day it links the team's next home game with a matched StubHub event, because the test stores event pages only and has no StubHub team page; on a TicketNetwork day it links the team performer page as before. The two arms land on different kinds of page from the same control. The owner decides before the test starts. |
+| 2 | Settled, no change needed | Checked on a production build with the switch on and the same simulated date: the Red Wings promo page and the Wild promo page carry 0 `shEventUrl` and 0 `tnEventUrl` keys, the Red Wings page has no ticketnetwork.com URL and the Wild page has no stubhub.com URL. The fields seen on the dev server were React debug rows, which a production build does not ship. |
+| 3 | Waived | The sentence is the owner's ruled copy (Gate 0 ruling 4), the same on both arms. One line longer than the line it replaces; nothing collides or clips. |
+| 4 | Waived | Same ruled sentence. "These links" under one link reads slightly off; recorded for the owner in known-issues 134. |
+| 5 | Not a defect | The branch dev server was started without `EVENTS_PAGES_LIVE`, so the Events links were absent on it. Unrelated to this change. |
+| 6 | Deferred, known-issues 134 | On production too. With one card instead of two, the floating video player covers the only above-the-fold ticket control at 1280. |
+| 7 | Waived | On production too (1 of 2 runs); the slot that fills is an ad slot above the module, not part of this change. |
+| 8 | Deferred, known-issues 134 | On production too. The compact TicketNetwork card is 43px tall and is now the only ticket control in the dialog and calendar panels of a TicketNetwork-day page. |
+| 9 | Waived | On production too; none of the findings is on the new card. |
+
+Checked after the review, on production builds served locally:
+
+- **Switch off equals main.** The branch built with the switch off and main built the same way, 15 pages (six team pages, /promos/today, two league hubs, /best-promos, /my-teams, a venue hub, two promo pages, the homepage): the rendered HTML is identical on all 15, and the flight payload differs only by one more JavaScript chunk reference in the module import rows. No new key, no new element.
+- **Switch on.** Multi-team pages (/promos/today, /nhl, /best-promos) and a club outside the test (Twins) carry no StubHub link and no test line. Test team pages carry one partner's links only. No config string (seed, pairs, click counts) is in any client chunk.

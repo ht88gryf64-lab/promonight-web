@@ -4563,3 +4563,18 @@ One line each.
 - **"In 2026" on a 2026-27 page.** The Canadiens team page's FAQ answer reads "The most anticipated Canadiens giveaway in 2026 is..." on a page titled 2026-27. Not checked yet: whether every NHL and NBA team page (the two-calendar-year leagues) carries the same single year in its FAQ answers.
 - **Promo page share text, not clicked.** That the share control is handed the display title ("Kraken Bobblehead") was confirmed in source and by test, not by clicking Share in a browser.
 
+## 134. Deferred from feature/stubhub-test (logged 2026-11-25)
+
+One line each. The ticket partner test (StubHub vs TicketNetwork) is behind `NEXT_PUBLIC_TICKET_TEST`, default off; none of these exists while the switch is off.
+
+- **The team-level card lands on different kinds of page per arm.** A test team's sidebar card (and a promo card with no game) links the team's next home game with a matched StubHub event on a StubHub day, and the TicketNetwork team performer page on a TicketNetwork day. The test stores StubHub event pages only. Needs the owner's ruling before the test starts (ux-review 2026-11-25-ticket-partner-test, defect 1).
+- **"These links" under one link.** The ruled line under the button says "these links"; most groups hold one link.
+- **The floating video player covers the single ticket card at 1280.** On production it covers part of a two-card stack; a test team's page has one card, so it is the only above-the-fold ticket control.
+- **The compact TicketNetwork card is 43px tall.** On a TicketNetwork-day test page it is the only ticket control in the row dialog and the calendar panels (the StubHub card is 45px).
+- **A game played today keeps its ticket link until the 00:15 Eastern refresh.** Same rule as the TicketNetwork event link on main (date on or after the site day, status scheduled); on a StubHub day the team-level card can point at a game that has just ended.
+- **eBay listings with item prices can sit on a StubHub-day promo page.** They are merchandise prices, not ticket prices; whether StubHub's terms reach them is a reading of the agreement.
+- **Apps and the email digest are outside the test.** The apps build ticket links from compiled constants and need a release to follow an arm; the digest renders no ticket link while `TICKETNETWORK_EMAIL_APPROVED` is unset.
+- **Six neutral-site games and NFL flex games without a confirmed StubHub date** have no `shEventUrl`; on a StubHub day they fall back to the TicketNetwork link (`fallback: true` on the click).
+- **StubHub `event_state` is not read by the pipeline matcher.** 40 written links carry state 4 or 6; the meaning of the states is not documented in the provider contract.
+- **No test covers the keep or drop of `shEventUrl` in `enrichGamesForTeam` or the `in_test` payload at the click.** Both are covered by served-HTML checks and by the card and promo page tests, not by a unit test of their own.
+
