@@ -212,8 +212,8 @@ test('the pages take these answers from the module and carry no second copy', ()
   assert.match(bobble, /SMALL_CAP_ANSWER,/);
   assert.doesNotMatch(bobble, /player likeness|miss the sponsor signal|capped at 10,000 covers/);
   // The bobblehead page covers three leagues; it no longer says those are all the leagues scored.
-  assert.doesNotMatch(bobble, /the three leagues we score/);
-  assert.match(bobble, /none of the three leagues this page covers/);
+  assert.doesNotMatch(bobble, /the three leagues we score|the three leagues this page covers/);
+  assert.match(bobble, /no league we score has a bobblehead giveaway still to come in its current season/);
 });
 
 test('isBestPromoRow: a scored giveaway at the floor or above, and never a theme night', () => {

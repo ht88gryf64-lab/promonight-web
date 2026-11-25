@@ -249,9 +249,60 @@ export function renderedKickoff(game: MatchupPage['game'], venueZone: string | n
   return `${game.kickoff.time}${tz}`;
 }
 
+// ── the matchup page's heading and <title> ─────────────────────────────────
+//
+// A trophy name alone is not what anyone searches: "Paul Bunyan's Axe 2026"
+// named neither school (2026-11-25 audit, item 9). When the display name does
+// not already read "A vs B", the heading leads with the pairing:
+//   "Minnesota vs Wisconsin: Paul Bunyan's Axe 2026"
+// A display name that already is the pairing ("Florida vs Georgia") is left
+// as it was. The H1 prints the same string (RivalryMatchupPage).
+//
+// NO DATE AND NO NETWORK IN THE TITLE. They would have to come from the
+// verified game fields (the gate the JSON-LD and the description use,
+// renderedKickoff), and the description already carries them under that gate;
+// in the title they do not fit the 60 characters beside both schools.
+
+/** The whole rendered <title>, brand included, stays within this. */
+export const MATCHUP_TITLE_MAX = 60;
+
+/** Whether a display name already names the pairing. */
+const namesThePairing = (displayName: string): boolean => /\bvs\.?\b/i.test(displayName);
+
+/** "Minnesota vs Wisconsin: Paul Bunyan's Axe 2026", or "Florida vs Georgia 2026". */
+export function matchupHeading(displayName: string, schoolA: string, schoolB: string, season: string): string {
+  if (namesThePairing(displayName)) return `${displayName} ${season}`;
+  return `${schoolA} vs ${schoolB}: ${displayName} ${season}`;
+}
+
+/**
+ * The rendered <title> (emitted with title.absolute, so the root layout's
+ * "%s | PromoNight" template does not apply). The first candidate within
+ * MATCHUP_TITLE_MAX wins: the heading with the brand, the heading alone, the
+ * heading without its season, then the pairing and season without the name.
+ * If none fits, the last one stands; nothing is cut mid-word.
+ */
+export function matchupTitle(displayName: string, schoolA: string, schoolB: string, season: string): string {
+  const heading = matchupHeading(displayName, schoolA, schoolB, season);
+  const candidates = namesThePairing(displayName)
+    ? [`${heading}${BRAND_SUFFIX}`, heading, displayName]
+    : [`${heading}${BRAND_SUFFIX}`, heading, `${schoolA} vs ${schoolB}: ${displayName}`, `${schoolA} vs ${schoolB} ${season}`];
+  return candidates.find((c) => c.length <= MATCHUP_TITLE_MAX) ?? candidates[candidates.length - 1];
+}
+
+/** Both sides' names as the page prints them: the tracked school's name, else
+ *  a readable form of its id, so the pairing never renders as a gap. */
+export function matchupSchoolNames(data: MatchupPage): [string, string] {
+  const [a, b] = data.schools;
+  const [aId, bId] = data.rivalry.schoolIds;
+  return [a?.name ?? prettySchoolId(aId), b?.name ?? prettySchoolId(bId)];
+}
+
 export function buildCfbMatchupMetadata(data: MatchupPage): Metadata {
   // displayName, never rivalry.name, so title, H1 and description agree.
-  const title = `${data.displayName} ${cfbSeasonLabel()}`;
+  const [nameA, nameB] = matchupSchoolNames(data);
+  const heading = matchupHeading(data.displayName, nameA, nameB, cfbSeasonLabel());
+  const title = matchupTitle(data.displayName, nameA, nameB, cfbSeasonLabel());
   const [a, b] = data.schools;
   const [aId, bId] = data.rivalry.schoolIds;
 
@@ -267,10 +318,10 @@ export function buildCfbMatchupMetadata(data: MatchupPage): Metadata {
     venueCity: data.resolvedVenue?.city ?? null,
   });
 
-  const socialTitle = `${title} | PromoNight`;
+  const socialTitle = `${heading}${BRAND_SUFFIX}`;
   const url = `${BASE}/cfb/rivalries/${data.slug}`;
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: { canonical: url },
     openGraph: { title: socialTitle, description, siteName: 'PromoNight', url, type: 'website', images: [OG_IMAGE] },

@@ -1302,9 +1302,9 @@ export async function getTeamsWithPromoCounts(): Promise<(Team & { promoCount: n
 // /best-promos, /best-promos/bobbleheads, and /team-rankings discovery pages.
 // All three readers filter to SCORED_LEAGUES (MLB / MLS / WNBA) by default, so
 // a caller that says nothing never sees NBA / NHL rows. The one caller that
-// wants them (/best-promos in upcoming mode) passes PROMO_SCORED_LEAGUES as
-// `leagues`; the social feed, /best-promos/bobbleheads and the retrospective
-// read do not.
+// wants them (the upcoming list of /best-promos and of /best-promos/bobbleheads,
+// src/lib/seasons/ranked-rows.ts) passes PROMO_SCORED_LEAGUES as `leagues`;
+// the social feed and both retrospective reads do not.
 
 // Internal helper. Walks the collectionGroup once, returns enriched promos.
 // `dateRange` is inclusive on both ends. `itemTypeFilter`, when set, filters
@@ -1455,8 +1455,9 @@ export async function getScoredPromosByItemType(
   itemType: string,
   limit: number = 500,
   eligible?: SeasonEligible,
+  leagues?: ReadonlySet<string>,
 ): Promise<ScoredPromoWithTeam[]> {
-  const all = await fetchScoredPromos(startDate, endDate, itemType, eligible);
+  const all = await fetchScoredPromos(startDate, endDate, itemType, eligible, leagues);
   return all.slice(0, limit);
 }
 
@@ -1711,8 +1712,10 @@ function hubTodayYMD(): string {
 // league in memory (promo docs carry no league field; league lives on the parent
 // team), the same shape fetchScoredPromos uses. Every hub league runs a daily
 // cadence, so this is a rolling window, not a fixed weekly slate.
-// getPromosInDateRange already dedupes to one promo per team, the right density
-// for a cross-team rail. Wrapped in cache() and keyed on `league`, so the page
+// getPromosInDateRange dedupes exact (team, date, title) repeats ONLY, so a
+// team with three promos in the window is three rows here, not one. The hub
+// rail groups them into one card per team (src/lib/hub-rail.ts); the stat bar
+// counts distinct teams. Wrapped in cache() and keyed on `league`, so the page
 // and getLeagueHubStats share one query per request for the same league.
 export const getLeagueSlate = cache(async (league: string): Promise<PromoWithTeam[]> => {
   const today = hubTodayYMD();

@@ -4423,9 +4423,9 @@ The Tomorrow section's cards render at `opacity-70` (TodayPromoCard `dimmed`) so
 
 At 21:31 ET on 2026-11-22, six hours after the Hawks-Pistons 3:30 PM tip, `/nba/atlanta-hawks/promos/kids-game` still treated the Nov 22 game as to come, on production and the branch alike: the date tile read "TONIGHT", "Next game" listed Pistons on Nov 22, the Nov 22 row kept its Tickets link, the primary "Get tickets" went to that game's TicketNetwork listing, and "Stream on Fubo" went through the hop to fubo.tv for it. The page's played state (ruling 2026-11-08, Branch A) starts only when the date is before the site's today, so the whole evening after a day game is covered. Fubo for a game in progress is right; tickets after the final whistle are not. A fix needs the start time plus a game-length allowance per league (or the spine's completed status where a league writes it; NHL docs never do, see entry 119), and the page's ISR window bounds how soon any change shows. Report: `docs/ux-review/2026-11-22-feature-fubo-subid-parity.md`.
 
-## 126. /best-promos/bobbleheads has no score floor or minimum row count (logged 2026-11-25, feature/best-promos-stopgap, deferred)
+## 126. /best-promos/bobbleheads has no score floor or minimum row count (logged 2026-11-25, feature/best-promos-stopgap, deferred; updated in feature/discovery-links)
 
-`/best-promos` now lists upcoming rows only when 10 or more giveaways score 65 or above (`RANKED_MIN_UPCOMING_ROWS` in `src/lib/seasons/ranked-rows.ts`, `BEST_PROMO_SCORE_FLOOR` in `src/lib/scoring-weights.ts`). `/best-promos/bobbleheads` reads through the same loader and was left as it was by ruling: any one forward bobblehead row still takes it out of the retrospective, and a bobblehead row typed `theme` (45 points) can be listed. Its retrospective capsule also still says nothing is upcoming, which stays true only under that one-row rule. Decide a threshold for it (bobblehead counts are far smaller than the main list's) when the NBA and NHL scoring branch lands.
+`/best-promos` lists upcoming rows only when 10 or more giveaways score 65 or above (`RANKED_MIN_UPCOMING_ROWS` in `src/lib/seasons/ranked-rows.ts`, `BEST_PROMO_SCORE_FLOOR` in `src/lib/scoring-weights.ts`). `/best-promos/bobbleheads` reads through the same loader. Since `feature/discovery-links` its upcoming list draws on the five promo-scored leagues and holds giveaways only, with the shared label rule and league copy. Two things were left as they were by ruling: any one forward bobblehead giveaway takes it out of the retrospective, and it has no score floor. Its retrospective is the ended MLB, MLS and WNBA season or nothing.
 
 ## 127. Deferred from the 2026-11 fix round, scoring branches (logged 2026-11-25)
 
@@ -4452,8 +4452,20 @@ One line each. None blocks the release; each needs its own change or ruling.
 - **Jersey and signed false positives that remain.** Still typed jersey: "Jersey Mike's", "Jersey City", "Jersey Shore", "jersey retirement", "jersey no. 30". Still typed premium: "re-signed", "co-signed", "newly signed free agent". Fixes 1 to 3 covered only the named cases.
 - **Unflagged package twin.** Nashville, 2027-02-18: "Billy Strings Bobblehead" (95, "Ticket package includes a guaranteed Billy Strings bobblehead") is not flagged `ticketPackageRequired` and lists beside "Music City Billy Strings Bobblehead" (98).
 - **Copy between the web deploy and the score write.** For that interval `/team-rankings` says NBA and NHL promos are scored while their rows carry no score yet. The final-gate sequence keeps the interval short.
-- **Rail card titles (ux-review D1).** The ticket-stub card clamps its title at three lines of 27px type. "Evgeni Malkin Talking Bobblehead" renders as "Evgeni Malkin Talking..." and "Cutter Gauthier Bobblehead Giveaway" is cut mid-word. The card is shared with the Tonight rail; a smaller size for long titles needs its own ux pass.
+- **Rail card titles (ux-review D1).** FIXED in `feature/discovery-links`: a long title steps down in size until it fits (`src/lib/stub-title.ts`), so "Evgeni Malkin Talking Bobblehead" and "Cutter Gauthier Bobblehead Giveaway" print whole.
 - **Rail at 1280 (ux-review D5).** With eight cards the rail overflows at 1280 with no arrows and no scrollbar; wheel and keyboard scroll work. The Tonight rail has the same build.
 - **NBA game times (ux-review D7).** The NBA rows on the rail show a date and no game time; their promo pages have none either.
 - **Empty league chips (ux-review D8).** On `/best-promos` the MLB, MLS and WNBA chips return no rows while those leagues have nothing ahead, and the empty state suggests a wider date range even at "Rest of season".
 - **Team coverage.** NBA and NHL clubs with no scored rows on 2026-11-25: Knicks, Thunder, Utah (NHL). Withheld clubs are `active:false` in the pipeline's `team-configs/nba.js` and `team-configs/nhl.js`. If NBA and NHL teams are ever ranked, a club with no rows is listed as not ranked, never last.
+
+## 128. Deferred from feature/discovery-links (logged 2026-11-25)
+
+One line each.
+
+- **Venue hub sources map.** The `t-mobile-park` venueHubs doc has 2 of its 15 `sources` keys written as URLs (the Mariners ballpark guide and disability-access guide), so a field lookup can never match them. The reader logs `[venue-hub] sources map is partially inverted` on every read.
+- **Hub rail team link.** On the league hubs' this-week cards the promo titles fire `this_week_card_tap`; the team name is a plain link and fires nothing, where the whole card used to count as one tap.
+- **Legacy nav.** The gate-off dark nav (`src/components/nav.tsx`) has no Events link; the footer still carries one there.
+- **Rivalry registry count.** The registry holds 32 matchup pages; the 33rd URL of the family is the index, whose title was already set from stored game days.
+- **Rivalry title, date and network.** The title carries neither. Both would come from the verified game fields, and neither fits 60 characters beside two school names; the description carries the verified date and kickoff.
+- **Hub rail, later days.** A team with promos on several days that week gets one card for its soonest day and a link reading "N more promo days this week" to its team page; the later days' promos are not listed on the hub.
+

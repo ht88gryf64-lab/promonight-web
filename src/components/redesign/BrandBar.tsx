@@ -3,6 +3,8 @@ import { Button } from '@/components/redesign/Button';
 import { WorldCupNavLink } from '@/components/world-cup/nav-link';
 import { BrandBarLeagueHubs } from './BrandBarLeagueHubs';
 import { BrandBarMobileMenu } from './BrandBarMobileMenu';
+import { EventPageLink } from '@/components/events/EventPageLink';
+import { eventPageHref } from '@/lib/events/event-pages';
 
 // Redesign v2 top bar. Replaces the global dark nav on gated team pages with a
 // light, sticky, translucent cream bar carrying the PromoNight wordmark, a
@@ -37,6 +39,14 @@ export function BrandBar({ playoffsActive = false, worldCupActive = false }: Bra
     ...(playoffsActive ? [{ label: 'Playoffs', href: '/playoffs' }] : []),
   ];
 
+  // EVENTS IN THE TOP NAV (2026-11 fix round): the events index was reachable
+  // only from the footer's Discover column. The link comes from the one
+  // helper every link into /events goes through, with its own surface
+  // (nav_events), so it is absent while EVENTS_PAGES_LIVE is off and its
+  // clicks stay separable from the footer's. Resolved HERE, on the server:
+  // the flag is not a public env var, so the client menu is handed the href.
+  const eventsLink = eventPageHref({ kind: 'index' }, 'nav_events');
+
   // Opaque cream (ruling 2026-11-08, ux-review D1): at 85% the dark body
   // showed through, because div.rd-root is display: contents and paints
   // nothing behind the header, and the wordmark measured 3.12:1 against
@@ -60,6 +70,11 @@ export function BrandBar({ playoffsActive = false, worldCupActive = false }: Bra
                 {link.label}
               </Link>
             ))}
+            {eventsLink ? (
+              <EventPageLink href={eventsLink.href} linkSurface={eventsLink.surface} className={LINK_CLASS}>
+                Events
+              </EventPageLink>
+            ) : null}
             {worldCupActive && <WorldCupNavLink className={WC_LINK_CLASS} />}
             <Link href="/about" className={LINK_CLASS}>
               About
@@ -80,7 +95,7 @@ export function BrandBar({ playoffsActive = false, worldCupActive = false }: Bra
           </div>
 
           {/* Mobile hamburger + fullscreen nav sheet (md:hidden). */}
-          <BrandBarMobileMenu playoffsActive={playoffsActive} worldCupActive={worldCupActive} />
+          <BrandBarMobileMenu playoffsActive={playoffsActive} worldCupActive={worldCupActive} eventsHref={eventsLink?.href ?? null} />
         </div>
       </nav>
     </header>

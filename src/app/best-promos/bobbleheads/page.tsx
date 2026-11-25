@@ -11,7 +11,7 @@ import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-t
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { addDaysYmd, siteYmd } from '@/lib/site-today';
-import { loadRankedRows } from '@/lib/seasons/ranked-rows';
+import { loadRankedRows, rankedLeaguesText } from '@/lib/seasons/ranked-rows';
 import { NINETY_EIGHT_VS_HUNDRED_ANSWER, SMALL_CAP_ANSWER } from '@/lib/scoring-weights';
 import { LEAD_IN_DAYS } from '@/lib/seasons/season-window';
 
@@ -40,14 +40,15 @@ function addDaysYMD(base: Date, days: number): string {
 // the rows on the page carry (loadRankedRows, src/lib/seasons/ranked-rows.ts),
 // read from the same cached fetch as the page body.
 export async function generateMetadata(): Promise<Metadata> {
-  const { label } = await loadRankedRows('bobblehead');
+  const { label, retrospective } = await loadRankedRows('bobblehead');
+  const leagues = rankedLeaguesText(retrospective);
   return {
     title: `Best Bobblehead Nights of ${label}: Ranked by Score`,
-    description: `Bobblehead giveaways across MLB, MLS, and WNBA in ${label}, ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. MLB rescored weekly; WNBA and MLS in season.`,
+    description: `Bobblehead giveaways across ${leagues} in ${label}, ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. Rescored with each league's weekly scan.`,
     alternates: { canonical: PAGE_URL },
     openGraph: {
       title: `Best Bobblehead Nights of ${label}`,
-      description: `Bobblehead giveaways across MLB, MLS, and WNBA in ${label}, ranked by score. MLB rescored weekly; WNBA and MLS in season.`,
+      description: `Bobblehead giveaways across ${leagues} in ${label}, ranked by score. Rescored with each league's weekly scan.`,
       url: PAGE_URL,
       type: 'website',
       images: [
@@ -122,6 +123,7 @@ export default async function BobbleheadsPage() {
   // loader generateMetadata also reads (src/lib/seasons/ranked-rows.ts).
   const { promos, retrospective, label, todayYMD } = await loadRankedRows('bobblehead');
   const teamScores = await getAllTeamScores();
+  const leaguesText = rankedLeaguesText(retrospective);
 
   // The ItemList mirrors the browser's server-rendered default view
   // (90-day window, first 50 cards): the schema declares exactly the
@@ -135,10 +137,15 @@ export default async function BobbleheadsPage() {
   );
   const locationsByTeamId = await getSchemaLocationsForTeams(uniqueTeams);
 
-  const latestComputedAt = teamScores.reduce((acc, t) => {
+  // When the scores listed here were last computed: the latest scoredAt among
+  // the rows, as on /best-promos. NBA and NHL promos are scored with no
+  // teamScores document, so the team stamp is only the fallback.
+  const latestRowScoredAt = promos.reduce((acc, p) => (p.scoredAt && p.scoredAt > acc ? p.scoredAt : acc), '');
+  const latestTeamComputedAt = teamScores.reduce((acc, t) => {
     if (!t.computedAt) return acc;
     return !acc || t.computedAt > acc ? t.computedAt : acc;
   }, '');
+  const latestComputedAt = latestRowScoredAt || latestTeamComputedAt;
   // Real stamp only: no render-clock fallback (docs/known-issues.md entry 17).
   // Null hides the visible Last-updated line rather than asserting today.
   const lastUpdatedDisplay = latestComputedAt
@@ -170,12 +177,12 @@ export default async function BobbleheadsPage() {
   const jsonLdLastUpdated = rankedContentDate || latestComputedAt;
 
   const jsonLdDescription = retrospective
-    ? `Bobblehead giveaways of the ${label} season across MLB, MLS, and WNBA, ranked by score.`
-    : `Bobblehead giveaways across MLB, MLS, and WNBA in ${label}, ranked by score.`;
+    ? `Bobblehead giveaways of the ${label} season across ${leaguesText}, ranked by score.`
+    : `Bobblehead giveaways across ${leaguesText} in ${label}, ranked by score.`;
   const stampLine = retrospective
-    ? `${label} season · no ranked MLB, MLS or WNBA bobbleheads ahead${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} bobbleheads ranked`
+    ? `${label} season · no ranked bobbleheads ahead${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} bobbleheads ranked`
     : null;
-  const capsuleRetro = `These are the ${promos.length} top-scored bobblehead giveaways of the ${label} season across MLB, MLS, and WNBA. Nothing here is upcoming: none of the three leagues this page covers has a ranked bobblehead still to come this season, so this is the year ranked rather than a list of what is on next. MLB clubs run the majority of bobblehead programs. Each listed event is scored on attendance cap, item value, sponsor presence, and highlight tier. Upcoming bobbleheads return here from ${LEAD_IN_DAYS} days before each league's Opening Day, as clubs announce them.`;
+  const capsuleRetro = `These are the ${promos.length} top-scored bobblehead giveaways of the ${label} season across ${leaguesText}. Nothing here is upcoming: no league we score has a bobblehead giveaway still to come in its current season, so this is the year ranked rather than a list of what is on next. MLB clubs run the majority of bobblehead programs. Each listed event is scored on attendance cap, item value, sponsor presence, and highlight tier. Upcoming bobbleheads return here from ${LEAD_IN_DAYS} days before each league's Opening Day, as clubs announce them.`;
 
   if (isRedesignEnabled()) {
     return (
@@ -209,7 +216,7 @@ export default async function BobbleheadsPage() {
           <div className="mx-auto max-w-4xl px-6 pb-20 pt-10">
             <p className="rounded-2xl border border-rd-line bg-rd-card p-5 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
               {retrospective ? capsuleRetro : (
-                <>The {promos.length} top-scored bobblehead giveaways of {label} are ranked below across MLB, MLS, and WNBA. MLB clubs run the majority of bobblehead programs. Each listed event is scored on attendance cap, item value, sponsor presence, and highlight tier.</>
+                <>The {promos.length} top-scored bobblehead giveaways of {label} are ranked below across {leaguesText}. Each listed event is scored on attendance cap, item value, sponsor presence, and highlight tier.</>
               )}
             </p>
 
@@ -279,8 +286,7 @@ export default async function BobbleheadsPage() {
           <p className="mt-5 text-text-secondary text-base leading-relaxed max-w-3xl">
             {retrospective ? capsuleRetro : (
               <>The {promos.length} top-scored bobblehead giveaways of {label} are
-              ranked below across MLB, MLS, and WNBA. MLB clubs run the
-              majority of bobblehead programs. Every listed event is scored
+              ranked below across {leaguesText}. Every listed event is scored
               on attendance cap, item value, sponsor presence, and highlight
               tier.</>
             )}

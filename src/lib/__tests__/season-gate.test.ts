@@ -315,13 +315,15 @@ test('scored NHL rows: only a caller that names the promo-scored leagues reads t
   assert.ok(!titles(await getScoredPromosInDateRange('2026-11-05', end, 300, gate)).includes('Dylan Larkin Bobblehead'));
   assert.ok(!titles(await getScoredPromosInDateRange('2026-11-05', end, 300)).includes('Dylan Larkin Bobblehead'));
   assert.deepEqual(titles(await getScoredPromosInDateRange('2026-11-05', end, 300, gate, SCORED_LEAGUES)), ['Camo Beanie', 'Galaxy Scarf']);
-  // The bobblehead reader takes no league argument at all.
+  // The bobblehead reader, called without a league set (its retrospective read).
   assert.ok(!titles(await getScoredPromosByItemType('2026-11-05', end, 'generic', 300, gate)).includes('Dylan Larkin Bobblehead'));
   assert.equal((await getTopPromosPerTeam('2026-11-05', gate)).has('detroit-red-wings'), false, 'the team-rankings tease stays on the team-score leagues');
   // /best-promos in upcoming mode names the wider set: the NHL row leads, and
   // its ticket-package twin (score 99) is left out although it carries a score.
   const wide = titles(await getScoredPromosInDateRange('2026-11-05', end, 300, gate, PROMO_SCORED_LEAGUES));
   assert.deepEqual(wide, ['Dylan Larkin Bobblehead', 'Camo Beanie', 'Galaxy Scarf']);
+  // The bobblehead page's upcoming read names the same set and gets the same NHL row, never the package.
+  assert.deepEqual(titles(await getScoredPromosByItemType('2026-11-05', end, 'generic', 300, gate, PROMO_SCORED_LEAGUES)), ['Dylan Larkin Bobblehead', 'Camo Beanie', 'Galaxy Scarf']);
 });
 
 test('homepage best rail: the gated readers feed it, and this four-row corpus is under its ten-row minimum', async () => {
@@ -345,7 +347,7 @@ test('the four ranked call sites pass the season gate', () => {
   // point 4), and the loader is what passes the gate.
   const loader = src('lib/seasons/ranked-rows.ts');
   assert.match(loader, /getScoredPromosInDateRange\(todayYMD, endYMD, Number\.MAX_SAFE_INTEGER, gate, PROMO_SCORED_LEAGUES\)/);
-  assert.match(loader, /getScoredPromosByItemType\(todayYMD, endYMD, itemType, BOBBLEHEAD_FETCH_CAP, gate\)/);
+  assert.match(loader, /getScoredPromosByItemType\(todayYMD, endYMD, itemType, Number\.MAX_SAFE_INTEGER, gate, PROMO_SCORED_LEAGUES\)/);
   assert.match(loader, /const gate = await getCurrentSeasonPredicate\(now\);/);
   assert.match(src('app/best-promos/page.tsx'), /await loadRankedRows\(null\)/);
   assert.match(src('app/best-promos/bobbleheads/page.tsx'), /await loadRankedRows\('bobblehead'\)/);

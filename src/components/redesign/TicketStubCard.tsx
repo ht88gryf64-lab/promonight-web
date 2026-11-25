@@ -1,5 +1,6 @@
 'use client';
 
+import { stubTitleTier } from '@/lib/stub-title';
 import type { MouseEvent } from 'react';
 import { IconFlame, IconTicket } from '@tabler/icons-react';
 import type { PromoType, PromoWithTeam } from '@/lib/types';
@@ -151,8 +152,12 @@ export function TicketStubCard({
             (the compiled-CSS bug), so the size decision waits for real
             Archivo metrics after the font fix lands. min-height equals the
             clamp ceiling (3 lines x 27px leading-none = 81px) so the
-            reservation and the clamp agree. */}
-        <p className="line-clamp-3 min-h-[81px] font-rd text-[27px] font-bold leading-none tracking-[0.004em] text-rd-ink transition-colors group-hover:text-rd-red">
+            reservation and the clamp agree.
+
+            A LONG title steps down in size until it fits (stubTitleTier,
+            src/lib/stub-title.ts): 27px is the default and every title that
+            fit it is unchanged; the block stays 81px tall at every size. */}
+        <p className={`${stubTitleTier(promo.title).className} min-h-[81px] font-rd font-bold tracking-[0.004em] text-rd-ink transition-colors group-hover:text-rd-red`}>
           {promo.title}
         </p>
 

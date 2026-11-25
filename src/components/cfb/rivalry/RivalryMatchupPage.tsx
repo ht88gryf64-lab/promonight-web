@@ -99,6 +99,10 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
   const aFallback = prettyId(aId);
   const bFallback = prettyId(bId);
 
+  // Same rule as matchupHeading (src/lib/cfb/metadata.ts): a display name that
+  // already reads "A vs B" is the whole heading.
+  const pairingInName = /\bvs\.?\b/i.test(data.displayName);
+
   const date = game?.date ? formatDayMonth(game.date) : null;
   // "Kickoff TBA" verbatim, no embellishment. renderedKickoff is the ONE gate
   // (announced AND verified), shared with the meta description, the lede and
@@ -208,20 +212,48 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
             cfbRivalries.name holds the trophy or historical name, which is not
             always what anyone searches. The trophy block below still shows
             rivalry.trophy, so nothing is lost. Condensed all-caps is styling
-            only; the H1 STRING is unchanged. */}
-        <h1
-          className="mt-3 font-extrabold uppercase leading-[0.98] tracking-[0.01em]"
-          style={{ fontFamily: CONDENSED, fontSize: 'clamp(34px, 8vw, 48px)' }}
-        >
-          {data.displayName} {Number(cfbSeasonLabel())}
-        </h1>
+            only.
 
-        {/* 3. matchup line */}
-        <p className="mt-2 text-lg font-semibold">
-          <SchoolName school={a} fallback={aFallback} />
-          <span className="px-2 text-white/40">vs</span>
-          <SchoolName school={b} fallback={bFallback} />
-        </p>
+            THE H1 STRING IS THE TITLE'S HEADING (src/lib/cfb/metadata.ts
+            matchupHeading): "Minnesota vs Wisconsin: Paul Bunyan's Axe 2026".
+            When the display name is not itself the pairing, the matchup line
+            is PART of the H1 and comes first in the document; column-reverse
+            keeps it where it always sat on screen, under the name. A display
+            name that already reads "A vs B" keeps the H1 it had, and the
+            matchup line stays a paragraph beneath it. */}
+        {pairingInName ? (
+          <>
+            <h1
+              className="mt-3 font-extrabold uppercase leading-[0.98] tracking-[0.01em]"
+              style={{ fontFamily: CONDENSED, fontSize: 'clamp(34px, 8vw, 48px)' }}
+            >
+              {data.displayName} {Number(cfbSeasonLabel())}
+            </h1>
+
+            {/* 3. matchup line */}
+            <p className="mt-2 text-lg font-semibold">
+              <SchoolName school={a} fallback={aFallback} />
+              <span className="px-2 text-white/40">vs</span>
+              <SchoolName school={b} fallback={bFallback} />
+            </p>
+          </>
+        ) : (
+          <h1 className="mt-3 flex flex-col-reverse">
+            {/* 3. matchup line, first in the H1's text, second on screen */}
+            <span className="mt-2 block text-lg font-semibold" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+              <SchoolName school={a} fallback={aFallback} />
+              <span className="px-1 text-white/40"> vs </span>
+              <SchoolName school={b} fallback={bFallback} />
+              <span className="sr-only">: </span>
+            </span>
+            <span
+              className="block font-extrabold uppercase leading-[0.98] tracking-[0.01em]"
+              style={{ fontFamily: CONDENSED, fontSize: 'clamp(34px, 8vw, 48px)' }}
+            >
+              {data.displayName} {Number(cfbSeasonLabel())}
+            </span>
+          </h1>
+        )}
 
         {/* 3b. lede: the hand-written matchup description, surfaced as body
             copy (identical string to the meta description by construction). */}

@@ -1,6 +1,8 @@
 import type { PromoWithTeam } from '@/lib/types';
 import { categoryForPromo } from '@/components/redesign/categories';
-import { teamDisplayName, synthPromoId, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
+import { teamDisplayName, synthPromoId, promoAnchorId, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
+import { promoPageHref } from '@/lib/promo-page-href';
+import { buildHubRail, hubRailCountLine } from '@/lib/hub-rail';
 import { normalizeSport, type AnalyticsSurface } from '@/lib/analytics';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
 import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
@@ -8,11 +10,6 @@ import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure
 import { IconFlame, IconArrowRight } from '@tabler/icons-react';
 import { siteTodayYmd } from '@/lib/site-today';
 import { ticketNetworkForGame } from '@/lib/affiliates';
-
-// Cap the rail so it stays a focused lead-in. getMlbSlate is already one promo
-// per team, date-sorted, so this is the soonest teams. Exhaustive, crawlable
-// team coverage lives in the division grid below.
-const RAIL_LIMIT = 8;
 
 
 function daysBetween(a: string, b: string): number {
@@ -53,22 +50,29 @@ export function HubThisWeek({
   // The site's day, the same one getLeagueSlate's window starts on, so days_out
   // on the tap event agrees with the slate bounds.
   const today = siteTodayYmd();
-  const items = slate.slice(0, RAIL_LIMIT);
+  // One card per team (its soonest promo day), up to eight teams; see
+  // src/lib/hub-rail.ts. The count line appears only when the rail is cut,
+  // and counts the same slate the stat bar's "teams with a promo this week" does.
+  const rail = buildHubRail(slate);
+  const countLine = hubRailCountLine(rail);
 
-  const byDate = new Map<string, PromoWithTeam[]>();
-  for (const p of items) {
-    const list = byDate.get(p.date) ?? [];
-    list.push(p);
-    byDate.set(p.date, list);
+  const byDate = new Map<string, typeof rail.cards>();
+  for (const card of rail.cards) {
+    const list = byDate.get(card.date) ?? [];
+    list.push(card);
+    byDate.set(card.date, list);
   }
   const groups = Array.from(byDate.entries()).sort(([a], [b]) => a.localeCompare(b));
 
   return (
     <section aria-labelledby={sectionId} data-ad-item="hub-section">
       <div className="flex items-end justify-between gap-4">
-        <h2 id={sectionId} className="rd-display text-2xl text-rd-ink md:text-3xl">
-          {heading}
-        </h2>
+        <div>
+          <h2 id={sectionId} className="rd-display text-2xl text-rd-ink md:text-3xl">
+            {heading}
+          </h2>
+          {countLine ? <p className="mt-1 font-rd text-[13px] text-rd-ink-soft">{countLine}</p> : null}
+        </div>
         <a
           href="/promos/this-week"
           className="inline-flex shrink-0 items-center gap-1 font-rd text-sm font-semibold text-rd-red hover:underline"
@@ -85,61 +89,80 @@ export function HubThisWeek({
               {formatDayLabel(date)}
             </h3>
             <div className="mt-3 grid gap-4 md:grid-cols-2">
-              {list.map((p) => {
-                const cat = categoryForPromo(p);
-                const name = teamDisplayName(p.team);
+              {list.map((card) => {
+                const team = card.team;
+                const name = teamDisplayName(team);
+                const first = card.promos[0];
+                const opponent = promoDisplayOpponent(first);
+                const teamHref = `/${team.sportSlug}/${team.id}`;
                 return (
                   <div
-                    key={p.team.id}
+                    key={`${team.id}-${card.date}`}
                     className="overflow-hidden rounded-2xl border border-rd-line bg-rd-card"
-                    style={{ borderTopColor: p.team.primaryColor, borderTopWidth: 3 }}
+                    style={{ borderTopColor: team.primaryColor, borderTopWidth: 3 }}
                   >
-                    <TrackedTapLink
-                      href={`/${p.team.sportSlug}/${p.team.id}`}
-                      trackEvent="this_week_card_tap"
-                      trackProps={{
-                        surface,
-                        team_id: p.team.id,
-                        sport: normalizeSport(p.team.league),
-                        promo_id: synthPromoId(p.team.id, p),
-                        promo_type: p.type,
-                        is_highlight: p.highlight,
-                        days_out: daysBetween(today, p.date),
-                      }}
-                      className="group block p-5"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-rd text-[11px] font-semibold"
-                          style={{ backgroundColor: `${cat.color}1a`, color: cat.ink }}
-                        >
-                          <cat.Icon size={12} stroke={2.25} />
-                          {cat.label}
-                        </span>
-                        {p.highlight && (
-                          <span className="inline-flex items-center gap-1 font-rd text-[10px] font-bold uppercase tracking-wide text-rd-red">
-                            <IconFlame size={12} stroke={2.25} />
-                            Hot
-                          </span>
-                        )}
+                    <div className="p-5">
+                      {/* The team line keeps the team link; each promo below links
+                          to its own page (or, without one, its row on the team page). */}
+                      <div className="font-rd text-[13px] text-rd-ink-soft">
+                        <a href={teamHref} className="font-semibold text-rd-ink hover:text-rd-red hover:underline">
+                          {name}
+                        </a>
+                        {opponent ? <span className="text-rd-ink-faint"> vs {opponent}</span> : null}
                       </div>
-                      <div className="mt-2 font-rd font-semibold text-rd-ink transition-colors group-hover:text-rd-red">
-                        {p.title}
-                      </div>
-                      <div className="mt-0.5 font-rd text-[13px] text-rd-ink-soft">
-                        {name}
-                        {promoDisplayOpponent(p) ? (
-                          <span className="text-rd-ink-faint"> vs {promoDisplayOpponent(p)}</span>
-                        ) : null}
-                      </div>
-                    </TrackedTapLink>
+                      <ul className="mt-3 space-y-3">
+                        {card.promos.map((p) => {
+                          const cat = categoryForPromo(p);
+                          return (
+                            <li key={`${p.date}-${p.title}`}>
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-rd text-[11px] font-semibold"
+                                  style={{ backgroundColor: `${cat.color}1a`, color: cat.ink }}
+                                >
+                                  <cat.Icon size={12} stroke={2.25} />
+                                  {cat.label}
+                                </span>
+                                {p.highlight && (
+                                  <span className="inline-flex items-center gap-1 font-rd text-[10px] font-bold uppercase tracking-wide text-rd-red">
+                                    <IconFlame size={12} stroke={2.25} />
+                                    Hot
+                                  </span>
+                                )}
+                              </div>
+                              <TrackedTapLink
+                                href={promoPageHref(p) ?? `${teamHref}#promo-${promoAnchorId(p)}`}
+                                trackEvent="this_week_card_tap"
+                                trackProps={{
+                                  surface,
+                                  team_id: team.id,
+                                  sport: normalizeSport(team.league),
+                                  promo_id: synthPromoId(team.id, p),
+                                  promo_type: p.type,
+                                  is_highlight: p.highlight,
+                                  days_out: daysBetween(today, p.date),
+                                }}
+                                className="mt-1.5 inline-block min-h-[24px] font-rd font-semibold text-rd-ink transition-colors hover:text-rd-red hover:underline"
+                              >
+                                {p.title}
+                              </TrackedTapLink>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      {card.moreDays > 0 && (
+                        <a href={teamHref} className="mt-3 inline-block font-rd text-[13px] font-semibold text-rd-red hover:underline">
+                          {card.moreDays === 1 ? '1 more promo day this week' : `${card.moreDays} more promo days this week`}
+                        </a>
+                      )}
+                    </div>
                     <div className="border-t border-rd-line px-5 py-4">
                       <TicketsBlock
-                        team={p.team}
+                        team={team}
                         surface={surface}
                         placement="promo_card"
-                        promoId={`${p.team.id}:${p.date}:${p.title}`}
-                        ticketNetwork={ticketNetworkForGame(null, p.team)}
+                        promoId={`${team.id}:${first.date}:${first.title}`}
+                        ticketNetwork={ticketNetworkForGame(null, team)}
                         variant="card"
                       />
                     </div>

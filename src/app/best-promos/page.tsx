@@ -9,10 +9,9 @@ import { BestPromosBrowser } from '@/components/scoring/best-promos-browser';
 import { ScoredJsonLd } from '@/components/scoring/scored-jsonld';
 import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-tracker';
 import { isRedesignEnabled } from '@/lib/redesign';
-import { PROMO_SCORED_LEAGUE_LIST } from '@/lib/types';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { addDaysYmd, siteYmd } from '@/lib/site-today';
-import { loadRankedRows, RANKED_LEAGUES, RANKED_MIN_UPCOMING_ROWS } from '@/lib/seasons/ranked-rows';
+import { loadRankedRows, rankedLeaguesText, RANKED_MIN_UPCOMING_ROWS } from '@/lib/seasons/ranked-rows';
 import { LEAD_IN_DAYS } from '@/lib/seasons/season-window';
 import { BEST_PROMO_SCORE_FLOOR, ITEM_WEIGHTS_ANSWER, PERFECT_SCORE_ANSWER, PERFECT_SCORE_SHORT_ANSWER, RANKED_LEAGUES_ANSWER, SCORE_COMPONENTS_ANSWER } from '@/lib/scoring-weights';
 
@@ -43,15 +42,6 @@ function addDaysYMD(base: Date, days: number): string {
 // generateMetadata, not a static object: the year in the title is the one
 // the rows on the page carry (loadRankedRows, src/lib/seasons/ranked-rows.ts),
 // read from the same cached fetch as the page body.
-// The leagues a mode's list draws on, as copy: the upcoming list ranks every
-// league whose promos are scored (PROMO_SCORED_LEAGUE_LIST), the retrospective
-// the three with a finished season on file (RANKED_LEAGUES). One helper, so
-// the head, the capsules and the JSON-LD cannot name different sets.
-function rankedLeaguesText(retrospective: boolean): string {
-  const list: readonly string[] = retrospective ? RANKED_LEAGUES : PROMO_SCORED_LEAGUE_LIST;
-  return `${list.slice(0, -1).join(', ')}, and ${list[list.length - 1]}`;
-}
-
 export async function generateMetadata(): Promise<Metadata> {
   const { label, retrospective } = await loadRankedRows(null);
   const leagues = rankedLeaguesText(retrospective);
@@ -110,7 +100,7 @@ const FAQS = [
   {
     question: 'Can I see only bobblehead nights?',
     answer:
-      `Yes. Visit /best-promos/bobbleheads for a ranking of bobblehead nights only, across MLB, MLS, and WNBA, with its own ranked list.`,
+      'Yes. Visit /best-promos/bobbleheads for a ranking of bobblehead nights only, across the same leagues, with its own ranked list.',
   },
 ];
 
