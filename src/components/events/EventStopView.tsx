@@ -9,6 +9,8 @@ import { buildEventTicketLink, buildSpotHeroUrl, eventSubId, eventTicketVendor }
 import { cityState, displayVenueName, spotHeroCovers, type TenantTeamLink, type VenueHub } from '@/lib/venue-hub';
 import { parkingLotsModel, transitRowModel } from '@/components/venue-hub/venue-logistics';
 import type { EventFloor, EventStopSummary } from '@/lib/events/event-stops';
+import { TICKETNETWORK_CTA_LABEL, ticketNetworkAriaLabel } from '@/lib/ticket-labels';
+import { ResaleNote } from '@/components/affiliates/AffiliateDisclosure';
 import {
   EVENTS_INDEX_PATH,
   EVENTS_NOT_AFFILIATED,
@@ -189,6 +191,9 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
   const head = eventStopHead(stop, hub, now);
   const { show, venueName, tl, upcoming, bag, pitParty, gateTimes, transit } = head;
   const provider = eventTicketVendor();
+  // A resale marketplace is labelled as one (src/lib/ticket-labels.ts). Any
+  // other provider keeps the neutral "Tickets" until it has its own label there.
+  const resale = provider === 'ticketnetwork';
   const hubHref = eventHubPath(stop.show);
   const venueHref = `/venues/${hub.slug}`;
   const place = cityState(hub);
@@ -276,6 +281,8 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
           {!stop.tombstoned && upcoming.length ? (
             <section aria-label="Showtimes and tickets" className="mt-[18px] flex flex-col gap-2.5">
               <H2>Pick your show</H2>
+              {/* Every ticket button below leads to TicketNetwork: one line says what that is. */}
+              {resale && upcoming.some((p) => ticketUrlFor(p)) ? <ResaleNote /> : null}
               {tl.upcoming.map((g) => (
                 <div key={g.visit.visitId} className="flex flex-col gap-2.5" data-visit={g.visit.visitId}>
                   {tl.upcoming.length > 1 ? (
@@ -309,10 +316,10 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
                                 eventContext={{ ...eventContext, performanceKey: p.key, provider: provider ?? undefined }}
                                 target="_blank"
                                 rel="noopener noreferrer sponsored"
-                                ariaLabel={`Tickets for ${show.name} at ${venueName}, ${formatShortDay(p.date)} at ${formatClock(p.startTime)}`}
-                                className="flex h-12 shrink-0 items-center justify-center rounded-xl bg-rd-red px-5 font-rd text-[16px] font-semibold text-white no-underline hover:brightness-95"
+                                ariaLabel={resale ? ticketNetworkAriaLabel(`for ${show.name} at ${venueName}, ${formatShortDay(p.date)} at ${formatClock(p.startTime)}`) : `Tickets for ${show.name} at ${venueName}, ${formatShortDay(p.date)} at ${formatClock(p.startTime)}`}
+                                className="flex h-12 shrink-0 items-center justify-center rounded-xl bg-rd-red px-4 font-rd text-[15px] font-semibold whitespace-nowrap text-white no-underline hover:brightness-95"
                               >
-                                Tickets
+                                {resale ? TICKETNETWORK_CTA_LABEL : 'Tickets'}
                               </TrackedAffiliateLink>
                             </ShowtimeGate>
                           ) : (

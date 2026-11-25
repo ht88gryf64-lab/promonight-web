@@ -15,6 +15,7 @@ import { barlowCondensed } from '@/components/cfb/rivalry/fonts';
 import { Spine, spineVars, CONDENSED } from '@/components/cfb/rivalry/spine';
 import type { Team, Venue } from '@/lib/types';
 import { cfbSeasonLabel } from '@/lib/cfb/season';
+import { TICKETNETWORK_CTA_LABEL, TICKETNETWORK_RESALE_NOTE } from '@/lib/ticket-labels';
 
 const PAGE_BG = '#08070d';
 
@@ -24,7 +25,8 @@ const PAGE_BG = '#08070d';
 // games sell out", "Rooms near campus go early") were generalities no field
 // backs, and a claim either derives from data or it comes out.
 const STEP_COPY: Record<TripStepKey, { title: string; blurb?: string; cta: string }> = {
-  tickets: { title: 'Get in', cta: 'Find tickets' },
+  // TicketNetwork: labelled as resale, with the note as the step's line (src/lib/ticket-labels.ts).
+  tickets: { title: 'Get in', blurb: TICKETNETWORK_RESALE_NOTE, cta: TICKETNETWORK_CTA_LABEL },
   hotels: { title: 'Book a room', cta: 'Find hotels' },
   parking: { title: 'Park', blurb: 'Reserve ahead and walk in.', cta: 'Reserve parking' },
   gates: { title: 'Gates and bags', blurb: 'Bag rules, gate times and transit for this stadium.', cta: 'Gameday guide' },

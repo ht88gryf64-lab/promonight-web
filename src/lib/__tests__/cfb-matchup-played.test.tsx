@@ -83,7 +83,7 @@ test('rendered, PLAYED (Florida vs Georgia, 2026-10-31, read on 2026-11-25): the
     assert.equal((h.match(/data-matchup-played/g) ?? []).length, 1);
     assert.match(t, /Florida vs Georgia was played Saturday, October 31, 2026/);
     assert.doesNotMatch(t, /is Saturday, October 31/);
-    assert.doesNotMatch(t, /Plan the trip|Find tickets|Find hotels|Reserve parking/);
+    assert.doesNotMatch(t, /Plan the trip|Find tickets|Resale tickets|Find hotels|Reserve parking/);
     assert.doesNotMatch(h, /ticketnetwork|lusg\.net|spothero|expedia|hotels\.com/i, 'no affiliate destination anywhere in the markup');
     assert.doesNotMatch(t, /may earn a commission/i, 'no affiliate disclosure without affiliate links');
     assert.doesNotMatch(t, /Kickoff TBA|3:30 PM/);
@@ -105,7 +105,8 @@ test('rendered, UPCOMING (the same page read on 2026-10-20): the trip section an
     assert.doesNotMatch(t, /This game has been played/);
     assert.match(t, /Florida vs Georgia is Saturday, October 31, 2026/);
     assert.match(t, /Plan the trip/);
-    assert.match(t, /Find tickets/);
+    assert.match(t, /Resale tickets/);
+    assert.match(t, /TicketNetwork is a resale marketplace\. Prices may differ from face value\./);
     assert.match(h, /ticketnetwork/i);
     assert.match(t, /may earn a commission/i);
     assert.doesNotMatch(h, /data-matchup-stadium-guide/, 'upcoming: the guide is the trip section\'s own step');

@@ -46,6 +46,17 @@ function anchor(html: string, text: string): string {
   const open = html.lastIndexOf('<a ', at);
   return /href="([^"]+)"/.exec(html.slice(open, at))?.[1] as string;
 }
+/** Per-date ticket links: the small "Resale tickets" links beside a date (class ml-1 ... text-[13px]),
+ *  as opposed to the page's primary button, which reads the same words since 2026-11-25. */
+const perDateHrefs = (html: string): string[] =>
+  [...html.matchAll(/<a ([^>]*)>Resale tickets<\/a>/g)].filter((m) => m[1].includes('ml-1 font-rd text-[13px]')).map((m) => /href="([^"]+)"/.exec(m[1])![1]);
+/** The page's primary ticket button (the 52px one). Per-date links read the same words
+ *  and can come first in the document, so the label alone no longer finds it. */
+function primaryHref(html: string): string {
+  const m = [...html.matchAll(/<a ([^>]*)>Resale tickets<\/a>/g)].find((x) => x[1].includes('h-[52px]'));
+  assert.ok(m, 'a primary Resale tickets button');
+  return /href="([^"]+)"/.exec(m![1])![1];
+}
 const anchors = (html: string, text: string) => html.split(`>${text}</a>`).length - 1;
 const eventOffers = (html: string) => {
   const out: [string, string][] = [];
@@ -70,7 +81,7 @@ const ldClean = (html: string) => ![...html.matchAll(/<script type="application\
 
 test('matched single-date page: primary wraps the event, Ticketmaster is the secondary text link, offers.url is the page', () => {
   const html = render([row({ tnEventUrl: BRUINS })]);
-  assert.equal(anchor(html, 'Get tickets'), tn(BRUINS));
+  assert.equal(primaryHref(html), tn(BRUINS));
   assert.match(anchor(html, 'Also on Ticketmaster'), /ticketmaster\.com/);
   assert.equal(offersUrl(html), pageUrl(html));
   assert.match(pageUrl(html), /^https:\/\/www\.getpromonight\.com\//);
@@ -80,7 +91,7 @@ test('matched single-date page: primary wraps the event, Ticketmaster is the sec
 
 test('unmatched page: primary falls back to the team performer page', () => {
   const html = render([row({ tnEventUrl: null })]);
-  assert.equal(anchor(html, 'Get tickets'), tn(PERFORMER));
+  assert.equal(primaryHref(html), tn(PERFORMER));
   assert.equal(offersUrl(html), pageUrl(html));
   assert.ok(ldClean(html));
   assert.equal(anchors(html, 'Also on Ticketmaster'), 1);
@@ -94,8 +105,8 @@ test('series: primary is the next upcoming date; every upcoming date links its o
     row({ promoId: 'd', date: '2027-01-30', displayOpponent: 'Maple Leafs', tnEventUrl: null }),
   ];
   const html = render(rows);
-  assert.equal(anchor(html, 'Get tickets'), tn(BRUINS));
-  const perDate = [...html.matchAll(/<a [^>]*href="([^"]+)"[^>]*>Tickets<\/a>/g)].map((m) => m[1]);
+  assert.equal(primaryHref(html), tn(BRUINS));
+  const perDate = perDateHrefs(html);
   assert.deepEqual(perDate, [tnDate(BRUINS), tnDate(HAWKS), tnDate(PERFORMER)]);
   assert.ok(!html.includes(`<a href="${tnDate(EV(1, 'played'))}`));
   // Each upcoming date has an offer, and every offer's url is the page (the per-date links are the anchors above).
@@ -133,8 +144,8 @@ for (const [name, team, rows] of FIXTURES) {
       assert.equal(new URL(h).searchParams.get('subId3'), rows[0].pageSlug, h);
       assert.equal(new URL(h).searchParams.get('subId2'), null, h);
     }
-    assert.equal(new URL(anchor(html, 'Get tickets')).searchParams.get('subId1'), `web_promo_page_${team.id}`);
-    for (const m of html.matchAll(/<a [^>]*href="([^"]+)"[^>]*>Tickets<\/a>/g)) assert.equal(new URL(m[1]).searchParams.get('subId1'), `web_promo_date_${team.id}`);
+    assert.equal(new URL(primaryHref(html)).searchParams.get('subId1'), `web_promo_page_${team.id}`);
+    for (const h of perDateHrefs(html)) assert.equal(new URL(h).searchParams.get('subId1'), `web_promo_date_${team.id}`);
     // The Ticketmaster secondary link is still there, untouched.
     assert.match(anchor(html, 'Also on Ticketmaster'), /^https:\/\/www\.ticketmaster\.com\//);
     // Without the Impact wrap it is a bare link, so no subId3 (not an Impact link).
@@ -145,6 +156,7 @@ for (const [name, team, rows] of FIXTURES) {
 test('a page whose dates have all been played sells nothing (ruling 2026-11-08): no ticket anchor, no TicketNetwork href, no offers; the way forward is the team page', () => {
   const html = render([row({ date: '2026-10-20', tnEventUrl: EV(2, 'detroit-red-wings-vs-x-tickets-tue-oct-20-2026-little-caesars-arena') })], '2026-11-02');
   assert.equal(anchors(html, 'Get tickets'), 0);
+  assert.equal(anchors(html, 'Resale tickets'), 0);
   assert.equal(anchors(html, 'Also on Ticketmaster'), 0);
   assert.equal(anchors(html, 'Tickets'), 0);
   assert.ok(!html.includes(PREFIX), 'no TicketNetwork href anywhere, JSON-LD included');

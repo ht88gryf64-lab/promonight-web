@@ -4508,3 +4508,7 @@ One line each.
 - **Homepage venue total moved.** The hero's "Venue guides" stat and the `venue_count` analytics property now count the 203 listed buildings, not the 213 flagged ones; dashboards reading `venue_count` will see the step.
 - **Today tile and /promos/today.** The tile now prints the Tonight rail's pool, which includes postseason rows; the /promos/today board it links to builds its own list and can differ when postseason rows exist.
 - **Hub card mark is text only.** On a hub naming next season early, a published club's card reads "2027 promotions published"; the selector cannot filter to those clubs.
+- **Resale note repeats on the daily boards.** /promos/today prints the resale line under every card's ticket row, so a long board repeats it many times.
+- **Per-date links carry the label only.** On a promo page the small per-date "Resale tickets" links have no line of their own; the one note sits under the primary button.
+- **Two casings of the Ticketmaster label.** The card says "Get Tickets"; the promo page's Ticketmaster fallback button says "Get tickets".
+- **The app is not covered.** The Flutter app's TicketNetwork buttons are outside this repo and keep their labels.

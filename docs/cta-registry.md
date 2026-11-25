@@ -26,10 +26,10 @@ when retiring a CTA.
 | ticketmaster_get_tickets_promo_card | team_page | tickets_block_promo_card | ticketmaster Get Tickets → | ticketmaster.com (Impact wrap when env set) | affiliate_click | 2026-05-03 | active |
 | ticketmaster_get_tickets_playoffs_card | playoffs_hub | tickets_block_playoffs_card | ticketmaster Get Tickets → | ticketmaster.com (Impact wrap when env set) | affiliate_click | 2026-05-03 | active |
 | ticketmaster_get_tickets_game_modal | team_page | tickets_block_game_modal | ticketmaster Get Tickets → | ticketmaster.com (Impact wrap when env set) | affiliate_click | 2026-05-03 | active |
-| ticketnetwork_tickets_team_hero | team_page | tickets_block_hero | TicketNetwork logo → | ticketnetwork.com (Impact tracked) | affiliate_click | 2026-06-28 | active |
-| ticketnetwork_tickets_promo_card | team_page | tickets_block_promo_card | TicketNetwork logo → | ticketnetwork.com (Impact tracked) | affiliate_click | 2026-06-28 | active |
-| ticketnetwork_tickets_playoffs_card | playoffs_hub | tickets_block_playoffs_card | TicketNetwork logo → | ticketnetwork.com (Impact tracked) | affiliate_click | 2026-06-28 | active |
-| ticketnetwork_tickets_game_modal | team_page | tickets_block_game_modal | TicketNetwork logo → | ticketnetwork.com (Impact tracked) | affiliate_click | 2026-06-28 | active |
+| ticketnetwork_tickets_team_hero | team_page | tickets_block_hero | TicketNetwork logo, Resale tickets → (resale note under the button) | ticketnetwork.com (Impact tracked) | affiliate_click | 2026-06-28 | active |
+| ticketnetwork_tickets_promo_card | team_page | tickets_block_promo_card | TicketNetwork logo, Resale tickets → (resale note under the button) | ticketnetwork.com (Impact tracked) | affiliate_click | 2026-06-28 | active |
+| ticketnetwork_tickets_playoffs_card | playoffs_hub | tickets_block_playoffs_card | TicketNetwork logo, Resale tickets → (resale note under the button) | ticketnetwork.com (Impact tracked) | affiliate_click | 2026-06-28 | active |
+| ticketnetwork_tickets_game_modal | team_page | tickets_block_game_modal | TicketNetwork logo, Resale tickets → (resale note under the button) | ticketnetwork.com (Impact tracked) | affiliate_click | 2026-06-28 | active |
 | app_push_pitch_team | team_page | conversion_pairing_after_promo_list | Download for iOS / Get it on Google Play | /download (iOS) / Play Store | app_download_click | 2026-10-11 | deprecated (replaced by app_alert_card_team, app funnel G1) |
 | app_alert_card_team | team_page | inside_promo_list_after_upcoming_rows | Get the app | App Store on iOS, Play Store on Android, /download?src=team_cta_{teamId} elsewhere (src/lib/app-link.ts) | app_download_click (surface team_cta) | 2026-10-11 | active |
 | app_download_page_buttons | download | per_store_section | Download for iOS / Get it on Google Play | App Store / Play Store (src/lib/app-link.ts) | app_download_click (surface download) | 2026-10-11 | active |
@@ -43,7 +43,7 @@ when retiring a CTA.
 | promo_link_venue_week_card | venue_page | promos_this_week_card_overlay | (promo title, sr-only) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_venue) + venue_hub_promo_click | 2026-10-30 | active |
 | promo_link_best_promos_card | best_promos | scored_card | (card) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_best_promos / web_best_promos_bobbleheads) + scored_promo_card_tap | 2026-10-30 | active |
 | promo_link_team_package_row | team_page | ticket_packages_group_row_title (NBA and NHL only) | (promo title) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_team_page_promolist) | 2026-10-31 | active |
-| ticketnetwork_event_page_performance | event_stop | showtime_row (upcoming performances only, one per row) | Tickets | TicketNetwork event page of that performance, by id (https://www.ticketnetwork.com/tickets/{eventId} from eventStops performances providerEvents.ticketnetwork.eventId); no performer-page fallback: a row that is not on sale or has no id shows its status with no link | affiliate_click (surface web_event_page, placement event_page_performance, ticket_link_level event, show, venue_slug, performance_key, provider) | 2026-11-18 | built, behind EVENTS_PAGES_LIVE |
+| ticketnetwork_event_page_performance | event_stop | showtime_row (upcoming performances only, one per row) | Resale tickets (one resale note under "Pick your show") | TicketNetwork event page of that performance, by id (https://www.ticketnetwork.com/tickets/{eventId} from eventStops performances providerEvents.ticketnetwork.eventId); no performer-page fallback: a row that is not on sale or has no id shows its status with no link | affiliate_click (surface web_event_page, placement event_page_performance, ticket_link_level event, show, venue_slug, performance_key, provider) | 2026-11-18 | built, behind EVENTS_PAGES_LIVE |
 | spothero_event_page_parking_block | event_stop | before_you_go_parking_row (only while a performance is upcoming and SpotHero covers the city; the page's one parking button since the restyle of 2026-11-18) | Reserve parking | the same SpotHero link (aff_sub = web_event_page_{show}_{venueSlug}) | affiliate_click (surface web_event_page, placement event_page_parking_block, show, venue_slug) | 2026-11-18 | built, behind EVENTS_PAGES_LIVE |
 | event_link_parking_section | event_stop | before_you_go_parking_block | Parking on the {Venue} guide | /venues/{slug}#parking (the venue page's parking card; rendered only when that card exists) | event_link_click (link_surface event_to_venue) | 2026-11-18 | built, behind EVENTS_PAGES_LIVE |
 | event_link_transit_row | event_stop | before_you_go_transit_row | Transit on the {Venue} guide | /venues/{slug}#transit (the venue page's Transit row; rendered only when that row exists) | event_link_click (link_surface event_to_venue) | 2026-11-18 |
@@ -56,9 +56,9 @@ when retiring a CTA.
 | event_link_hub_list | events_index, event_hub, event_stop | stop rows, show cards, breadcrumb, More stops | (city and dates, or show name) | /events, /events/{show}, /events/{show}/{venue} | event_link_click (link_surface events_hub_list) | 2026-11-18 | built, behind EVENTS_PAGES_LIVE |
 | event_link_out | events_index, event_hub, event_stop | Also at {Venue}, venue guide links | {Venue} guide, {Team} promos | /venues/{slug}, /{sport}/{team} | event_link_click (link_surface event_to_venue or event_to_team) | 2026-11-18 | built, behind EVENTS_PAGES_LIVE |
 | app_remind_promo_page | promo_page | cta_row_secondary | Remind me | /download?src=promo_cta_{teamId}&promoId={promoId}&pageSlug={pageSlug}; on /download every App Store ct is pc (amended 2026-10-31, see App Store campaign tokens below) and Play utm_content is {teamId}_{promoId}_{pageSlug} (src/lib/app-link.ts) | web_app_cta_click (surface promo_cta) + app_download_click (surface promo_cta) | 2026-10-31 | active |
-| ticketnetwork_promo_page_primary | promo_page | cta_row_primary | Get tickets | TicketNetwork event page of the next date's game when the pipeline matched it (games.tnEventUrl), else the team performer page; Impact tracked, subId1 web_promo_page_{team} | affiliate_click (surface web_promo_page, placement promo_page_primary, ticket_link_level event / team) | 2026-11-02 | active |
+| ticketnetwork_promo_page_primary | promo_page | cta_row_primary | Resale tickets (resale note under the row; "Get tickets" when the link falls back to Ticketmaster) | TicketNetwork event page of the next date's game when the pipeline matched it (games.tnEventUrl), else the team performer page; Impact tracked, subId1 web_promo_page_{team} | affiliate_click (surface web_promo_page, placement promo_page_primary, ticket_link_level event / team) | 2026-11-02 | active |
 | ticketmaster_promo_page_secondary | promo_page | cta_row_primary_text_link | Also on Ticketmaster | ticketmaster.com team page (Impact wrap when env set) | affiliate_click (surface web_promo_page, placement promo_page_ticketmaster, ticket_link_level team) | 2026-11-02 | active |
-| ticketnetwork_promo_page_date | promo_page | series_date_row (upcoming dates only) | Tickets | TicketNetwork event page of that date's game when matched, else the team performer page; Impact tracked, subId1 web_promo_date_{team} | affiliate_click (surface web_promo_page, placement promo_page_date, ticket_link_level event / team) | 2026-11-02 | active |
+| ticketnetwork_promo_page_date | promo_page | series_date_row (upcoming dates only) | Resale tickets | TicketNetwork event page of that date's game when matched, else the team performer page; Impact tracked, subId1 web_promo_date_{team} | affiliate_click (surface web_promo_page, placement promo_page_date, ticket_link_level event / team) | 2026-11-02 | active |
 | share_promo_page_row | promo_page | cta_row_primary_right (same row as Get tickets, right of it) | Share (icon only below 340px) | navigator.share sheet where it exists, else a popover: Copy link, Text (sms:), Email (mailto:), X intent, Facebook sharer. Shared URL = canonical + utm_source=share, utm_medium={native,copy,sms,email,x,facebook}, utm_campaign=promo_page, s={8-char share id} | share_click (placement cta_row) + share_complete | 2026-11-03 | active |
 | share_promo_page_image | promo_page | promo_image_top_right_overlay | (share icon, aria-label "Share this promo") | same as share_promo_page_row | share_click (placement image) + share_complete | 2026-11-03 | active |
 | fubo_promo_page | promo_page | cta_row, directly under "Also on Ticketmaster" (under the primary when the club has no TicketNetwork); inside the CTA section, no new article child | Stream on Fubo + "Availability varies by market." | /go/fubo/{league}/{gameId}?s=web_promo_page&t={team} (307 to fubo.tv, see Fubo below) | affiliate_click (partner fubo, surface web_promo_page, placement promo_page_fubo) | 2026-11-20 | built, not merged |
@@ -187,7 +187,7 @@ other surface is byte-identical.
 |---|---|---|
 | subId1 (Ticketmaster: the wrap's `sharedid`) | `{surface}_{team}`, server-rendered | unchanged: `web_promo_page_{team}`, or `web_promo_date_{team}` on the per-date links |
 | subId2 | `share`, client-side, shared-link sessions only | unchanged; never in served HTML |
-| subId3 | the page slug, server-rendered | the primary "Get tickets", the per-date "Tickets" links, and the Ticketmaster wrap. Never in structured data: since 2026-11-18 every JSON-LD `offers.url` is the page's own URL and no affiliate or tracking URL appears in any structured data sitewide (appended to the wrap, never folded into `sharedid`) |
+| subId3 | the page slug, server-rendered | the primary ticket button, the per-date ticket links, and the Ticketmaster wrap. Never in structured data: since 2026-11-18 every JSON-LD `offers.url` is the page's own URL and no affiliate or tracking URL appears in any structured data sitewide (appended to the wrap, never folded into `sharedid`) |
 
 - **Ticketmaster.** Only the Impact wrap gets subId3. Without
   `NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP` the link is a bare ticketmaster.com
@@ -222,7 +222,7 @@ performer page; `ticket_link_level` on `affiliate_click` says which.
 |---|---|---|
 | web_event_page_{show}_{venueSlug} | web_event_page | Event stop page per-performance "Tickets". NOT in structured data: an event page's JSON-LD `offers.url` is the stop page URL, and no affiliate or tracking URL appears in it (ruling 2026-11-18); the same token rides SpotHero's aff_sub on the stop page's Parking button. A stop has no team, so the key is the show and the venue slug: partner-side sales report per stop, apart from team sales. Built by `eventSubId` (src/lib/affiliates.ts) |
 | web_event_hub_{show}_{venueSlug} | web_event_hub | Reserved for a ticket link on the show hub or the /events index. Neither page renders one today; the surface is registered so the day one does, it is attributed |
-| web_promo_page_{team} | web_promo_page | Promo page primary "Get tickets". Not in JSON-LD (its `offers.url` is the promo page URL since 2026-11-18) |
+| web_promo_page_{team} | web_promo_page | Promo page primary ticket button ("Resale tickets"). Not in JSON-LD (its `offers.url` is the promo page URL since 2026-11-18) |
 | web_promo_date_{team} | web_promo_date (sub ID only; the click reports web_promo_page) | Promo page per-date "Tickets" links on a series |
 | web_team_page_{team} | web_team_page | Team page tickets block and sidebar rail (AffiliateRail); team-page schedule game detail for home games (GameExpand, game-day-detail; event link when matched) |
 | web_away_game_{team}_at_{opponent} | (away-game token, `awayGameSubKey`) | Team-page schedule game detail for away games (event link when matched) |
@@ -261,6 +261,41 @@ in Play's `utm_content` and in PostHog (`app_download_click`,
 
 The `pt` is `NEXT_PUBLIC_APPSTORE_PROVIDER_TOKEN` (set in Production
 2026-10-31); unset, the link carries no parameters.
+
+## Ticket button labels (ruling 2026-11-25, audit item 7)
+
+A ticket link to a resale marketplace is labelled as resale. The words live in
+`src/lib/ticket-labels.ts` and nowhere else:
+
+| Partner | Visible text | Line under the button |
+|---|---|---|
+| TicketNetwork | Resale tickets | TicketNetwork is a resale marketplace. Prices may differ from face value. |
+| Ticketmaster | Get Tickets ("Get tickets" on the promo page fallback, "Also on Ticketmaster" as the secondary link) | none |
+
+Where it applies:
+
+| Surface | Emitter | Note placement |
+|---|---|---|
+| Every stacked ticket card: team page rail, game expand and calendar modal, homepage game modal, hub this-week cards, /best-promos cards, playoffs, venue pages, CFB school pages, World Cup rows | `TicketmasterCTA` (through `TicketsBlock` where used) | under the TicketNetwork button |
+| /promos/today and the other daily boards (inline row) | `TicketmasterCTA` inline + `TodayPromoCard` | under the whole row; the tile itself always shows "Resale tickets" |
+| Promo page primary button and per-date links | `PromoPageView` | under the primary row; per-date links carry the label only |
+| Event stop showtimes | `EventStopView` | once, under "Pick your show" |
+| CFB rivalry page, tickets step | `RivalryMatchupPage` + `TripStep` | the step's own line |
+| Digest email hero button | `src/lib/digest-email.ts` | under the button |
+
+Accessible names contain the visible text: "Ticketmaster Get Tickets",
+"TicketNetwork Resale tickets", and "Resale tickets for ... on TicketNetwork"
+on the promo page and event stops.
+
+Nothing in analytics changed: `affiliate_click`, every surface, every
+placement, `partner`, `ticketLinkLevel` and the sub-IDs are what they were. The
+registry ids above (`ticketnetwork_tickets_*`, `ticketnetwork_promo_page_*`,
+`ticketnetwork_event_page_performance`) are unchanged.
+
+A new resale partner or a new event family (Banana Ball,
+`docs/events-banana-ball-brief.md`) takes its label from the same file.
+`src/components/affiliates/__tests__/ticket-labels.test.tsx` lists the
+emitters and fails when a new one appears without the label.
 
 ## Removed CTAs
 

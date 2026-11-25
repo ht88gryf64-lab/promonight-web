@@ -457,7 +457,7 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   // this description already names it, so the name appears once in the body.
   assert.ok(!/Presented by<\/span>/.test(h), 'no Presented-by tile');
   assert.equal((h.slice(h.indexOf('<article'), h.lastIndexOf('</article>')).match(/Presented by Federal Ammunition\./g) ?? []).length, 1, 'once in the body (the schema descriptions aside)');
-  assert.match(h, /Get tickets<\/a>/);
+  assert.match(h, /Resale tickets<\/a>/);
   // "Remind me" is the promo_cta surface (hotfix 2026-10-31): the team in src,
   // the promo id and page slug as their own params, never team_cta.
   assert.match(h, /<a href="\/download\?src=promo_cta_minnesota-wild&amp;promoId=[A-Za-z0-9]+&amp;pageSlug=blaze-orange-hat"[^>]*>Remind me<\/a>/);
@@ -545,7 +545,7 @@ test('a series with more than three dates shows the next three and folds the res
   assert.ok(faq, 'a FAQPage');
   assert.match(faq!.mainEntity[0].acceptedAnswer.text, /^5 Anaheim Ducks home games this season: Nov 1, 2026, Nov 8, 2026, Nov 15, 2026, Nov 22, 2026, Nov 29, 2026\.$/);
   // The CTA row follows the header directly.
-  assert.match(h, /<\/header><section class="[^"]*">(?:<div class="flex shrink-0 flex-col gap-1\.5">[\s\S]*?<\/div>)?<div class="flex min-w-0 flex-1 flex-col gap-2\.5"><div class="flex gap-2"><a href="https:\/\/ticketnetwork\.lusg\.net\/[^"]*"[^>]*aria-label="Get Anaheim Ducks tickets on TicketNetwork"/);
+  assert.match(h, /<\/header><section class="[^"]*">(?:<div class="flex shrink-0 flex-col gap-1\.5">[\s\S]*?<\/div>)?<div class="flex min-w-0 flex-1 flex-col gap-2\.5"><div class="flex gap-2"><a href="https:\/\/ticketnetwork\.lusg\.net\/[^"]*"[^>]*aria-label="Resale tickets for Anaheim Ducks on TicketNetwork"/);
 });
 
 test('a series pads the open list to three with played dates, and a fold of played dates says "earlier"', async () => {
@@ -634,7 +634,7 @@ test('tombstoned before its date: the removed page, indexable, cancelled in the 
   assert.match(h, /<h1 class="rd-display[^"]*">Removed Future Poster<\/h1>/);
   assert.match(h, /Removed from the Minnesota Wild schedule on Oct 5, 2026\./);
   assert.match(h, />Removed</);
-  assert.ok(!h.includes('Get tickets'), 'no ticket CTA on a removed page');
+  assert.ok(!h.includes('Get tickets') && !h.includes('Resale tickets'), 'no ticket CTA on a removed page');
   // No tier 1 photo, so no image block (v2 prerequisite); the card stays the schema image.
   assert.ok(!h.includes('<figure'), 'no image block on a removed page without a photo');
   assert.ok(JSON.stringify(jsonLd(h)).includes('/api/promo-card/a5?team=minnesota-wild&v='), 'the card stays in the schema');
@@ -799,7 +799,7 @@ test('share (2026-11-03): the share card on og:image and twitter:image on every 
     } else {
       assert.equal(shares, body === 'photo' ? 2 : 1, `${slug}: the row Share${body === 'photo' ? ' and the image icon' : ' only (no image block without a tier 1 photo)'}`);
       // Tickets and Share on one row, tickets first and filling the width.
-      assert.match(h, /<div class="flex gap-2"><a href="[^"]*"[^>]*class="flex h-\[52px\] min-w-0 flex-1 [^"]*bg-\[var\(--pp-accent\)\][^"]*"[^>]*>Get tickets<\/a><div class="relative shrink-0"><button type="button" aria-label="Share this promo"[^>]*class="flex h-\[52px\] [^"]*bg-white[^"]*text-rd-ink shadow-\[inset_0_0_0_1\.5px_var\(--color-rd-ink\)\][^"]*">/, `${slug}: the tickets + Share row (1.5px ink outline as an inset shadow)`);
+      assert.match(h, /<div class="flex gap-2"><a href="[^"]*"[^>]*class="flex h-\[52px\] min-w-0 flex-1 [^"]*bg-\[var\(--pp-accent\)\][^"]*"[^>]*>Resale tickets<\/a><div class="relative shrink-0"><button type="button" aria-label="Share this promo"[^>]*class="flex h-\[52px\] [^"]*bg-white[^"]*text-rd-ink shadow-\[inset_0_0_0_1\.5px_var\(--color-rd-ink\)\][^"]*">/, `${slug}: the tickets + Share row (1.5px ink outline as an inset shadow)`);
       assert.match(h, /<span class="max-\[339px\]:sr-only">Share<\/span>/, `${slug}: the label hides at very narrow widths`);
       // The image icon: absolutely placed in the (now relative) figure, on a tier 1 photo only.
       if (body === 'photo') {
@@ -1068,7 +1068,7 @@ test('content floor: the team colour on the article, the band, the badge and the
   assert.match(wild.h, /<article class="page-content[^"]*" data-ad-region="content" style="--pp-accent:#154734;--pp-accent-ink:#ffffff;--pp-accent-text:#154734;overflow-anchor:none">/);
   assert.match(wild.h, /<header class="[^"]*"><div aria-hidden="true" class="h-\[3px\] w-full rounded-full bg-\[var\(--pp-accent\)\]"><\/div>/, 'the band under the breadcrumb, inside the header');
   assert.match(wild.h, /class="rounded-md px-2 py-1 [^"]*bg-\[var\(--pp-accent\)\] text-\[var\(--pp-accent-ink\)\]">Giveaway<\/span>/, 'the badge');
-  assert.match(wild.h, /class="flex h-\[52px\] min-w-0 flex-1 [^"]*bg-\[var\(--pp-accent\)\][^"]*text-\[var\(--pp-accent-ink\)\][^"]*"[^>]*>Get tickets<\/a>/, 'the CTA');
+  assert.match(wild.h, /class="flex h-\[52px\] min-w-0 flex-1 [^"]*bg-\[var\(--pp-accent\)\][^"]*text-\[var\(--pp-accent-ink\)\][^"]*"[^>]*>Resale tickets<\/a>/, 'the CTA');
   assert.match(wild.h, /<h2 class="rd-display[^"]*"><span aria-hidden="true" class="[^"]*bg-\[var\(--pp-accent\)\]"><\/span>About this giveaway<\/h2>/, 'the section rule');
   // Mid-gray primary, white secondary: neither clears the gate, so the house red, with white ink.
   const gray = await render('nhl', 'gray-club', 'gray-towel');
@@ -1108,7 +1108,7 @@ test('content floor: the date tile reads the venue day; tonight with doors, toni
   assert.equal(minis.length, 3, 'three shrunk tiles');
   assert.equal((series.h.match(/>In 7 days<\/span>/g) ?? []).length, 1, 'Nov 5 is in 7 days; one state line');
   // The CTA row still opens the column beside the tile(s): CTA above the first in-content unit.
-  for (const page of [blaze, series]) assert.ok(page.h.indexOf('Get tickets</a>') < page.h.search(/>(This|Next) game<\/h2>/), 'CTA before the first in-content unit');
+  for (const page of [blaze, series]) assert.ok(page.h.indexOf('Resale tickets</a>') < page.h.search(/>(This|Next) game<\/h2>/), 'CTA before the first in-content unit');
 });
 
 test('content floor: the general guide is the themeKey entry, else the type entry, else absent; it sits after This game', async () => {
@@ -1346,7 +1346,7 @@ test('played (ruling 2026-11-08): every date before today in the venue zone; the
   assert.match(h, /<a [^>]*href="\/nhl\/past-club\/promos\/yesterday-towel-2027-28"[^>]*>Next edition: Yesterday Towel 2027-28 · Wednesday, Oct 20, 2027<\/a>/);
   // Nothing to sell: no ticket, parking, hotel or reminder link, and no
   // affiliate anchor of any kind.
-  for (const gone of ['>Get tickets<', 'Also on Ticketmaster', '>Parking</a>', '>Hotels</a>', '>Remind me<', 'rel="noopener noreferrer sponsored"', '/download?src=promo_cta']) {
+  for (const gone of ['>Get tickets<', '>Resale tickets<', 'Also on Ticketmaster', '>Parking</a>', '>Hotels</a>', '>Remind me<', 'rel="noopener noreferrer sponsored"', '/download?src=promo_cta']) {
     assert.ok(!h.includes(gone), `played page still carries ${gone}`);
   }
   // The Event happened: EventScheduled, no offers.
@@ -1362,7 +1362,7 @@ test('played (ruling 2026-11-08): every date before today in the venue zone; the
   // Tomorrow: not played. The ticket row, the offers and the arrival question are all there.
   const next = await render('nhl', 'past-club', 'tomorrow-towel');
   assert.ok(!next.h.includes('This game has been played'));
-  assert.match(next.h, />Get tickets<\/a>/);
+  assert.match(next.h, />Resale tickets<\/a>/);
   assert.match(next.h, />Parking<\/a>/);
   assert.match(next.h, />Remind me<\/a>/);
   assert.ok(!next.h.includes('Next Past Club promo'));
@@ -1375,13 +1375,13 @@ test('played (ruling 2026-11-08): every date before today in the venue zone; the
   assert.match(series2.h, /<strong class="text-rd-ink">These games have been played<\/strong>/);
   assert.ok(!series2.h.includes('This game has been played'));
   assert.match(series2.h, /<a [^>]*href="\/nhl\/past-club\/promos\/tomorrow-towel"[^>]*>Next Past Club promo<\/a>/);
-  assert.ok(!series2.h.includes('>Get tickets<') && !series2.h.includes('rel="noopener noreferrer sponsored"'));
+  assert.ok(!series2.h.includes('>Get tickets<') && !series2.h.includes('>Resale tickets<') && !series2.h.includes('rel="noopener noreferrer sponsored"'));
 
   // A series with two played dates and three to come is not played; a page
   // dated today is not played.
   const series = await render('nhl', 'pittsburgh-penguins', 'community-night');
   assert.ok(!series.h.includes('This game has been played'));
-  assert.match(series.h, />Get tickets<\/a>/);
+  assert.match(series.h, />Resale tickets<\/a>/);
   const todayPage = await render('nhl', 'minnesota-wild', 'blaze-orange-hat');
   assert.ok(!todayPage.h.includes('This game has been played'));
   // The article opts out of scroll anchoring (ux-review 2026-11-08, D1; live guard 9).

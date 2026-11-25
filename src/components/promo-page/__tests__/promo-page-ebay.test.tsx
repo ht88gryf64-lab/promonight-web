@@ -103,7 +103,7 @@ test('a played bobblehead page gets the block even with a tier 1 photo, with the
   const s = section(html);
   assert.equal(ebayAnchors(s).length, 2);
   assert.ok(!html.includes('Resale listings for this bobblehead'), 'no lead line on a played page either');
-  assert.ok(!html.includes('>Get tickets</a>'));
+  assert.ok(!html.includes('>Get tickets</a>') && !html.includes('>Resale tickets</a>'));
   assert.ok(!html.includes('ticketnetwork.lusg.net'));
   // The listing links are the only sponsored anchors on the page.
   assert.equal((html.match(/rel="sponsored/g) ?? []).length, 2);

@@ -84,7 +84,7 @@ test('promo page: under "Also on Ticketmaster", above Parking, inside the CTA se
   // Sub-ID parity: the same subId3 as the page's TicketNetwork link.
   const tnHref = h.match(/href="(https:\/\/ticketnetwork\.lusg\.net\/[^"]+)"/)![1];
   assert.equal(new URL(tnHref).searchParams.get('subId3'), 'winter-beanie');
-  const tn = h.indexOf('>Get tickets<');
+  const tn = h.indexOf('>Resale tickets<');
   const tm = h.indexOf('Also on Ticketmaster');
   const fubo = h.indexOf('data-fubo-cta');
   const parking = h.indexOf('>Parking<');
@@ -155,7 +155,7 @@ test('team page: the served HTML never carries the tray Fubo link, for any away 
     const h = await renderRow(c, team, surface);
     assert.equal(fuboLinks(h).length, 0);
     assert.ok(!h.includes('data-fubo-cta'));
-    assert.ok(h.includes('Get tickets on TicketNetwork'), 'the tray itself did render');
+    assert.ok(h.includes('TicketNetwork Resale tickets'), 'the tray itself did render');
   }
 });
 
@@ -175,7 +175,7 @@ test('/promos/today: under the inline ticket row, keyed to the host club', async
   const row = h.indexOf('data-cta-row');
   const rowEnd = h.indexOf('data-fubo-cta');
   assert.ok(row > 0 && row < rowEnd, 'after the ticket row');
-  assert.ok(h.slice(row, rowEnd).includes('Get tickets on TicketNetwork'), 'the ticket row precedes it');
+  assert.ok(h.slice(row, rowEnd).includes('TicketNetwork Resale tickets'), 'the ticket row precedes it');
   assert.ok(h.includes('Availability varies by market.'));
   assertCopy(h);
 });
