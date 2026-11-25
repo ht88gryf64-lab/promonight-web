@@ -4562,4 +4562,4 @@ One line each.
 - **Completed team-page rows keep the stored title.** The completed list's rows are not handed the team object, so a bare title in the archive prints as stored while the same title in the upcoming list prints with the club.
 - **Two Kraken dates share one promo page.** Jan 31 and Mar 21, 2027 both store "Bobblehead" and resolve to `/nhl/seattle-kraken/promos/bobblehead`, although the sponsors differ (Symetra, Toyota).
 - **Kings "Rally Towel" has a theme the title dropped.** The 2027-01-02 row's description says "Pride rally towel giveaway"; the display rule prints "Kings Rally Towel".
-
+- **Game detail promo line keeps the stored title.** Inside an opened game row or calendar day (`GameExpand`'s `PromoLine`) a bare title prints as stored: the lines there can belong to the home club of an away game, and the component is not told whose each one is.
