@@ -1,7 +1,7 @@
 import { promoDisplayTitle } from '@/lib/promo-display-title';
 import { TICKET_CTA_LABEL, ticketAriaLabel } from '@/lib/ticket-labels';
 import { ResaleNote, TicketTestNote } from '@/components/affiliates/AffiliateDisclosure';
-import { pickTestTicketLink, resolveTicketTest, ticketTestClickProps, type TestTicketLink } from '@/lib/ticket-test';
+import { pickTestTicketLink, ticketTestClickProps, type TestTicketLink, type TicketTestResolution } from '@/lib/ticket-test-link';
 import Link from 'next/link';
 import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
@@ -104,6 +104,9 @@ export const PROMO_PAGE_SURFACE = 'web_promo_page' as const;
 const PROMO_DATE_SUBID_SURFACE = 'web_promo_date' as const;
 
 export interface PromoPageViewProps {
+  /** The page team's ticket partner test resolution for `today`
+   *  (resolveTicketTest, src/lib/ticket-test.ts), from the route. */
+  ticketTest?: TicketTestResolution | null;
   page: PromoPage;
   ctx: PromoPageContext;
   /** The site's day, the route's one clock read. */
@@ -242,7 +245,7 @@ function monthName(ym: string): string {
 // The date is the tile; the subtitle never repeats it. A cross-team card
 // names the club, a same-team card the opponent and the time (ruling
 // 2026-10-29).
-export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageViewProps) {
+export function PromoPageView({ page, ctx, today, now, imageSize, ticketTest = null }: PromoPageViewProps) {
   const { team, primary, dates } = page;
   const removed = page.state === 'removed';
   const head = promoPageHead(page, ctx, today, imageSize);
@@ -360,8 +363,9 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
   // matched one, else that date's TicketNetwork link as before (a fallback,
   // said so on the click; Ticketmaster for a club TicketNetwork does not
   // list). "Also on Ticketmaster" is gone on both arms and the test's line
-  // replaces the resale line. Null: the page is exactly as before.
-  const ticketTest = resolveTicketTest(team.id, today);
+  // replaces the resale line. The ROUTE resolves it (the resolver is
+  // server-only) and passes it in; null or absent: the page is exactly as
+  // before.
   const shEventUrlOf = (r: { date: string; shEventUrl?: string | null }) => (r.date >= today ? r.shEventUrl ?? null : null);
   const testPrimary: TestTicketLink | null = ticketTest ? pickTestTicketLink(ticketTest, { stubHubEventUrl: shEventUrlOf(primary), ticketNetwork, ticketmaster }) : null;
   const tickets = testPrimary?.href ?? ticketNetwork ?? ticketmaster;
