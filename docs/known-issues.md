@@ -4549,4 +4549,6 @@ One line each.
 
 - **Live guards match literal label text.** The package-disclosure guard in `scripts/live/team-pages.live.test.ts` looked for `>Get tickets</a>`; when the label became "Get Tickets" it matched nothing and failed with every page correct. A label change breaks such a guard silently: it reports a failure about the pages, not about itself. The guard now finds the primary button by its 52px class.
 - **Twins page at 935,306 bytes.** On production after the 2026-11-25 deploy `/mlb/minnesota-twins` is 935,306 bytes against the 950,000 cap (14,694 under), the largest team page; the next four are 895,000 to 902,000.
+- **IndexNow submit route reports no per-endpoint result.** `/api/indexnow/submit` answers `{"ok":true,"submitted":N}` whatever api.indexnow.org and bing.com returned; the two statuses are only in the function logs (both were 200 for the 75 URLs of 2026-11-25). A failed endpoint is invisible to the caller.
+- **Code comments still say 222 buildings.** `venueHubs` holds 223 docs since `cotton-bowl-stadium` was added on 2026-08-11 (203 indexable); comments in `src/lib/venue-hub.ts`, `src/app/venues/[slug]/page.tsx`, `src/components/venue-hub/VenueHubView.tsx`, two probe scripts and the pipeline's seed script still say 222. The standing numbers are in `docs/fix-round-2026-11.md`.
 
