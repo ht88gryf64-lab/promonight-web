@@ -4,7 +4,8 @@ import type { AnalyticsSurface } from '@/lib/analytics';
 import { buildTicketmasterUrl, buildTicketNetworkLink, ticketNetworkLinkLevel } from '@/lib/affiliates';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 import { TICKET_CTA_LABEL } from '@/lib/ticket-labels';
-import { ResaleNote } from './AffiliateDisclosure';
+import { ResaleNote, TicketTestNote } from './AffiliateDisclosure';
+import { pickTestTicketLink, ticketTestClickProps, type TicketTestResolution } from '@/lib/ticket-test';
 
 // Two-button ticket CTA — Ticketmaster + TicketNetwork. Each button is an
 // independent branded white-card link that visually breaks from PromoNight's
@@ -79,6 +80,18 @@ type Props = {
    *  whose home club (or, team-level, whose club) is flagged
    *  tnHomeUnavailable (ticketNetworkForGame). Default true. */
   ticketNetwork?: boolean;
+  /** TICKET PARTNER TEST (2026-11-25, src/lib/ticket-test.ts). Set only on a
+   *  test team's own team page. The stack then becomes ONE card in the same
+   *  card style: the team's partner today (StubHub by name, or the
+   *  TicketNetwork card as it is), no Ticketmaster card, and the test's one
+   *  line under it in place of the resale line. A StubHub day without a
+   *  matched StubHub event falls back to the TicketNetwork card (to the
+   *  Ticketmaster card for a club TicketNetwork does not list) and the click
+   *  says fallback. Absent or null: this component renders exactly as before. */
+  ticketTest?: TicketTestResolution | null;
+  /** The StubHub event page this card may link (the game's, or the team's next
+   *  home game for a team-level card). Read only with ticketTest. */
+  stubHubEventUrl?: string | null;
 };
 
 export function TicketmasterCTA({
@@ -93,6 +106,8 @@ export function TicketmasterCTA({
   primaryOnly = false,
   eventUrl = null,
   ticketNetwork = true,
+  ticketTest = null,
+  stubHubEventUrl = null,
 }: Props) {
   // Both vendors receive the identical sub-ID: subKey verbatim when the call
   // site provides one (away rows pass the shared awayGameSubKey compound
@@ -161,6 +176,9 @@ export function TicketmasterCTA({
     ? 'font-outfit font-extrabold italic lowercase text-[#003C71] text-[13px]'
     : `font-outfit font-extrabold italic lowercase text-[#003C71] ${wordmarkSize}`;
 
+  const testLink = ticketTest ? pickTestTicketLink(ticketTest, { stubHubEventUrl, ticketNetwork: ticketNetworkHref, ticketmaster: ticketmasterHref || null }) : null;
+  const testClick = ticketTest && testLink ? ticketTestClickProps(ticketTest, testLink) : undefined;
+
   const ticketmasterButton = ticketmasterHref ? (
     <TrackedAffiliateLink
       href={ticketmasterHref}
@@ -175,6 +193,7 @@ export function TicketmasterCTA({
       // The accessible name is the visible text: brand, then the descriptor.
       ariaLabel={`Ticketmaster ${TICKET_CTA_LABEL}`}
       ticketLinkLevel="team"
+      ticketTest={testClick}
       className={cardClass}
     >
       <span className={wordmarkClass} style={{ letterSpacing: '-0.3px' }}>
@@ -201,6 +220,7 @@ export function TicketmasterCTA({
       rel="noopener noreferrer sponsored"
       ariaLabel={`TicketNetwork ${TICKET_CTA_LABEL}`}
       ticketLinkLevel={tnLevel}
+      ticketTest={testClick}
       className={cardClass}
     >
       <Image
@@ -217,6 +237,51 @@ export function TicketmasterCTA({
       </span>
     </TrackedAffiliateLink>
   ) : null;
+
+  // TICKET PARTNER TEST: one card, the partner the test picked, the test's
+  // line under it. The TicketNetwork and Ticketmaster cards are the ones built
+  // above, unchanged; the StubHub card is the same card with StubHub's name
+  // where the TicketNetwork logo sits (no logo asset, by ruling).
+  if (ticketTest) {
+    if (!testLink) return null;
+    const card =
+      testLink.partner === 'stubhub' ? (
+        <TrackedAffiliateLink
+          href={testLink.href}
+          partner="stubhub"
+          teamId={team.id}
+          sport={team.league}
+          promoId={promoId}
+          surface={surface}
+          placement={placement}
+          target="_blank"
+          rel="noopener noreferrer sponsored"
+          ariaLabel={`StubHub ${TICKET_CTA_LABEL}`}
+          ticketLinkLevel="event"
+          ticketTest={testClick}
+          className={cardClass}
+        >
+          <span data-ticket-card="stubhub" className={`font-outfit font-extrabold text-[#003C71] ${inline ? 'text-[13px]' : wordmarkSize}`} style={{ letterSpacing: '-0.3px' }}>
+            StubHub
+          </span>
+          {' '}
+          <span className={descriptorClass}>{TICKET_CTA_LABEL}</span>
+          <span aria-hidden="true" className={arrowClass}>
+            →
+          </span>
+        </TrackedAffiliateLink>
+      ) : testLink.partner === 'ticketnetwork' ? (
+        ticketNetworkButton
+      ) : (
+        ticketmasterButton
+      );
+    return (
+      <div className={wrapperClass} data-ticket-test={ticketTest.phase}>
+        {card}
+        {!inline ? <TicketTestNote className="px-1" /> : null}
+      </div>
+    );
+  }
 
   // Ticketmaster leads on every surface (stacked = top, inline = leftmost).
   if (primaryOnly) {

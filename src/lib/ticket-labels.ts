@@ -20,9 +20,15 @@ export const TICKET_CTA_LABEL = 'Get Tickets';
 /** The one line under a TicketNetwork button or button group. */
 export const TICKETNETWORK_RESALE_NOTE = 'TicketNetwork is a resale marketplace. Prices may differ from face value.';
 
+/** The one line under a test team's ticket button or button group while the
+ *  ticket partner test runs (src/lib/ticket-test.ts, Gate 0 ruling 4,
+ *  2026-11-25): the same sentence on both arms, in place of the resale line
+ *  above, naming no partner. */
+export const TICKET_TEST_NOTE = 'PromoNight may earn a commission on ticket purchases made through these links. Resale prices may differ from face value.';
+
 /** aria-label of a ticket link that needs context beyond its visible text. It
  *  BEGINS with the visible text, so the accessible name contains what a
  *  sighted fan reads (WCAG 2.5.3). */
-export function ticketAriaLabel(context: string, partner: 'TicketNetwork' | 'Ticketmaster'): string {
+export function ticketAriaLabel(context: string, partner: 'TicketNetwork' | 'Ticketmaster' | 'StubHub'): string {
   return `${TICKET_CTA_LABEL} ${context} on ${partner}`;
 }

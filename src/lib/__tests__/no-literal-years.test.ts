@@ -33,6 +33,8 @@ function exemptPath(rel: string): boolean {
  * A literal not listed for its file fails. Keep entries exact.
  */
 const ALLOW: Record<string, { years: RegExp; reason: string }> = {
+  // The ticket partner test's own dates and seed.
+  'src/config/ticket-test.ts': { years: /^202[67]/, reason: 'the StubHub vs TicketNetwork test: its start, flip and end dates and its dated seed are fixed calendar facts of one 60-day test' },
   // The season table itself.
   'src/lib/seasons/windows.json': { years: /.*/, reason: 'the season table: every date is a sourced season boundary' },
   // Event names and their fixed calendars.

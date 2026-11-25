@@ -24,6 +24,9 @@ export type AffiliatePartner =
   | 'expedia'
   | 'ticketmaster'
   | 'ticketnetwork'
+  // StubHub through Partnerize (2026-11-25): the ticket partner test only.
+  // Its link builder is src/lib/ticket-test.ts buildStubHubLink.
+  | 'stubhub'
   // Streaming (2026-11-20). Its table, URL builder and on-site hop live in
   // src/lib/affiliates/fubo.ts; the CTA links to /go/fubo/..., never fubo.tv.
   | 'fubo';
@@ -93,6 +96,10 @@ export function isPartnerActive(partner: AffiliatePartner): boolean {
       // into every TicketNetwork link (no env var) — the outbound link is always
       // commissionable, so tracking is always active (same model as Expedia).
       return true;
+    case 'stubhub':
+      // The Partnerize camref is a hardcoded constant in every StubHub link
+      // (src/lib/ticket-test.ts), so tracking is always active.
+      return true;
     case 'fubo':
       // irmp + per-league irad are hardcoded in src/lib/affiliates/fubo.ts
       // and added by the /go/fubo hop: the outbound link is always tagged.
@@ -159,6 +166,10 @@ export function buildAffiliateUrl(
       // TicketNetwork links are fully assembled by `buildTicketNetworkLink`
       // at the call site — the Impact prefix, property IDs, and subId1 are
       // already baked in. Do NOT re-tag; pass the URL through unchanged.
+      return rawUrl;
+    case 'stubhub':
+      // Fully assembled by buildStubHubLink (camref, pubref, destination
+      // last). Nothing may be appended to a StubHub link: passthrough.
       return rawUrl;
     case 'fubo':
       // The href is our own /go/fubo hop; the route builds the tagged

@@ -81,6 +81,9 @@ export interface PromoPageRow {
    *  through resolveTnEventUrl), or null: the ticket links then fall back to
    *  the team performer page. */
   tnEventUrl?: string | null;
+  /** The StubHub event page of this date's home game (Game.shEventUrl), null
+   *  when unmatched and always null while the ticket partner test is off. */
+  shEventUrl?: string | null;
 }
 
 export interface PromoPageLocation {

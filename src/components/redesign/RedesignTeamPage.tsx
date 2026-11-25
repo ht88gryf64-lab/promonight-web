@@ -21,6 +21,7 @@ import { scheduleStatusLine, statusLineSaysNothingAnnounced } from '@/lib/announ
 import { isSplitSeasonLeague } from '@/lib/season-label';
 import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 import { AffiliateRail } from './AffiliateRail';
+import type { TicketTestPageValue } from '@/components/affiliates/TicketTestContext';
 import { ExploreCard } from './ExploreCard';
 import { FanTools } from './FanTools';
 import WeaveAdOrder from './WeaveAdOrder';
@@ -75,6 +76,9 @@ export interface RedesignTeamPageProps {
    *  day; see CalendarGrid for why a client-side clock read there is a
    *  hydration mismatch (known-issues entry 52). */
   today: string;
+  /** Ticket partner test: the page team's resolution and its next home game's
+   *  StubHub event, from the route. Null: the page is exactly as before. */
+  ticketTestPage?: TicketTestPageValue | null;
   recurringDeals: RecurringDeal[];
   playoffsActive: boolean;
   inPlayoffs: boolean;
@@ -114,6 +118,7 @@ export function RedesignTeamPage({
   displayName,
   gameContexts,
   today,
+  ticketTestPage = null,
   recurringDeals,
   inPlayoffs,
   playoffPromos,
@@ -466,6 +471,7 @@ export function RedesignTeamPage({
             <AffiliateRail
               team={team}
               venue={venue}
+              ticketTestPage={ticketTestPage}
               className={`rd-weave-item order-[20] ${showSchedule ? 'lg:mt-0' : 'mt-10 lg:mt-0'}`}
             />
             {/* Fan-made companion apps. Below the whole AffiliateRail, so it
@@ -680,7 +686,7 @@ export function RedesignTeamPage({
       {/* Fine print — minimal treatment in the cream flow (reads fine at #444). */}
       <div className="mx-auto max-w-6xl px-6 pb-8">
         {/* No TicketNetwork sentence for a club TicketNetwork lists no home events for. */}
-        <AffiliateDisclosure className="text-center" resale={ticketNetworkForGame(null, team)} />
+        <AffiliateDisclosure className="text-center" resale={!ticketTestPage && ticketNetworkForGame(null, team)} />
       </div>
 
       <div className="mx-auto max-w-6xl px-6 py-4">

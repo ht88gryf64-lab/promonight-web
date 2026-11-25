@@ -13,6 +13,9 @@ import {
 } from '@/lib/analytics';
 import { withShareSubId2 } from '@/lib/promo-share';
 import { useShareSession } from '@/lib/promo-share-session';
+import type { TicketTestClickProps } from '@/lib/ticket-test';
+
+const TICKET_PARTNERS: readonly string[] = ['ticketmaster', 'ticketnetwork', 'stubhub'];
 
 export type TrackedAffiliateLinkProps = {
   href: string;
@@ -39,6 +42,9 @@ export type TrackedAffiliateLinkProps = {
    *  the button belongs to and the ticket provider, sent on affiliate_click.
    *  A stop has no team: teamId is '' and sport is '' on these links. */
   eventContext?: { show: string; venueSlug: string; performanceKey?: string; provider?: string };
+  /** Ticket partner test (src/lib/ticket-test.ts): set on a test team's own
+   *  pages only. Without it a ticket click reports in_test false. */
+  ticketTest?: TicketTestClickProps;
 };
 
 // Fires on mousedown (not click) so the event is captured even when the
@@ -63,6 +69,7 @@ export function TrackedAffiliateLink({
   ariaLabel,
   ticketLinkLevel,
   eventContext,
+  ticketTest,
 }: TrackedAffiliateLinkProps) {
   const builtHref = buildAffiliateUrl(partner as AffiliateUrlPartner, href, {
     surface,
@@ -97,6 +104,7 @@ export function TrackedAffiliateLink({
       ...(eventContext
         ? { show: eventContext.show, venue_slug: eventContext.venueSlug, performance_key: eventContext.performanceKey, provider: eventContext.provider }
         : {}),
+      ...(ticketTest ? ticketTest : TICKET_PARTNERS.includes(partner) ? { in_test: false } : {}),
     });
   };
 

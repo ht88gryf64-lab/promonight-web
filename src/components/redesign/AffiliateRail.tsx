@@ -10,6 +10,7 @@ import { VenueHubLink } from '@/components/venue-hub/VenueHubLink';
 import { getVenueHub, getVenueHubForTeam } from '@/lib/venue-hub';
 import { TeamVenueFacts } from '@/components/venue-hub/TeamVenueFacts';
 import { ticketNetworkForGame } from '@/lib/affiliates';
+import type { TicketTestPageValue } from '@/components/affiliates/TicketTestContext';
 
 // AffiliateRail — the "plan your visit" module. The single tickets CTA lives
 // here now (the hero Get Tickets button was removed), so this is the one place
@@ -24,9 +25,11 @@ export interface AffiliateRailProps {
   team: Team;
   venue: Venue | null;
   className?: string;
+  /** Ticket partner test (the route resolves it). Null: as before. */
+  ticketTestPage?: TicketTestPageValue | null;
 }
 
-export async function AffiliateRail({ team, venue, className }: AffiliateRailProps) {
+export async function AffiliateRail({ team, venue, className, ticketTestPage = null }: AffiliateRailProps) {
   // Resolve this team to its building hub (via venueHubs.tenants). The routing
   // CTA renders ONLY when that hub is above the indexing floor — a held/noindex
   // building has nothing useful yet, so no dead-end link into an empty hub.
@@ -54,7 +57,7 @@ export async function AffiliateRail({ team, venue, className }: AffiliateRailPro
         {/* Tickets — the single tickets CTA (locked team_page_sidebar placement).
             Ticketmaster only for a club TicketNetwork lists no home events for
             (tnHomeUnavailable; Matt 2026-11-03). */}
-        <TicketmasterCTA team={team} surface="web_team_page" placement="team_page_sidebar" size="full" ticketNetwork={ticketNetworkForGame(null, team)} />
+        <TicketmasterCTA team={team} surface="web_team_page" placement="team_page_sidebar" size="full" ticketNetwork={ticketNetworkForGame(null, team)} ticketTest={ticketTestPage?.test ?? null} stubHubEventUrl={ticketTestPage?.teamStubHubEventUrl ?? null} />
         {/* Parking */}
         <SpotHeroCTA team={team} venue={venue} surface="web_team_page" placement="team_page_prepare" />
         {/* Hotels */}

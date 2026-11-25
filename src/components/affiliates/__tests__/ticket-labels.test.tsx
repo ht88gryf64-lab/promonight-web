@@ -35,7 +35,7 @@ test('the constants: one label for every ticket button, one resale line, an aria
   assert.equal(l.TICKETNETWORK_RESALE_NOTE, NOTE);
   assert.equal(l.ticketAriaLabel('for Wild vs Blues', 'TicketNetwork'), 'Get Tickets for Wild vs Blues on TicketNetwork');
   assert.equal(l.ticketAriaLabel('for Wild', 'Ticketmaster'), 'Get Tickets for Wild on Ticketmaster');
-  assert.deepEqual(Object.keys(l).sort(), ['TICKETNETWORK_RESALE_NOTE', 'TICKET_CTA_LABEL', 'ticketAriaLabel'], 'no partner-specific button label exists');
+  assert.deepEqual(Object.keys(l).sort(), ['TICKETNETWORK_RESALE_NOTE', 'TICKET_CTA_LABEL', 'TICKET_TEST_NOTE', 'ticketAriaLabel'], 'no partner-specific button label exists');
   assert.doesNotMatch(NOTE, /—|–/);
 });
 
@@ -106,7 +106,8 @@ test('one line per group on a page with several buttons: the event stop and the 
   assert.doesNotMatch(stop.split('\n').filter((l) => !/^\s*(\/\/|\*|\{\/\*)/.test(l)).join('\n'), />\s*Tickets\s*</, 'no bare "Tickets" button');
   const promo = readFileSync(new URL('../../promo-page/PromoPageView.tsx', import.meta.url), 'utf-8');
   assert.equal(count(promo, '<ResaleNote'), 1, 'under the primary row; the per-date links share it');
-  assert.match(promo, /\{ticketNetwork \? <ResaleNote tone="light" className="text-center" \/> : null\}/, 'only when the primary is TicketNetwork');
+  // The ticket partner test's line takes its place on a test team's page (2026-11-25).
+  assert.match(promo, /\{ticketTest \? <TicketTestNote tone="light" className="text-center" \/> : ticketNetwork \? <ResaleNote tone="light" className="text-center" \/> : null\}/, 'only when the primary is TicketNetwork');
   assert.equal(count(promo, '{TICKET_CTA_LABEL}'), 2, 'the primary and the per-date link');
 });
 
@@ -122,9 +123,10 @@ test('the disclosure says it in its own words, and only where the page can carry
   assert.ok(off.includes(d.AFFILIATE_DISCLOSURE_TEXT) && !/TicketNetwork/.test(off));
   // Off where there is no TicketNetwork link: a Ticketmaster-only club, an eBay-only block, a promo page or rivalry page without one.
   const src = (rel: string) => readFileSync(new URL(rel, import.meta.url), 'utf-8');
-  assert.match(src('../../redesign/RedesignTeamPage.tsx'), /<AffiliateDisclosure className="text-center" resale=\{ticketNetworkForGame\(null, team\)\} \/>/);
+  // Off as well on a ticket partner test team's page, whose line under the button says it (2026-11-25).
+  assert.match(src('../../redesign/RedesignTeamPage.tsx'), /<AffiliateDisclosure className="text-center" resale=\{!ticketTestPage && ticketNetworkForGame\(null, team\)\} \/>/);
   assert.match(src('../../redesign/PastBobbleheadsSection.tsx'), /<AffiliateDisclosure className="mt-8" resale=\{false\} \/>/);
-  assert.match(src('../../promo-page/PromoPageView.tsx'), /<AffiliateDisclosure className="mt-6" resale=\{!!ticketNetwork && !past && !removed\} \/>/);
+  assert.match(src('../../promo-page/PromoPageView.tsx'), /<AffiliateDisclosure className="mt-6" resale=\{!ticketTest && !!ticketNetwork && !past && !removed\} \/>/);
   assert.match(src('../../scoring/best-promos-browser.tsx'), /resale=\{!retrospective\}/, 'retrospective cards carry no ticket links');
   assert.match(src('../../venue-hub/VenueHubView.tsx'), /resale=\{!!ticketTeam && ticketNetworkForGame\(null, ticketTeam\)\}/, 'a Ticketmaster-only building');
   assert.match(src('../../cfb/rivalry/RivalryMatchupPage.tsx'), /resale=\{steps\.some\(\(s\) => s\.partner === 'ticketnetwork'\)\}/);
@@ -136,8 +138,11 @@ test('analytics is unchanged: partner, surface and placement on the links are wh
   const src = readFileSync(new URL('../TicketmasterCTA.tsx', import.meta.url), 'utf-8');
   assert.equal(count(src, 'partner="ticketmaster"'), 1);
   assert.equal(count(src, 'partner="ticketnetwork"'), 1);
-  assert.equal(count(src, 'surface={surface}'), 2);
-  assert.equal(count(src, 'placement={placement}'), 2);
+  // The third link is the StubHub card of the ticket partner test (2026-11-25):
+  // the same surface and placement, its own partner.
+  assert.equal(count(src, 'partner="stubhub"'), 1);
+  assert.equal(count(src, 'surface={surface}'), 3);
+  assert.equal(count(src, 'placement={placement}'), 3);
   assert.doesNotMatch(readFileSync(new URL('../../../lib/analytics.ts', import.meta.url), 'utf-8'), /ticket-labels|resale_note|ResaleNote/);
 });
 
@@ -154,7 +159,8 @@ test('every emitter of a TicketNetwork link takes its words from ticket-labels, 
   walk(root);
   const body = (f: string) => readFileSync(f, 'utf-8');
   // A file that emits a TicketNetwork link itself (not through the shared card), by any spelling of the partner.
-  const emitters = files.filter((f) => /partner=["{]'?ticketnetwork|partner: 'ticketnetwork'|partner=\{ticketsPartner\}|solidButton\(ticketUrl/.test(body(f))).map((f) => f.slice(root.length)).sort();
+  // lib/ticket-test.ts renders nothing: it picks which of a card's existing links the card carries.
+  const emitters = files.filter((f) => /partner=["{]'?ticketnetwork|partner: 'ticketnetwork'|partner=\{ticketsPartner\}|solidButton\(ticketUrl/.test(body(f))).map((f) => f.slice(root.length)).filter((f) => f !== 'lib/ticket-test.ts').sort();
   assert.deepEqual(emitters, [
     'components/affiliates/TicketmasterCTA.tsx',
     'components/cfb/rivalry/RivalryMatchupPage.tsx',

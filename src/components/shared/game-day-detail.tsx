@@ -2,7 +2,7 @@ import type { Promo, Team } from '@/lib/types';
 import { PROMO_TYPE_COLORS, SPORT_ICONS } from '@/lib/types';
 import { PromoBadge } from '@/components/promo-badge';
 import { ShareButton, formatShareDate, type ShareItem } from '@/components/share';
-import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
+import { GameTicketsBlock } from '@/components/affiliates/TicketTestContext';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
 import { awayGameSubKey, ticketNetworkForGame } from '@/lib/affiliates';
@@ -232,13 +232,14 @@ export function GameDetailRow({
        *  Ticketmaster URL is valid regardless of game venue. */}
       <div className="mt-4 space-y-4">
         {team && (
-          <TicketsBlock
+          <GameTicketsBlock
             team={team}
             surface={surface}
             placement={placement}
             promoId={teamSlug ? `${teamSlug}:${game.date}:${game.id}` : undefined}
             subKey={awaySubKey}
             eventUrl={game.tnEventUrl ?? null}
+            gameStubHubEventUrl={game.shEventUrl ?? null}
             ticketNetwork={ticketNetworkForGame(game, isHome ? team : opponentTeam)}
             variant="card"
           />
@@ -334,10 +335,11 @@ export function LegacyPromoDetail({
               )}
               {team && teamSlug && (
                 <div className="mt-3">
-                  <TicketsBlock
+                  <GameTicketsBlock
                     team={team}
                     surface={surface}
                     placement="promo_card"
+                    teamLevel
                     promoId={`${teamSlug}:${p.date}:${p.title}`}
                     ticketNetwork={ticketNetworkForGame(null, team)}
                     variant="card"

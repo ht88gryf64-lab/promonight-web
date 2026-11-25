@@ -206,6 +206,34 @@ other surface is byte-identical.
   subId1 + subId2=share + subId3 together) and the route test's served-HTML
   check in `src/app/[sport]/[team]/promos/[slug]/__tests__/promo-page.test.tsx`.
 
+## StubHub pubref (ticket partner test, 2026-11-25)
+
+StubHub links exist only inside the StubHub vs TicketNetwork crossover test
+(`src/config/ticket-test.ts`, switch `NEXT_PUBLIC_TICKET_TEST`, default off),
+and only on a test team's own pages. Each is a Partnerize deep link built by
+`buildStubHubLink` in `src/lib/ticket-test.ts`:
+`https://stubhub.prf.hn/click/camref:1101l6zbdB/pubref:{pubref}/destination:{encoded StubHub event URL}`.
+Order is fixed (camref, pubref, destination last), the destination is encoded
+once and nothing is appended (no subId2, no subId3, no UTM). The destination
+is `games.shEventUrl`, exposed only when `shEventDate` equals the game's date.
+`pubref` is `{surface}-{league}-{phase}`, lowercase letters, digits and
+hyphens: the web sends `web-nba-a`, `web-nhl-b` and so on; `app-ios`,
+`app-android` and `email` are reserved and not sent yet.
+
+| pubref | analytics surface | placement | where |
+|---|---|---|---|
+| web-{league}-{phase} | web_team_page | team_page_sidebar | Team page sidebar card: the team's next home game on StubHub |
+| web-{league}-{phase} | web_team_page, web_team_page_promolist | home_game_card, away_game_card, promo_card | Team page schedule, calendar and promo rows (away rows follow the page team's partner) |
+| web-{league}-{phase} | web_promo_page | promo_page_primary, promo_page_date | Promo page primary button and per-date links |
+
+`affiliate_click` on these surfaces carries `partner` (`stubhub` or
+`ticketnetwork`; `ticketmaster` only as a fallback for a club TicketNetwork
+does not list), `in_test: true`, `test_arm`, `test_pair_id`, `test_phase`,
+`pubref` (null unless the link is StubHub's) and `fallback`. Every other ticket
+click on the site carries `in_test: false`. A StubHub day with no matched
+StubHub event falls back to the TicketNetwork link the control had before,
+with `fallback: true`.
+
 ## TicketNetwork subId1 (ruling 2026-11-02)
 
 Every TicketNetwork link carries `subId1` in the Fanatics convention,
