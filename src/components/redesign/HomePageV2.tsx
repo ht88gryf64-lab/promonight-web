@@ -229,6 +229,10 @@ export function HomePageV2({
             </section>
           )}
 
+          {/* No rows, no section: StubRail returns null on an empty list, and
+              a bare <section> here would still be 32px of padding and one
+              more `.page-content > *` anchor for an ad to follow. */}
+          {bestPromos.length > 0 && (
           <section className="px-6 py-4">
             <StubRail
               eyebrow="Worth planning around"
@@ -244,6 +248,7 @@ export function HomePageV2({
               withRank
             />
           </section>
+          )}
 
           <section className="py-16">
             <HomeCategoryGrid tiles={categoryTiles} />
