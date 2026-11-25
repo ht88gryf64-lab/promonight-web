@@ -105,7 +105,9 @@ export const loadRankedRows = cache(async (itemType: string | null): Promise<Ran
     const earliest = forward.reduce((acc, p) => (p.date < acc ? p.date : acc), forward[0].date);
     return { promos: forward, retrospective: false, label: Number(earliest.slice(0, 4)), todayYMD };
   }
-  const range = retrospectiveRange(todayYMD, await getSeasonFinals());
+  // The bobblehead page keeps the range rule it had (ended season or nothing).
+  const finals = await getSeasonFinals();
+  const range = itemType ? offSeasonRange(todayYMD, finals) : retrospectiveRange(todayYMD, finals);
   if (!range) return { promos: [], retrospective: true, label: '', todayYMD };
   const promos = itemType
     ? await getScoredPromosByItemType(range.start, range.end, itemType, BOBBLEHEAD_FETCH_CAP)

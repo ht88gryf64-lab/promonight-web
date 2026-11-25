@@ -43,7 +43,8 @@ type BestPromosBrowserProps = {
   // 'dark' (default) byte-identical when the gate is off; 'light' is the
   // cream-house. All filters, events, scoring, and capsules are unchanged.
   variant?: 'dark' | 'light';
-  /** Retrospective mode: the forward window yielded nothing, so initialPromos
+  /** Retrospective mode: the forward window yielded too few rows (none, on
+   *  /best-promos/bobbleheads; under ten qualifying, on /best-promos), so initialPromos
    *  carry a COMPLETED season instead of upcoming dates. Skips the
    *  today-forward date filter that would discard every one of them, and hides
    *  the date-range chips, which are meaningless once the season is over.

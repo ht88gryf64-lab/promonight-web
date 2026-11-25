@@ -138,6 +138,17 @@ test('/best-promos: 9 qualifying rows stay in the retrospective, 10 leave it', a
   assert.equal(ten.label, 2027, 'the year of the earliest row shown');
 });
 
+test('/best-promos: the floor through the loader, 64 does not count and 65 does', async () => {
+  finals = new Map([['MLB_2026', '2026-10-28'], ['WNBA_2026', '2026-10-31']]);
+  pastRows = [row('giveaway', 98, '2026-07-04')];
+  forwardRows = [...giveaways(9, BEST_PROMO_SCORE_FLOOR), row('giveaway', BEST_PROMO_SCORE_FLOOR - 1, '2027-04-01')];
+  assert.equal((await loadAt('2027-02-10', null)).retrospective, true, 'nine at the floor and one a point under: nine qualify');
+  forwardRows = giveaways(10, BEST_PROMO_SCORE_FLOOR);
+  const atFloor = await loadAt('2027-02-10', null);
+  assert.equal(atFloor.retrospective, false, 'ten at exactly the floor qualify');
+  assert.equal(atFloor.promos.length, 10);
+});
+
 test('/best-promos: the floor is applied before the cap, on an uncapped gated read', async () => {
   finals = new Map([['MLB_2026', '2026-10-28'], ['WNBA_2026', '2026-10-31']]);
   pastRows = [];
@@ -198,4 +209,11 @@ test('/best-promos/bobbleheads is unchanged: one forward row is enough, and no f
   assert.equal(calls[0].limit, 500);
   forwardRows = [];
   assert.equal((await loadAt('2027-02-10', 'bobblehead')).retrospective, true);
+  // Its retrospective range is the ended season or nothing, as before: with
+  // no ended season it does NOT take the in-play fallback /best-promos has.
+  finals = new Map();
+  pastRows = [row('giveaway', 98, '2026-05-18')];
+  const early = await loadAt('2026-10-18', 'bobblehead');
+  assert.deepEqual([early.retrospective, early.promos.length, early.label], [true, 0, '']);
+  assert.equal(calls.some((c) => !c.gated), false, 'no past read is made');
 });

@@ -31,6 +31,9 @@ import {
   SPONSOR_POINTS,
   UNCAPPED_BOBBLEHEAD_CEILING,
   UNSCORED_LEAGUES_ANSWER,
+  GENERIC_TITLE_CEILING,
+  NINETY_EIGHT_VS_HUNDRED_ANSWER,
+  SMALL_CAP_ANSWER,
   isBestPromoRow,
 } from '../scoring-weights';
 
@@ -101,7 +104,27 @@ test('pipeline copy: the pipeline scores the "perfect 100" promo the copy descri
   assert.equal(scorePromo(promo, { ...jersey, quantityCap: 999, sponsor: null }).score, SCORE_MAX);
 });
 
+test('pipeline copy: scorePromo writes exactly the breakdown keys the mirror knows', (t) => {
+  if (!pipelinePresent(t)) return;
+  // A new bonus or penalty in the scorer adds a `breakdown.<key> =` line. This
+  // list is every key it writes today; a key the mirror has no constant for
+  // fails here, before the FAQ copy goes stale.
+  const src = readFileSync(SCORER, 'utf8');
+  const keys = [...new Set([...src.matchAll(/breakdown\.([A-Za-z0-9_]+)\s*=/g)].map((m) => m[1]))].sort();
+  assert.deepEqual(keys, ['baseType', 'genericTitle', 'highlight', 'itemType', 'limitedQuantity', 'quantityCapUnder1000', 'quantityCapUnder5000', 'sponsor']);
+  // The two paths that write no key of their own: a recurring promo short-circuits to 0, and the total is clamped to 0..100.
+  assert.match(src, /promo\.recurring === true\) \{\s*return \{ score: 0, breakdown: \{ recurring: 0 \} \};/);
+  assert.match(src, /clamp\(Math\.round\(total\), 0, 100\)/);
+  const { scorePromo } = loadScorer();
+  assert.equal(scorePromo({ type: 'giveaway', highlight: true, recurring: true }, { itemType: 'bobblehead' }).score, 0);
+  assert.equal(scorePromo({ type: 'nonsense' }, { isGenericTitle: true }).score, 0, 'clamped at zero');
+  // A generic title: every other signal at once still stops short of the maximum.
+  assert.equal(scorePromo({ type: 'giveaway', highlight: true }, { itemType: 'bobblehead', limitedQuantity: true, quantityCap: 500, sponsor: 'Acme', isGenericTitle: true }).score, GENERIC_TITLE_CEILING);
+});
+
 test('the arithmetic the "perfect 100" answer states holds in the mirror itself', () => {
+  assert.equal(GENERIC_TITLE_CEILING, 98);
+  assert.ok(GENERIC_TITLE_CEILING < SCORE_MAX);
   assert.equal(PERFECT_BOBBLEHEAD_TOTAL, SCORE_MAX, 'giveaway + bobblehead + highlight + limited + one cap step is exactly the maximum');
   assert.equal(UNCAPPED_BOBBLEHEAD_CEILING, 98);
   assert.ok(UNCAPPED_BOBBLEHEAD_CEILING < SCORE_MAX, 'without a cap under the high threshold a bobblehead cannot reach the maximum');
@@ -112,7 +135,7 @@ test('the arithmetic the "perfect 100" answer states holds in the mirror itself'
 });
 
 test('the FAQ copy states the real numbers and none of the retired claims', () => {
-  for (const a of [SCORE_COMPONENTS_ANSWER, PERFECT_SCORE_ANSWER, ITEM_WEIGHTS_ANSWER, UNSCORED_LEAGUES_ANSWER]) {
+  for (const a of [SCORE_COMPONENTS_ANSWER, PERFECT_SCORE_ANSWER, ITEM_WEIGHTS_ANSWER, UNSCORED_LEAGUES_ANSWER, NINETY_EIGHT_VS_HUNDRED_ANSWER, SMALL_CAP_ANSWER]) {
     assert.doesNotMatch(a, /—|–/, 'no dashes in user-facing copy');
     assert.doesNotMatch(a, /undefined|NaN/);
   }
@@ -125,6 +148,14 @@ test('the FAQ copy states the real numbers and none of the retired claims', () =
   assert.match(PERFECT_SCORE_ANSWER, /A sponsor is not required/);
   assert.match(PERFECT_SCORE_ANSWER, /tops out at 98/);
   assert.match(PERFECT_SCORE_ANSWER, /only with a cap under 1,000/);
+  assert.match(PERFECT_SCORE_ANSWER, /A generic title such as "Giveaway Night" takes 10 off, and a promo that carries one tops out at 98/);
+  assert.match(SCORE_COMPONENTS_ANSWER, /a recurring deal is not scored as an event and carries 0/);
+  // The bobblehead page's two answers agree with the one above: the cap, not the sponsor.
+  assert.match(NINETY_EIGHT_VS_HUNDRED_ANSWER, /^The cap\./);
+  assert.match(NINETY_EIGHT_VS_HUNDRED_ANSWER, /scores 98 when its stated cap is 5,000 fans or more, or when no cap is stated/);
+  assert.match(NINETY_EIGHT_VS_HUNDRED_ANSWER, /with or without a sponsor/);
+  assert.match(SMALL_CAP_ANSWER, /cap under 5,000 fans adds 5 points and a cap under 1,000 adds 5 more/);
+  for (const a of [NINETY_EIGHT_VS_HUNDRED_ANSWER, SMALL_CAP_ANSWER]) assert.doesNotMatch(a, /likeness|miss the sponsor/i);
   assert.match(ITEM_WEIGHTS_ANSWER, /Bobbleheads earn 30 .* jerseys and premium collectibles earn 25, hats earn 12, towels earn 10 and T-shirts earn 8/);
   for (const a of [SCORE_COMPONENTS_ANSWER, PERFECT_SCORE_ANSWER, ITEM_WEIGHTS_ANSWER]) {
     assert.doesNotMatch(a, /likeness/i);
@@ -139,7 +170,8 @@ test('the pages take these answers from the module and carry no second copy', ()
   const src = (p: string) => readFileSync(new URL(`../../${p}`, import.meta.url), 'utf-8');
   const best = src('app/best-promos/page.tsx');
   const teams = src('app/team-rankings/page.tsx');
-  assert.equal(best.match(/^\s+PERFECT_SCORE_ANSWER,$/gm)?.length, 2, 'both "perfect 100" questions give the one answer');
+  // Counted after the import line, whatever the formatting around `answer:`.
+  assert.equal(best.slice(best.indexOf('const FAQS')).match(/\bPERFECT_SCORE_ANSWER\b/g)?.length, 2, 'both "perfect 100" questions give the one answer');
   assert.match(best, /SCORE_COMPONENTS_ANSWER,/);
   assert.match(best, /ITEM_WEIGHTS_ANSWER,/);
   assert.match(best, /UNSCORED_LEAGUES_ANSWER,/);
@@ -150,6 +182,13 @@ test('the pages take these answers from the module and carry no second copy', ()
   // The retrospective says what the list is and never that nothing is left.
   assert.match(best, /This list is the season's record/);
   assert.doesNotMatch(best, /Nothing here is upcoming|no ranked promos ahead|has a ranked promo still to come/);
+  // And it states the real condition for the upcoming list, from the constants.
+  assert.match(best, /from \$\{LEAD_IN_DAYS\} days before a scored league's next Opening Day, once at least \$\{RANKED_MIN_UPCOMING_ROWS\} giveaways scoring \$\{BEST_PROMO_SCORE_FLOOR\} or more/);
+  assert.doesNotMatch(best, /once clubs have announced/);
+  const bobble = src('app/best-promos/bobbleheads/page.tsx');
+  assert.match(bobble, /NINETY_EIGHT_VS_HUNDRED_ANSWER,/);
+  assert.match(bobble, /SMALL_CAP_ANSWER,/);
+  assert.doesNotMatch(bobble, /player likeness|miss the sponsor signal|capped at 10,000 covers/);
 });
 
 test('isBestPromoRow: a scored giveaway at the floor or above, and never a theme night', () => {

@@ -12,6 +12,7 @@ import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { addDaysYmd, siteYmd } from '@/lib/site-today';
 import { loadRankedRows } from '@/lib/seasons/ranked-rows';
+import { NINETY_EIGHT_VS_HUNDRED_ANSWER, SMALL_CAP_ANSWER } from '@/lib/scoring-weights';
 import { LEAD_IN_DAYS } from '@/lib/seasons/season-window';
 
 export const revalidate = 86400;
@@ -99,13 +100,13 @@ const INLINE_ANSWERS = [
     afterPosition: 14,
     question: 'Why do WNBA bobbleheads score so high?',
     answer:
-      'WNBA arenas seat 9,000 to 15,000 fans, so a bobblehead capped at 10,000 covers nearly every ticketed attendee. That near-universal availability combined with a named sponsor and a highlight tier is why WNBA bobbleheads can outscore programs at much larger venues.',
+      SMALL_CAP_ANSWER,
   },
   {
     afterPosition: 29,
     question: 'What separates a 98 score from a 100?',
     answer:
-      'Most 98-score bobbleheads miss the sponsor signal. They have attendance caps, recognizable player likenesses, and highlight tiers, but no named "Presented by" partner. Adding a sponsor adds 3 points to the total, which is the difference between the 98 cluster and the 100 leaders.',
+      NINETY_EIGHT_VS_HUNDRED_ANSWER,
   },
   {
     afterPosition: 44,

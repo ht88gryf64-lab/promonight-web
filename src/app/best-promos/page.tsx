@@ -13,8 +13,9 @@ import { numberWord } from '@/lib/coverage-counts';
 import { SCORED_LEAGUES } from '@/lib/types';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { addDaysYmd, siteYmd } from '@/lib/site-today';
-import { loadRankedRows } from '@/lib/seasons/ranked-rows';
-import { ITEM_WEIGHTS_ANSWER, PERFECT_SCORE_ANSWER, SCORE_COMPONENTS_ANSWER, UNSCORED_LEAGUES_ANSWER } from '@/lib/scoring-weights';
+import { loadRankedRows, RANKED_MIN_UPCOMING_ROWS } from '@/lib/seasons/ranked-rows';
+import { LEAD_IN_DAYS } from '@/lib/seasons/season-window';
+import { BEST_PROMO_SCORE_FLOOR, ITEM_WEIGHTS_ANSWER, PERFECT_SCORE_ANSWER, SCORE_COMPONENTS_ANSWER, UNSCORED_LEAGUES_ANSWER } from '@/lib/scoring-weights';
 
 // Server-side fetch runs once per ISR revalidate window. Scoring rides
 // each league's weekly scan (MLB Tue year-round; WNBA Wed and MLS Thu in
@@ -100,7 +101,7 @@ const FAQS = [
   {
     question: 'Can I see only bobblehead nights?',
     answer:
-      `Yes. Visit /best-promos/bobbleheads for the same ranking filtered to derivedSignals.itemType equal to "bobblehead". That page shows every scored upcoming bobblehead night across the ${numberWord(SCORED_LEAGUES.size)} scored leagues with its own ranked list.`,
+      `Yes. Visit /best-promos/bobbleheads for a ranking of bobblehead nights only (derivedSignals.itemType equal to "bobblehead"). That page shows every scored upcoming bobblehead night across the ${numberWord(SCORED_LEAGUES.size)} scored leagues with its own ranked list.`,
   },
 ];
 
@@ -173,9 +174,11 @@ export default async function BestPromosPage() {
     : null;
 
   // Retrospective copy. The h1 already carries the season label; these say
-  // plainly, in the first sentence, that the season is FINISHED, so a December
-  // visitor arriving on a bobblehead query is not left thinking these are
-  // tonight's options.
+  // plainly that the list is the season's RECORD, so a December visitor
+  // arriving on a bobblehead query is not left thinking these are tonight's
+  // options. They never say nothing is left to come: since 2026-11-25 the
+  // retrospective also shows while fewer than RANKED_MIN_UPCOMING_ROWS
+  // qualifying rows are ahead (src/lib/seasons/ranked-rows.ts).
   // dateModified signals to a crawler that CONTENT changed, so in
   // retrospective mode it must not track the scoring clock. TeamScore
   // computedAt advances weekly because MLB scanning and scoring run
@@ -204,7 +207,7 @@ export default async function BestPromosPage() {
   const stampLine = retrospective
     ? `${label} season record${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} promos ranked`
     : null;
-  const capsuleRetro = `These are the ${promos.length} best-scored promo nights of the ${label} season across MLB, MLS, and WNBA. This list is the season's record, ranked from 100 down, not a list of what is on next. Every entry pulls from official team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. An upcoming ranking returns once clubs have announced enough of the next season's giveaways to rank.`;
+  const capsuleRetro = `These are the ${promos.length} best-scored promo nights of the ${label} season across MLB, MLS, and WNBA. This list is the season's record, ranked from 100 down, not a list of what is on next. Every entry pulls from official team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. An upcoming ranking returns from ${LEAD_IN_DAYS} days before a scored league's next Opening Day, once at least ${RANKED_MIN_UPCOMING_ROWS} giveaways scoring ${BEST_PROMO_SCORE_FLOOR} or more are on the schedule.`;
 
   if (isRedesignEnabled()) {
     return (
@@ -236,7 +239,7 @@ export default async function BestPromosPage() {
           <div className="mx-auto max-w-4xl px-6 pb-20 pt-10">
             <p className="rounded-2xl border border-rd-line bg-rd-card p-5 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
               {retrospective ? capsuleRetro : (
-                <>The {promos.length} best-scored sports promo nights of {label} are ranked below from 100 down. Every entry pulls from official MLB, MLS, and WNBA team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. The list refreshes with each league&apos;s weekly scan: MLB year-round, WNBA and MLS in season.</>
+                <>The {promos.length} best-scored giveaway nights of {label}, each scoring {BEST_PROMO_SCORE_FLOOR} or more, are ranked below from 100 down. Every entry pulls from official MLB, MLS, and WNBA team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. The list refreshes with each league&apos;s weekly scan: MLB year-round, WNBA and MLS in season.</>
               )}
             </p>
 
@@ -306,7 +309,7 @@ export default async function BestPromosPage() {
           </p>
           <p className="mt-5 text-text-secondary text-base leading-relaxed max-w-3xl">
             {retrospective ? capsuleRetro : (
-              <>The {promos.length} best-scored sports promo nights of {label} are
+              <>The {promos.length} best-scored giveaway nights of {label}, each scoring {BEST_PROMO_SCORE_FLOOR} or more, are
               ranked below from 100 down. Every entry pulls from official MLB,
               MLS, and WNBA team-promotion announcements and is scored 0 to 100
               on attendance cap, item value, sponsor presence, and highlight
