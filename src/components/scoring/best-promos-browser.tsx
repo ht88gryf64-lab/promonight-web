@@ -43,7 +43,8 @@ type BestPromosBrowserProps = {
   // 'dark' (default) byte-identical when the gate is off; 'light' is the
   // cream-house. All filters, events, scoring, and capsules are unchanged.
   variant?: 'dark' | 'light';
-  /** Retrospective mode: the forward window yielded nothing, so initialPromos
+  /** Retrospective mode: the forward window yielded too few rows (none, on
+   *  /best-promos/bobbleheads; under ten qualifying, on /best-promos), so initialPromos
    *  carry a COMPLETED season instead of upcoming dates. Skips the
    *  today-forward date filter that would discard every one of them, and hides
    *  the date-range chips, which are meaningless once the season is over.
@@ -253,7 +254,10 @@ export function BestPromosBrowser({
             <div key={`${promo.team.id}-${promo.promoId}`}>
               <ScoredPromoCard
                 promo={promo}
-                showTickets
+                // A retrospective row is a game already played: no ticket
+                // links for it (ux-review 2026-11-25, D1), as on the promo
+                // page's played state.
+                showTickets={!retrospective}
                 ticketsPlacement={ticketsPlacement}
                 trackingSurface={trackingSurface}
                 ticketsSurface={ticketsSurface}

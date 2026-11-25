@@ -13,8 +13,9 @@ import { numberWord } from '@/lib/coverage-counts';
 import { SCORED_LEAGUES } from '@/lib/types';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { addDaysYmd, siteYmd } from '@/lib/site-today';
-import { loadRankedRows } from '@/lib/seasons/ranked-rows';
+import { loadRankedRows, RANKED_MIN_UPCOMING_ROWS } from '@/lib/seasons/ranked-rows';
 import { LEAD_IN_DAYS } from '@/lib/seasons/season-window';
+import { BEST_PROMO_SCORE_FLOOR, ITEM_WEIGHTS_ANSWER, PERFECT_SCORE_ANSWER, PERFECT_SCORE_SHORT_ANSWER, SCORE_COMPONENTS_ANSWER, UNSCORED_LEAGUES_ANSWER } from '@/lib/scoring-weights';
 
 // Server-side fetch runs once per ISR revalidate window. Scoring rides
 // each league's weekly scan (MLB Tue year-round; WNBA Wed and MLS Thu in
@@ -70,12 +71,12 @@ const FAQS = [
   {
     question: 'How does PromoNight rank promos?',
     answer:
-      'Every scored promo gets a 0 to 100 total built from five components: type (giveaway, theme, food, kids), item desirability (bobbleheads and jerseys outscore towels), attendance cap presence, highlight tier, and sponsor presence. The list above sorts by this total descending, with the soonest date as a tiebreaker.',
+      SCORE_COMPONENTS_ANSWER,
   },
   {
     question: 'What makes a promo score 100?',
     answer:
-      'A 100 score requires a giveaway with a desirable collectible item (typically a bobblehead), a stated attendance cap, a highlighted status from the team, and a named sponsor.',
+      PERFECT_SCORE_ANSWER,
   },
   {
     question: 'Why is my favorite team not at the top?',
@@ -85,12 +86,12 @@ const FAQS = [
   {
     question: 'Why are NBA and NHL not included?',
     answer:
-      'The scoring layer rolled out for MLB, MLS, and WNBA first. NBA and NHL promo data exists in PromoNight but has not yet been processed through the structured-extraction pipeline that this ranking depends on. Those leagues will join in a future release.',
+      UNSCORED_LEAGUES_ANSWER,
   },
   {
     question: 'How often does this list update?',
     answer:
-      'Team scores and per-promo scores are recomputed when a scoring run processes updated promo data, and can shift between runs as teams announce more events and the variety bonus adjusts. The Last updated date on this page reflects the most recent scoring run.',
+      'Team scores and per-promo scores are recomputed when a scoring run processes updated promo data, and can shift between runs as teams announce more events and the variety bonus adjusts. The date in the line under the page title is the most recent scoring run.',
   },
   {
     question: 'What does the "Presented by" line on a card mean?',
@@ -100,7 +101,7 @@ const FAQS = [
   {
     question: 'Can I see only bobblehead nights?',
     answer:
-      `Yes. Visit /best-promos/bobbleheads for the same ranking filtered to derivedSignals.itemType equal to "bobblehead". That page shows every scored upcoming bobblehead night across the ${numberWord(SCORED_LEAGUES.size)} scored leagues with its own ranked list.`,
+      `Yes. Visit /best-promos/bobbleheads for a ranking of bobblehead nights only, across the ${numberWord(SCORED_LEAGUES.size)} scored leagues, with its own ranked list.`,
   },
 ];
 
@@ -112,7 +113,7 @@ const INLINE_ANSWERS = [
     afterPosition: 14,
     question: 'What gives a promo a perfect 100 score?',
     answer:
-      'A perfect 100 requires four signals together: a stated attendance cap, a named sponsor, highlighted status from the team, and a recognizable player likeness in the item type. Most high-scoring bobbleheads sit just below the top because they hit three of the four.',
+      PERFECT_SCORE_SHORT_ANSWER,
   },
   {
     afterPosition: 29,
@@ -124,7 +125,7 @@ const INLINE_ANSWERS = [
     afterPosition: 44,
     question: 'How are bobbleheads and jerseys ranked?',
     answer:
-      'Bobbleheads earn 30 points in the item-type component, jerseys earn 20, t-shirts earn 15, towels earn 10. Layering on a low attendance cap, a named sponsor, and a highlight tier pushes the total well above other giveaways.',
+      ITEM_WEIGHTS_ANSWER,
   },
 ];
 
@@ -173,9 +174,11 @@ export default async function BestPromosPage() {
     : null;
 
   // Retrospective copy. The h1 already carries the season label; these say
-  // plainly, in the first sentence, that the season is FINISHED, so a December
-  // visitor arriving on a bobblehead query is not left thinking these are
-  // tonight's options.
+  // plainly that the list is the season's RECORD, so a December visitor
+  // arriving on a bobblehead query is not left thinking these are tonight's
+  // options. They never say nothing is left to come: since 2026-11-25 the
+  // retrospective also shows while fewer than RANKED_MIN_UPCOMING_ROWS
+  // qualifying rows are ahead (src/lib/seasons/ranked-rows.ts).
   // dateModified signals to a crawler that CONTENT changed, so in
   // retrospective mode it must not track the scoring clock. TeamScore
   // computedAt advances weekly because MLB scanning and scoring run
@@ -202,9 +205,9 @@ export default async function BestPromosPage() {
   // In retrospective mode the stamp says what the date actually is, the last
   // time SCORES were computed, rather than implying the content is fresh.
   const stampLine = retrospective
-    ? `${label} season · no ranked promos ahead${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} promos ranked`
+    ? `${label} season record${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} promos ranked`
     : null;
-  const capsuleRetro = `These are the ${promos.length} best-scored promo nights of the ${label} season across MLB, MLS, and WNBA. Nothing here is upcoming: none of the three leagues we score has a ranked promo still to come this season, so this is the year ranked from 100 down rather than a list of what is on next. Every entry pulls from official team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. Upcoming rankings return here from ${LEAD_IN_DAYS} days before each league's Opening Day, as clubs announce them.`;
+  const capsuleRetro = `These are the ${promos.length} best-scored promo nights of the ${label} season across MLB, MLS, and WNBA. This list is the season's record, ranked from 100 down, not a list of what is on next. Every entry pulls from official team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. An upcoming ranking returns from ${LEAD_IN_DAYS} days before a scored league's next Opening Day, once at least ${RANKED_MIN_UPCOMING_ROWS} giveaways scoring ${BEST_PROMO_SCORE_FLOOR} or more are on the schedule.`;
 
   if (isRedesignEnabled()) {
     return (
@@ -236,7 +239,7 @@ export default async function BestPromosPage() {
           <div className="mx-auto max-w-4xl px-6 pb-20 pt-10">
             <p className="rounded-2xl border border-rd-line bg-rd-card p-5 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
               {retrospective ? capsuleRetro : (
-                <>The {promos.length} best-scored sports promo nights of {label} are ranked below from 100 down. Every entry pulls from official MLB, MLS, and WNBA team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. The list refreshes with each league&apos;s weekly scan: MLB year-round, WNBA and MLS in season.</>
+                <>The {promos.length} best-scored giveaway nights of {label}, each scoring {BEST_PROMO_SCORE_FLOOR} or more, are ranked below from 100 down. Every entry pulls from official MLB, MLS, and WNBA team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. The list refreshes with each league&apos;s weekly scan: MLB year-round, WNBA and MLS in season.</>
               )}
             </p>
 
@@ -306,7 +309,7 @@ export default async function BestPromosPage() {
           </p>
           <p className="mt-5 text-text-secondary text-base leading-relaxed max-w-3xl">
             {retrospective ? capsuleRetro : (
-              <>The {promos.length} best-scored sports promo nights of {label} are
+              <>The {promos.length} best-scored giveaway nights of {label}, each scoring {BEST_PROMO_SCORE_FLOOR} or more, are
               ranked below from 100 down. Every entry pulls from official MLB,
               MLS, and WNBA team-promotion announcements and is scored 0 to 100
               on attendance cap, item value, sponsor presence, and highlight

@@ -1,5 +1,6 @@
 import type { PromoWithTeam } from '@/lib/types';
 import type { SeasonEligible } from '@/lib/seasons/season-window';
+import { isBestPromoRow } from '@/lib/scoring-weights';
 
 // Top-N future promos by stored per-promo score, picked in memory over the
 // corpus the homepage already fetches. mapPromoDoc carries score,
@@ -19,6 +20,13 @@ import type { SeasonEligible } from '@/lib/seasons/season-window';
 // 2026-11-05, 7 of these 8 picks were Giants 2027 rows. `eligible` keeps only
 // rows inside their league's current season (src/lib/seasons/season-window.ts),
 // and it is applied before the cut so the rail still fills from in-season rows.
+//
+// GIVEAWAYS AT OR ABOVE THE FLOOR ONLY (2026-11-25). The rail's lede is about
+// giveaways, and with no floor it showed whatever was left: that day, three
+// MLS playoff fixtures typed `theme` and scoring 15 to 18. isBestPromoRow
+// (src/lib/scoring-weights.ts) admits a scored giveaway at
+// BEST_PROMO_SCORE_FLOOR or above and never a theme night. When nothing
+// passes, the array is empty and HomePageV2 renders no section at all.
 export function pickBestStubPromos(
   allFuture: PromoWithTeam[],
   n: number,
@@ -28,6 +36,7 @@ export function pickBestStubPromos(
     .filter(
       (p) => typeof p.score === 'number' && p.scoreBreakdown != null && p.derivedSignals != null,
     )
+    .filter(isBestPromoRow)
     .filter((p) => eligible(p.team.league, p.date))
     .sort((a, b) => (b.score as number) - (a.score as number) || a.date.localeCompare(b.date))
     .slice(0, n);
