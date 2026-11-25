@@ -126,6 +126,18 @@ difference there is a finding.
   session's scratchpad), run your scripts from there, and keep every
   script there. The PNGs, the diff images and the report are the only
   files you write inside the repo.
+- Never read, grep, cat, list the contents of, copy or source any `.env*`
+  file, in this repo or any other directory, and never print the
+  environment (`env`, `printenv`, `process.env`). On 2026-11-25 a
+  `grep -rn ... .env*` meant to check one public flag printed two secret
+  lines from `.env.local` into the session transcript. The dev server is
+  started for you by the session that launched you, which is the only
+  party that handles env files; you are handed a running URL and nothing
+  else. If a difference between the branch and production looks like an
+  env difference (an unwrapped link, a missing block), report it as
+  observed and say that you could not tell; do not go looking for the
+  variable. Searches of the repo exclude env files explicitly
+  (`grep --exclude='.env*'`), and never use a `.env*` glob.
 - Do not propose code. Do not soften findings.
 
 ## Report

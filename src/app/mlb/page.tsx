@@ -191,6 +191,11 @@ export default async function MlbHubPage() {
           sectionId="mlb-browse-team"
           surface="web_mlb_hub_team_card"
           collection="mlb_hub"
+          // On a hub naming next season early, the cards of the clubs that
+          // have published say so; the rest keep the default line.
+          {...(hubSeason.early
+            ? { subtitleByTeamId: Object.fromEntries(hubSeason.publishedTeamIds.map((id) => [id, `${hubSeason.label} promotions published`])) }
+            : {})}
           intro={hubSeason.early ? 'All 30 MLB clubs by division. Open any team for its promotional schedule.' : `All 30 MLB clubs by division. Open any team for its full ${YEAR} promotional schedule.`}
           selectorLabel="Filter teams by division"
           allLabel="All divisions"

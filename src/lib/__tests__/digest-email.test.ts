@@ -302,7 +302,8 @@ test('gate on: exactly one lusg.net link, on the hero button, and none without a
       const ticket = hrefs(html).find((h) => h.includes('lusg.net'))!;
       assert.match(ticket, /subId1=web_email_(personalized|generic|empty)_florida-panthers/);
       assert.match(ticket, /subId3=star-wars-night/);
-      assert.match(html, />Get tickets<\/a>/);
+      assert.match(html, />Get Tickets<\/a>/);
+      assert.ok(html.indexOf('TicketNetwork is a resale marketplace. Prices may differ from face value.') > html.indexOf('>Get Tickets</a>'), `${c.name}: the resale line under the button`);
       assert.ok(!html.includes('See this game'), `${c.name}: the button became Get tickets`);
     } else {
       assert.strictEqual(count(html, 'lusg.net'), 0, `${c.name}: no hero, no ticket link`);

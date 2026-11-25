@@ -9,6 +9,8 @@ import { buildEventTicketLink, buildSpotHeroUrl, eventSubId, eventTicketVendor }
 import { cityState, displayVenueName, spotHeroCovers, type TenantTeamLink, type VenueHub } from '@/lib/venue-hub';
 import { parkingLotsModel, transitRowModel } from '@/components/venue-hub/venue-logistics';
 import type { EventFloor, EventStopSummary } from '@/lib/events/event-stops';
+import { TICKET_CTA_LABEL, ticketAriaLabel } from '@/lib/ticket-labels';
+import { ResaleNote } from '@/components/affiliates/AffiliateDisclosure';
 import {
   EVENTS_INDEX_PATH,
   EVENTS_NOT_AFFILIATED,
@@ -276,6 +278,8 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
           {!stop.tombstoned && upcoming.length ? (
             <section aria-label="Showtimes and tickets" className="mt-[18px] flex flex-col gap-2.5">
               <H2>Pick your show</H2>
+              {/* One resale line for every showtime button, directly under the heading and above the buttons (ruling 2026-11-25). */}
+              {upcoming.some((p) => ticketUrlFor(p)) ? <ResaleNote tone="light" /> : null}
               {tl.upcoming.map((g) => (
                 <div key={g.visit.visitId} className="flex flex-col gap-2.5" data-visit={g.visit.visitId}>
                   {tl.upcoming.length > 1 ? (
@@ -309,10 +313,10 @@ export function EventStopView({ stop, hub, now, teams, otherStops }: EventStopVi
                                 eventContext={{ ...eventContext, performanceKey: p.key, provider: provider ?? undefined }}
                                 target="_blank"
                                 rel="noopener noreferrer sponsored"
-                                ariaLabel={`Tickets for ${show.name} at ${venueName}, ${formatShortDay(p.date)} at ${formatClock(p.startTime)}`}
-                                className="flex h-12 shrink-0 items-center justify-center rounded-xl bg-rd-red px-5 font-rd text-[16px] font-semibold text-white no-underline hover:brightness-95"
+                                ariaLabel={ticketAriaLabel(`for ${show.name} at ${venueName}, ${formatShortDay(p.date)} at ${formatClock(p.startTime)}`, 'TicketNetwork')}
+                                className="flex h-12 shrink-0 items-center justify-center whitespace-nowrap rounded-xl bg-rd-red px-3 font-rd text-[14px] font-semibold text-white no-underline hover:brightness-95 min-[420px]:px-5 min-[420px]:text-[16px]"
                               >
-                                Tickets
+                                {TICKET_CTA_LABEL}
                               </TrackedAffiliateLink>
                             </ShowtimeGate>
                           ) : (

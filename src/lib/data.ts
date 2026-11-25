@@ -1849,12 +1849,14 @@ export interface LeagueHubSeason {
   teamCount: number;
   /** "8 of 30 clubs have published 2027 promotions so far." Null unless `early`. */
   note: string | null;
+  /** The clubs counted in `clubsPublished`, so the team cards can say which. Empty unless `early`. */
+  publishedTeamIds: string[];
 }
 
 export const getLeagueHubSeason = cache(async (league: string): Promise<LeagueHubSeason> => {
   const today = hubTodayYMD();
   const teams = (await getAllTeams()).filter((t) => t.league === league);
-  const same: LeagueHubSeason = { label: seasonLabel(league, today), early: false, clubsPublished: 0, teamCount: teams.length, note: null };
+  const same: LeagueHubSeason = { label: seasonLabel(league, today), early: false, clubsPublished: 0, teamCount: teams.length, note: null, publishedTeamIds: [] };
   const next = nextSeasonNotYetOpen(league, today);
   // No next season in the table, or the labelled one is still in play: no read.
   if (!next || hubLabelDay(league, today, 1) === today) return same;
@@ -1884,6 +1886,7 @@ export const getLeagueHubSeason = cache(async (league: string): Promise<LeagueHu
     early: true,
     clubsPublished: clubs.size,
     teamCount: teams.length,
+    publishedTeamIds: [...clubs].sort(),
     note: `${clubs.size} of ${teams.length} ${league === 'WNBA' || league === 'NBA' ? 'teams' : 'clubs'} ${clubs.size === 1 ? 'has' : 'have'} published ${label} promotions so far.`,
   };
 });

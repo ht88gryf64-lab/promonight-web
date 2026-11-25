@@ -115,3 +115,22 @@ test('a game already played is tagged "Played" beside its date; one still ahead 
   // Before the first game: none.
   assert.equal(tagged((await renderAt('2026-09-01T17:00:00Z')).h), 0);
 });
+
+test('a canceled game is never tagged "Played" (2026-11 fix round)', async () => {
+  const tagged = (h: string) => (h.match(/data-rivalry-played/g) ?? []).length;
+  assert.equal(tagged((await renderAt('2026-11-25T17:00:00Z')).h), 2, 'Red River and the Big Game');
+  const redRiver = ROWS.find((r) => r.slug === 'red-river')!;
+  redRiver.canceled = true;
+  try {
+    const { h } = await renderAt('2026-11-25T17:00:00Z');
+    assert.equal(tagged(h), 1, 'only the Big Game');
+    const at = h.indexOf('href="/cfb/rivalries/red-river"');
+    assert.doesNotMatch(text(h.slice(h.lastIndexOf('<li', at), h.indexOf('</li>', at))), /Played/);
+  } finally {
+    delete redRiver.canceled;
+  }
+  // And the row carries the game's own status from the corpus.
+  const matchups = (await import('node:fs')).readFileSync(new URL('../../../../lib/cfb/matchups.ts', import.meta.url), 'utf-8');
+  assert.match(matchups, /canceled: game\?\.data\.status === 'canceled',/);
+  assert.match(matchups, /canceled: r\.canceled,/);
+});

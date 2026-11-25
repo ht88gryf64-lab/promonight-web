@@ -4490,15 +4490,33 @@ One line each.
 - **Monster Jam stop past state.** Covered by a render test on a fixture; the first live case is Anaheim on Dec 19 and 20, 2026.
 - **Head and body gate the early label differently.** The head computes the label day for every league; the body only where the season scope is live. They agree today (every scope gate is open) and would differ if a gate were closed again.
 - **Postseason rows and the early label.** Rows flagged `isPostseason` are dropped before the team rule reads them, so a club still in a postseason whose only other upcoming rows are next season's would name next season.
-- **Rivalry index day.** The index tags "Played" on the site's Eastern day; the rivalry page flips on the venue's day, so a Pacific game can be tagged up to three hours before its page changes. A canceled game is not treated as played on its page, but the index row carries no status and would still be tagged.
+- **Rivalry index day.** The index tags "Played" on the site's Eastern day; the rivalry page flips on the venue's day, so a Pacific game can be tagged up to three hours before its page changes.
 - **Events hub lag.** /events/monster-jam revalidates daily and stop pages hourly, so the hub can keep "2026-27" for up to a day after the last December show.
-- **Flipped team page has no rendered test.** The early-season tests read source and pure helpers; the served checks at the gate are the only rendered evidence.
 - **MLS home games constant.** `HOME_GAMES_BY_LEAGUE` says 17 for MLS, which will be wrong for the 2027 Sprint Season; the ratio sentence is suppressed on an early page and must be checked before MLS 2027 opens.
-- **Hub does not say which clubs have published.** /mlb leads with 2027 and "8 of 30 clubs" but the team cards are unmarked; a card for a club with nothing published lands on a finished 2026 page (ux-review 2026-11-25, D3).
-- **Calendar on an early page opens on the current month.** On a flipped team page the month grid opens on an empty November 2026 and takes four taps to reach March 2027 (D4).
 - **Early page repeats its counts and mixes certainty.** With nothing completed, sentences read "11 giveaway nights, 11 still to come", and the three question blocks and one FAQ still read as season totals beside "announced so far" (D5, D6).
 - **"Still to come" label spacing on an early page.** The label sits flush against the hero's bottom edge at 390 and 768 (D8).
 - **Division rivals intro says "this season"** on a page naming next season (D9).
 - **Past promos count mismatch.** The team page says "All 114 past promos" and the archive page says "102 promotions already played" (D10, on production too).
 - **Played rivalry page has no result** and says played three times in the first screen; the sibling list on a rivalry page shows a played game with no mark (D11, D12).
 - **Hub FAQ names a this-week rail** that does not exist in the offseason (D14, on production too).
+
+## 130. Deferred from feature/counts-and-cta (logged 2026-11-25)
+
+One line each.
+
+- **"Verified" elsewhere.** /venues no longer says "verified" (43 of the 203 listed buildings meet the pipeline's current verification rule; the rest carry the flag from earlier seed passes). /about still says "the buildings we have verified", and per-venue pages and descriptions still use the word.
+- **Homepage venue total moved.** The hero's "Venue guides" stat and the `venue_count` analytics property now count the 203 listed buildings, not the 213 flagged ones; dashboards reading `venue_count` will see the step.
+- **Today tile and /promos/today.** The tile now prints the Tonight rail's pool, which includes postseason rows; the /promos/today board it links to builds its own list and can differ when postseason rows exist.
+- **Hub card mark is text only.** On a hub naming next season early, a published club's card reads "2027 promotions published"; the selector cannot filter to those clubs.
+- **Disclosure sentence is on by default.** The disclosure's TicketNetwork sentence is switched off for Ticketmaster-only clubs, eBay-only blocks, the event stop and promo or rivalry pages without a TicketNetwork link; the homepage, /best-promos and /playoffs keep it because their ticket cards load on interaction or sit in a panel.
+- **Daily board tiles at phone width.** On /promos/today below about 416px of row width the inline tiles show brand marks only, so neither reads "Get Tickets"; the resale line prints once under the page lede (ruling 2026-11-25).
+- **Per-date links share the primary's line.** On a promo page the small per-date "Get Tickets" links have no line of their own.
+- **The app is not covered.** The Flutter app's ticket buttons are outside this repo.
+- **/promos/today lede.** It says "15 games today have promotions" where there are 15 promos at 9 games (ux-review 2026-11-25; on production too).
+- **A canceled rivalry row has no marker.** It is never tagged "Played", and it shows its date with nothing saying it was canceled.
+- **Transit tile predicate.** The homepage transit tile counts raw transit data less suppressed buildings; the /venues index uses the page's own render rule. They agree today (103) by data, not by code.
+- **Team-page bytes in season.** The resale line adds about 170 bytes per prerendered game block; at the 35-block cap that is about 6 KB against the 950,000-byte cap. The live battery is the check.
+- **Event stop at 360px.** "12:00 PM" wraps on 12 rows at 8 stops with the "Get Tickets" button; by geometry production wraps the same rows.
+- **Two identical ticket cards.** On team pages the Ticketmaster and TicketNetwork cards both read "Get Tickets" and differ by logo and the line under the pair (ux-review 2026-11-25, D5; by ruling).
+- **Hub card name and subtitle run together for axe.** The two spans have no whitespace between them, so the cards still fail label-content-name-mismatch on every hub (on production too).
+- **No calendar on an early team page.** A page naming next season early shows no calendar until the schedule holds a game dated today or later (ruling 2026-11-25); the category chips go with it.
