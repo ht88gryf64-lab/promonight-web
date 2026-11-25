@@ -56,10 +56,6 @@ function primaryHref(html: string): string {
 /** The small per-date ticket links beside a date (class ml-1 ... text-[13px]). */
 const perDateHrefs = (html: string): string[] =>
   [...html.matchAll(/<a ([^>]*)>Get Tickets<\/a>/g)].filter((m) => m[1].includes('ml-1 font-rd text-[13px]')).map((m) => /href="([^"]+)"/.exec(m[1])![1]);
-/** The page less the disclosure's own sentence about TicketNetwork (2026-11-25), which every
- *  page with the disclosure now carries: what must be absent on a Ticketmaster-only page is
- *  a TicketNetwork link, label, resale line or offer. */
-const lessDisclosure = (html: string) => html.replaceAll(' Tickets on TicketNetwork are resold by other sellers, so a price there can be above or below face value.', '');
 const anchors = (html: string, text: string) => html.split(`>${text}</a>`).length - 1;
 const eventOffers = (html: string) => {
   const out: [string, string][] = [];
@@ -159,6 +155,8 @@ for (const [name, team, rows] of FIXTURES) {
 test('a page whose dates have all been played sells nothing (ruling 2026-11-08): no ticket anchor, no TicketNetwork href, no offers; the way forward is the team page', () => {
   const html = render([row({ date: '2026-10-20', tnEventUrl: EV(2, 'detroit-red-wings-vs-x-tickets-tue-oct-20-2026-little-caesars-arena') })], '2026-11-02');
   assert.equal(anchors(html, 'Get Tickets'), 0);
+  // Nothing about TicketNetwork at all on a played page: no link, no resale line, no disclosure sentence.
+  assert.ok(!/ticketnetwork/i.test(html), 'a played page names no ticket partner');
   assert.equal(anchors(html, 'Also on Ticketmaster'), 0);
   assert.equal(anchors(html, 'Tickets'), 0);
   assert.ok(!html.includes(PREFIX), 'no TicketNetwork href anywhere, JSON-LD included');
@@ -196,7 +194,7 @@ test('flagged club, single date: Ticketmaster is the primary with the unflagged 
   assert.equal(anchors(html, 'Tickets'), 0);
   assert.equal(offersUrl(html), pageUrl(html));
   assert.ok(ldClean(html), 'the Ticketmaster link is on the button, not in JSON-LD');
-  assert.ok(!/ticketnetwork/i.test(lessDisclosure(html)), 'no TicketNetwork href, label or offer');
+  assert.ok(!/ticketnetwork/i.test(html), 'no TicketNetwork href, label or offer');
   assert.ok(html.includes('on Ticketmaster"'), 'the primary is labelled for Ticketmaster');
 });
 
@@ -212,11 +210,11 @@ test('flagged club, series: no per-date links, every Event offers the page', () 
   assert.equal(anchors(html, 'Tickets'), 0);
   assert.deepEqual(eventOffers(html), [['2026-11-21', pageUrl(html)], ['2026-12-12', pageUrl(html)]]);
   assert.ok(ldClean(html));
-  assert.ok(!/ticketnetwork/i.test(lessDisclosure(html)));
+  assert.ok(!/ticketnetwork/i.test(html));
 });
 
 test('flagged club with a stored event link: the flag wins, Ticketmaster stays primary', () => {
   const html = render([leafsRow({ date: '2026-11-21', tnEventUrl: EV(9000001, 'toronto-maple-leafs-vs-boston-bruins-tickets-sat-nov-21-2026-scotiabank-arena') })], '2026-11-02', LEAFS);
   assert.match(primaryHref(html), /^https:\/\/www\.ticketmaster\.com\//);
-  assert.ok(!/ticketnetwork/i.test(lessDisclosure(html)));
+  assert.ok(!/ticketnetwork/i.test(html));
 });

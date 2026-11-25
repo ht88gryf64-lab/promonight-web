@@ -124,7 +124,9 @@ test('the disclosure says it in its own words, and only where the page can carry
   const src = (rel: string) => readFileSync(new URL(rel, import.meta.url), 'utf-8');
   assert.match(src('../../redesign/RedesignTeamPage.tsx'), /<AffiliateDisclosure className="text-center" resale=\{ticketNetworkForGame\(null, team\)\} \/>/);
   assert.match(src('../../redesign/PastBobbleheadsSection.tsx'), /<AffiliateDisclosure className="mt-8" resale=\{false\} \/>/);
-  assert.match(src('../../promo-page/PromoPageView.tsx'), /<AffiliateDisclosure className="mt-6" resale=\{!!ticketNetwork\} \/>/);
+  assert.match(src('../../promo-page/PromoPageView.tsx'), /<AffiliateDisclosure className="mt-6" resale=\{!!ticketNetwork && !past && !removed\} \/>/);
+  assert.match(src('../../scoring/best-promos-browser.tsx'), /resale=\{!retrospective\}/, 'retrospective cards carry no ticket links');
+  assert.match(src('../../venue-hub/VenueHubView.tsx'), /resale=\{!!ticketTeam && ticketNetworkForGame\(null, ticketTeam\)\}/, 'a Ticketmaster-only building');
   assert.match(src('../../cfb/rivalry/RivalryMatchupPage.tsx'), /resale=\{steps\.some\(\(s\) => s\.partner === 'ticketnetwork'\)\}/);
   // The event stop prints the resale line under its buttons and the base disclosure after it: never the same thing twice.
   assert.doesNotMatch(src('../../events/EventStopView.tsx'), /AFFILIATE_DISCLOSURE_RESALE_SENTENCE/);

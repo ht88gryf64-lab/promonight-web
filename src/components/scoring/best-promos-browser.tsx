@@ -315,7 +315,8 @@ export function BestPromosBrowser({
           Gated on the same `visible` list the CTAs come from: filtering down to
           an empty result set removes the links and the claim together. */}
       {visible.length > 0 && (
-        <AffiliateDisclosure className="mt-10 text-center" tone={light ? 'light' : 'dark'} />
+        // Retrospective cards carry no ticket links (showTickets), so no TicketNetwork sentence.
+        <AffiliateDisclosure className="mt-10 text-center" tone={light ? 'light' : 'dark'} resale={!retrospective} />
       )}
     </div>
   );
