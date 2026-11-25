@@ -15,7 +15,7 @@ import { archivoHouse } from '@/components/redesign/fonts-house';
 import { addDaysYmd, siteYmd } from '@/lib/site-today';
 import { loadRankedRows, RANKED_MIN_UPCOMING_ROWS } from '@/lib/seasons/ranked-rows';
 import { LEAD_IN_DAYS } from '@/lib/seasons/season-window';
-import { BEST_PROMO_SCORE_FLOOR, ITEM_WEIGHTS_ANSWER, PERFECT_SCORE_ANSWER, SCORE_COMPONENTS_ANSWER, UNSCORED_LEAGUES_ANSWER } from '@/lib/scoring-weights';
+import { BEST_PROMO_SCORE_FLOOR, ITEM_WEIGHTS_ANSWER, PERFECT_SCORE_ANSWER, PERFECT_SCORE_SHORT_ANSWER, SCORE_COMPONENTS_ANSWER, UNSCORED_LEAGUES_ANSWER } from '@/lib/scoring-weights';
 
 // Server-side fetch runs once per ISR revalidate window. Scoring rides
 // each league's weekly scan (MLB Tue year-round; WNBA Wed and MLS Thu in
@@ -91,7 +91,7 @@ const FAQS = [
   {
     question: 'How often does this list update?',
     answer:
-      'Team scores and per-promo scores are recomputed when a scoring run processes updated promo data, and can shift between runs as teams announce more events and the variety bonus adjusts. The Last updated date on this page reflects the most recent scoring run.',
+      'Team scores and per-promo scores are recomputed when a scoring run processes updated promo data, and can shift between runs as teams announce more events and the variety bonus adjusts. The date in the line under the page title is the most recent scoring run.',
   },
   {
     question: 'What does the "Presented by" line on a card mean?',
@@ -101,7 +101,7 @@ const FAQS = [
   {
     question: 'Can I see only bobblehead nights?',
     answer:
-      `Yes. Visit /best-promos/bobbleheads for a ranking of bobblehead nights only (derivedSignals.itemType equal to "bobblehead"). That page shows every scored upcoming bobblehead night across the ${numberWord(SCORED_LEAGUES.size)} scored leagues with its own ranked list.`,
+      `Yes. Visit /best-promos/bobbleheads for a ranking of bobblehead nights only, across the ${numberWord(SCORED_LEAGUES.size)} scored leagues, with its own ranked list.`,
   },
 ];
 
@@ -113,7 +113,7 @@ const INLINE_ANSWERS = [
     afterPosition: 14,
     question: 'What gives a promo a perfect 100 score?',
     answer:
-      PERFECT_SCORE_ANSWER,
+      PERFECT_SCORE_SHORT_ANSWER,
   },
   {
     afterPosition: 29,

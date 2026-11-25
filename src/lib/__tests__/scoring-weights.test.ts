@@ -32,6 +32,7 @@ import {
   UNCAPPED_BOBBLEHEAD_CEILING,
   UNSCORED_LEAGUES_ANSWER,
   GENERIC_TITLE_CEILING,
+  PERFECT_SCORE_SHORT_ANSWER,
   NINETY_EIGHT_VS_HUNDRED_ANSWER,
   SMALL_CAP_ANSWER,
   isBestPromoRow,
@@ -145,6 +146,11 @@ test('the FAQ copy states the real numbers and none of the retired claims', () =
   assert.match(SCORE_COMPONENTS_ANSWER, /A generic title such as "Theme Night" loses 10/);
   assert.match(SCORE_COMPONENTS_ANSWER, /40 points for a giveaway, 30 for a kids event, 20 for a food deal and 15 for a theme night/);
   assert.match(PERFECT_SCORE_ANSWER, /cap under 5,000 fans/);
+  assert.match(PERFECT_SCORE_ANSWER, /\(40 points plus 30\)/, 'the first bracket says the numbers are points');
+  // The short form states the same rule and the same two numbers.
+  assert.match(PERFECT_SCORE_SHORT_ANSWER, /highlighted bobblehead giveaway in limited quantity with a stated cap under 5,000 fans/);
+  assert.match(PERFECT_SCORE_SHORT_ANSWER, /A sponsor is not required, and a bobblehead capped at 5,000 or more tops out at 98/);
+  assert.doesNotMatch(PERFECT_SCORE_SHORT_ANSWER, /likeness|\u2014|\u2013/);
   assert.match(PERFECT_SCORE_ANSWER, /A sponsor is not required/);
   assert.match(PERFECT_SCORE_ANSWER, /tops out at 98/);
   assert.match(PERFECT_SCORE_ANSWER, /only with a cap under 1,000/);
@@ -171,7 +177,11 @@ test('the pages take these answers from the module and carry no second copy', ()
   const best = src('app/best-promos/page.tsx');
   const teams = src('app/team-rankings/page.tsx');
   // Counted after the import line, whatever the formatting around `answer:`.
-  assert.equal(best.slice(best.indexOf('const FAQS')).match(/\bPERFECT_SCORE_ANSWER\b/g)?.length, 2, 'both "perfect 100" questions give the one answer');
+  const body = best.slice(best.indexOf('const FAQS'));
+  assert.equal(body.match(/\bPERFECT_SCORE_ANSWER\b/g)?.length, 1, 'the FAQ gives the full answer once');
+  assert.equal(body.match(/\bPERFECT_SCORE_SHORT_ANSWER\b/g)?.length, 1, 'the inline block gives the short form of the same rule');
+  // A retrospective card is a played game: no ticket links on it.
+  assert.match(src('components/scoring/best-promos-browser.tsx'), /showTickets=\{!retrospective\}/);
   assert.match(best, /SCORE_COMPONENTS_ANSWER,/);
   assert.match(best, /ITEM_WEIGHTS_ANSWER,/);
   assert.match(best, /UNSCORED_LEAGUES_ANSWER,/);

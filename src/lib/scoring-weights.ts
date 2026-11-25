@@ -92,11 +92,18 @@ export const SCORE_COMPONENTS_ANSWER =
 /** "What makes a promo score 100?" and "What gives a promo a perfect 100
  *  score?": one answer, so the page cannot define it two ways again. */
 export const PERFECT_SCORE_ANSWER =
-  `A ${SCORE_MAX} is a bobblehead giveaway (${BASE_TYPE_WEIGHT.giveaway} plus ${ITEM_TYPE_WEIGHT.bobblehead}) that the team highlights (${HIGHLIGHT_POINTS}), in limited quantity (${LIMITED_QUANTITY_POINTS}), with a stated cap under ${n(CAP_THRESHOLD_HIGH)} fans (${CAP_POINTS}). ` +
+  `A ${SCORE_MAX} is a bobblehead giveaway (${BASE_TYPE_WEIGHT.giveaway} points plus ${ITEM_TYPE_WEIGHT.bobblehead}) that the team highlights (${HIGHLIGHT_POINTS} more), in limited quantity (${LIMITED_QUANTITY_POINTS}), with a stated cap under ${n(CAP_THRESHOLD_HIGH)} fans (${CAP_POINTS}). ` +
   `A sponsor is not required: it adds ${SPONSOR_POINTS} points, and the total stops at ${SCORE_MAX}. ` +
   `With a cap of ${n(CAP_THRESHOLD_HIGH)} or more, the same bobblehead tops out at ${UNCAPPED_BOBBLEHEAD_CEILING}, sponsor included, which is why most top bobbleheads sit just under ${SCORE_MAX}. ` +
   `A jersey or premium item is worth ${ITEM_TYPE_WEIGHT.bobblehead - ITEM_TYPE_WEIGHT.jersey} fewer points than a bobblehead, so it reaches ${SCORE_MAX} only with a cap under ${n(CAP_THRESHOLD_LOW)}. ` +
   `A generic title such as "Giveaway Night" takes ${GENERIC_TITLE_PENALTY} off, and a promo that carries one tops out at ${GENERIC_TITLE_CEILING}.`;
+
+/** The inline block between cards on /best-promos, "What gives a promo a
+ *  perfect 100 score?": the same rule in two sentences, so the page does not
+ *  print the full FAQ paragraph twice (ux-review 2026-11-25, D3). */
+export const PERFECT_SCORE_SHORT_ANSWER =
+  `A perfect ${SCORE_MAX} is a highlighted bobblehead giveaway in limited quantity with a stated cap under ${n(CAP_THRESHOLD_HIGH)} fans. ` +
+  `A sponsor is not required, and a bobblehead capped at ${n(CAP_THRESHOLD_HIGH)} or more tops out at ${UNCAPPED_BOBBLEHEAD_CEILING}. The FAQ below has the point values.`;
 
 /** "How are bobbleheads and jerseys ranked?" */
 export const ITEM_WEIGHTS_ANSWER =

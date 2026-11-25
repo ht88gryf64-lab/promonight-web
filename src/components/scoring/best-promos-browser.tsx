@@ -254,7 +254,10 @@ export function BestPromosBrowser({
             <div key={`${promo.team.id}-${promo.promoId}`}>
               <ScoredPromoCard
                 promo={promo}
-                showTickets
+                // A retrospective row is a game already played: no ticket
+                // links for it (ux-review 2026-11-25, D1), as on the promo
+                // page's played state.
+                showTickets={!retrospective}
                 ticketsPlacement={ticketsPlacement}
                 trackingSurface={trackingSurface}
                 ticketsSurface={ticketsSurface}
