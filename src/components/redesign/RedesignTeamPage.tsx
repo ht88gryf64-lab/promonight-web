@@ -378,9 +378,11 @@ export function RedesignTeamPage({
             // schedule list prints, from the same helper, so the tile and the
             // list cannot disagree. Was the raw doc count, which read 168 on
             // the Braves (3 Wild Card games, 3 postponed originals).
-            gamesCount={regularGames?.length}
+            // Not on a page naming next season early: these are this season's
+            // games, and the tile would sit under next season's label.
+            gamesCount={claim.labelDay ? undefined : regularGames?.length}
             {...(isSplitSeasonLeague(team.league) ? { gamesLabel: 'Scheduled games' } : {})}
-            note={seasonScope ? seasonClaimSentence(seasonScope) : undefined}
+            note={seasonScope ? seasonClaimSentence(seasonScope, !!claim.labelDay) : undefined}
           />
         }
       />

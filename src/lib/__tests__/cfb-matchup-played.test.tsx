@@ -91,6 +91,8 @@ test('rendered, PLAYED (Florida vs Georgia, 2026-10-31, read on 2026-11-25): the
     assert.match(t, /FLORIDA VS GEORGIA 2026|Florida vs Georgia 2026/i);
     assert.match(t, /EverBank Stadium/);
     assert.match(t, /Okefenokee Oar/);
+    // The stadium guide link survives the trip section: internal, and not an offer.
+    assert.match(h, /<a[^>]*href="\/venues\/everbank-stadium"[^>]*>Stadium guide<\/a>/);
   } finally { mock.timers.reset(); }
 });
 
@@ -106,6 +108,7 @@ test('rendered, UPCOMING (the same page read on 2026-10-20): the trip section an
     assert.match(t, /Find tickets/);
     assert.match(h, /ticketnetwork/i);
     assert.match(t, /may earn a commission/i);
+    assert.doesNotMatch(h, /data-matchup-stadium-guide/, 'upcoming: the guide is the trip section\'s own step');
   } finally { mock.timers.reset(); }
 });
 

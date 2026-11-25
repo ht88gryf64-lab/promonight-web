@@ -536,7 +536,7 @@ export function generateTeamFAQs(
     const seasonBreakdown = breakdown(season.counts);
     faqs.push({
       question: `How many promotional nights do the ${team.name} have in the ${season.label} season?`,
-      answer: `The ${fullName} have ${season.total} promotional ${season.total === 1 ? 'event' : 'events'} in the ${season.label} season${seasonBreakdown ? `, including ${seasonBreakdown}` : ''}.${remaining ? ` ${remaining}` : ''}${gated ? ` ${gated}` : ''} These events take place at ${venueName}${cityClause}.`,
+      answer: `The ${fullName} have ${claim.labelDay ? 'announced ' : ''}${season.total} promotional ${season.total === 1 ? 'event' : 'events'} ${claim.labelDay ? 'so far for' : 'in'} the ${season.label} season${seasonBreakdown ? `, including ${seasonBreakdown}` : ''}.${remaining ? ` ${remaining}` : ''}${gated ? ` ${gated}` : ''} These events take place at ${venueName}${cityClause}.`,
     });
   } else if (upcomingPromos.length > 0) {
     // HELD keeps the pre-change strings byte for byte, including the "in the

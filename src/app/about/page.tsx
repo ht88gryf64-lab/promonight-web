@@ -86,10 +86,16 @@ export default async function AboutPage() {
   // Where each league stands today, derived (src/lib/about-league-state.ts):
   // the season windows, and which teams have a promotion listed ahead.
   const today = siteTodayYmd();
-  const [allTeams, upcoming] = await Promise.all([getAllTeams(), getPromosFromDate(today)]);
-  const leagueState = aboutLeagueStateSentence(
-    resolveAboutLeagueState(today, allTeams, upcoming.map((p) => ({ teamId: p.team.id, league: p.team.league, date: p.date }))),
-  );
+  // A failed read never fails /about: the sentence is left out.
+  let leagueState = '';
+  try {
+    const [allTeams, upcoming] = await Promise.all([getAllTeams(), getPromosFromDate(today)]);
+    leagueState = aboutLeagueStateSentence(
+      resolveAboutLeagueState(today, allTeams, upcoming.map((p) => ({ teamId: p.team.id, league: p.team.league, date: p.date }))),
+    );
+  } catch (err) {
+    console.error('/about league state read failed; sentence omitted', err);
+  }
   const sections = aboutSections(counts, leagueState);
   const faqs = aboutFaqs(counts);
   const light = isRedesignEnabled();

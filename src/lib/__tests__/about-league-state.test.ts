@@ -21,12 +21,12 @@ test('2026-11-25: four leagues in season, MLB and WNBA finished, and the clubs a
   assert.deepEqual(s.inSeason, ['NBA', 'NFL', 'NHL', 'MLS']);
   assert.deepEqual(s.opening, []);
   assert.deepEqual(s.finished, ['MLB', 'WNBA']);
-  // Kraken and Ravens have nothing ahead; the Galaxy row is next season's but it is a row ahead.
-  assert.deepEqual([s.activeTeams, s.activeTeamsAhead], [7, 5]);
+  // Kraken and Ravens have nothing ahead; the Galaxy row is next season's and is not counted.
+  assert.deepEqual([s.activeTeams, s.activeTeamsAhead], [7, 4]);
   assert.equal(s.finishedClubsNextSeason, 2, 'Giants and Braves');
   assert.equal(
     aboutLeagueStateSentence(s),
-    'NBA, NFL, NHL and MLS are in season: 5 of the 7 teams there have promotions listed ahead. MLB and WNBA have finished their season, and their team pages carry the record of it. 2 clubs there have already published promotions for next season.',
+    'NBA, NFL, NHL and MLS are in season: 4 of their 7 teams have promotions listed ahead this season. MLB and WNBA have finished their season, and their team pages carry the record of it. 2 MLB and WNBA clubs have already published promotions for next season.',
   );
 });
 
@@ -40,13 +40,13 @@ test('the same rows read differently as the calendar moves, with no edit to any 
   // Mid-July 2026 (before any of this): MLB, MLS and WNBA in season; NFL in its lead-in? It opens 2026-07-26.
   const july = resolveAboutLeagueState('2026-07-10', teams, []);
   assert.deepEqual(july.inSeason, ['MLB', 'MLS', 'WNBA']);
-  assert.match(aboutLeagueStateSentence(july), /^MLB, MLS and WNBA are in season: 0 of the 6 teams there have promotions listed ahead\.$/);
+  assert.match(aboutLeagueStateSentence(july), /^MLB, MLS and WNBA are in season: 0 of their 6 teams have promotions listed ahead this season\.$/);
 });
 
 test('grammar for one league, and nothing at all when no league has a window', () => {
   const one = { inSeason: ['NHL'], opening: [], finished: ['MLB'], activeTeams: 32, activeTeamsAhead: 29, finishedClubsNextSeason: 1 };
-  assert.equal(aboutLeagueStateSentence(one), 'NHL is in season: 29 of the 32 teams there have promotions listed ahead. MLB has finished its season, and its team pages carry the record of it. 1 club there has already published promotions for next season.');
-  assert.equal(aboutLeagueStateSentence({ inSeason: [], opening: ['MLB'], finished: [], activeTeams: 30, activeTeamsAhead: 8, finishedClubsNextSeason: 0 }), 'MLB is about to start a season: 8 of the 30 teams there have promotions listed ahead.');
+  assert.equal(aboutLeagueStateSentence(one), 'NHL is in season: 29 of their 32 teams have promotions listed ahead this season. MLB has finished its season, and its team pages carry the record of it. 1 MLB club has already published promotions for next season.');
+  assert.equal(aboutLeagueStateSentence({ inSeason: [], opening: ['MLB'], finished: [], activeTeams: 30, activeTeamsAhead: 8, finishedClubsNextSeason: 0 }), 'MLB is about to start a season: 8 of their 30 teams have promotions listed ahead this season.');
   assert.equal(aboutLeagueStateSentence({ inSeason: [], opening: [], finished: [], activeTeams: 0, activeTeamsAhead: 0, finishedClubsNextSeason: 0 }), '');
   assert.equal(aboutLeagueStateSentence(resolveAboutLeagueState('2026-11-25', teams, [], ['XFL'])), '');
   for (const s of [aboutLeagueStateSentence(one)]) assert.doesNotMatch(s, /\u2014|\u2013|20\d\d|now|yet|soon/);

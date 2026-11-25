@@ -42,18 +42,22 @@ const HUB_URL = 'https://www.getpromonight.com/mls';
 // it moves on the first day of the next season's lead-in without a deploy.
 // Never new Date().getFullYear(), which would flip the copy at midnight on
 // Jan 1, before the new season's data exists.
-function hubCopy(YEAR: string) {
+// `early`: the hub names next season before it opens, while only some clubs
+// have published. The copy then promises no full schedule.
+function hubCopy(YEAR: string, early = false) {
   return {
     YEAR,
     TITLE: `MLS Promotions & Giveaways ${YEAR}`,
-    DESCRIPTION: `Every MLS club's ${YEAR} promo schedule in one place: jersey and kit giveaways, scarf nights, theme nights, and more across all 30 clubs, grouped by conference and refreshed through the season.`,
+    DESCRIPTION: early
+      ? `MLS ${YEAR} promo schedules as clubs announce them: jersey and kit giveaways, scarf nights, theme nights, and more, with all 30 clubs grouped by conference.`
+      : `Every MLS club's ${YEAR} promo schedule in one place: jersey and kit giveaways, scarf nights, theme nights, and more across all 30 clubs, grouped by conference and refreshed through the season.`,
   };
 }
 
 export async function generateMetadata(): Promise<Metadata> {
   // The season the hub names: the labelled one, or the next one early once
   // this season has ended and a club has published (getLeagueHubSeason).
-  const { TITLE, DESCRIPTION } = hubCopy((await getLeagueHubSeason('MLS')).label);
+  const { TITLE, DESCRIPTION } = hubCopy(...(await getLeagueHubSeason('MLS').then((x) => [x.label, x.early] as const)));
   return {
     title: TITLE,
     description: DESCRIPTION,
@@ -93,7 +97,7 @@ const FAQS: HubFaqItem[] = [
 
 export default async function MlsHubPage() {
   const hubSeason = await getLeagueHubSeason('MLS');
-  const { YEAR, TITLE, DESCRIPTION } = hubCopy(hubSeason.label);
+  const { YEAR, TITLE, DESCRIPTION } = hubCopy(hubSeason.label, hubSeason.early);
   const [slate, stats, conferences, today] = await Promise.all([
     getLeagueSlate('MLS'),
     getLeagueHubStats('MLS'),
@@ -187,7 +191,7 @@ export default async function MlsHubPage() {
           sectionId="mls-browse-team"
           surface="web_mls_hub_team_card"
           collection="mls_hub"
-          intro={`All 30 MLS clubs by conference. Open any club for its full ${YEAR} promotional schedule.`}
+          intro={hubSeason.early ? 'All 30 MLS clubs by conference. Open any club for its promotional schedule.' : `All 30 MLS clubs by conference. Open any club for its full ${YEAR} promotional schedule.`}
           selectorLabel="Filter teams by conference"
           allLabel="All clubs"
         />

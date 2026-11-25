@@ -303,7 +303,10 @@ export function isSeasonComplete(scope: SeasonScope): boolean {
  * is over or that we captured every event. "98 promotions in the 2026 season"
  * is exactly as strong as the evidence.
  */
-export function seasonClaimSentence(scope: SeasonScope): string {
+export function seasonClaimSentence(scope: SeasonScope, early = false): string {
+  // A season named early (ClaimMode.labelDay) is a partial announcement, never
+  // a season total: say so.
+  if (early) return `${scope.total} ${plural(scope.total, 'promotion', 'promotions')} announced so far for the ${scope.label} season`;
   const head = `${scope.total} ${plural(scope.total, 'promotion', 'promotions')} in the ${scope.label} season`;
   if (isSeasonComplete(scope)) return head;
   if (scope.completedCount === 0) return `${head}, all still to come`;

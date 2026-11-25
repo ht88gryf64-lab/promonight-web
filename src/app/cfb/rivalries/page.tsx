@@ -196,7 +196,7 @@ export default async function Page() {
         </h1>
         <p className="mt-2.5 max-w-[46ch] text-sm text-white/60">
           {range && `${rivalryWeekAnswer(range, today)} `}
-          The date, the kickoff and the stadium for every rivalry we cover, in the order they are played.
+          The date and the stadium for every rivalry we cover, with the kickoff for games still ahead, in the order they are played.
         </p>
 
         {/* Seasonal section on a persistent page, not a date-scoped page: the

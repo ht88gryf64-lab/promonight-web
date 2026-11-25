@@ -4485,9 +4485,20 @@ One line each.
 
 - **Events link with Playoffs or World Cup in the bar.** The top bar shows Events from 860px, from 980px while Playoffs or World Cup is also in the bar, and from 1100px with both. Between 768px and that width the link is in the footer only (ruling: keep as built).
 - **Schedule block on a page that names next season early.** A team page that has flipped to 2027 still shows the 2026 game schedule under its own 2026 heading; the games spine has no 2027 games yet. It moves on the day the lead-in opens.
-- **Promos-per-game on an early season.** On a flipped page "By the numbers" divides the promotions announced so far by a full season of home games, as every page does in a lead-in.
 - **A club flips while its league is still playing.** The team rule is row-based: the Galaxy name 2027 although MLS 2026 runs to Dec 18. The hub rule is league-based, so /mls stays on 2026 until Dec 19.
 - **Venue page titles.** Per-venue titles still carry the hardcoded season ("Bag Policy 2026", `SEASON_YEAR` in `src/lib/venue-hub.ts`), including NBA and NHL arenas in 2026-27. Only the /venues index was reworded.
-- **Rivalry pages after the game.** The whole "Plan the trip" section goes, including its internal link to the stadium guide; the page has no other link to that guide.
-- **/about, teams with promotions ahead.** The count includes a club whose only upcoming rows are next season's.
 - **Monster Jam stop past state.** Covered by a render test on a fixture; the first live case is Anaheim on Dec 19 and 20, 2026.
+- **Head and body gate the early label differently.** The head computes the label day for every league; the body only where the season scope is live. They agree today (every scope gate is open) and would differ if a gate were closed again.
+- **Postseason rows and the early label.** Rows flagged `isPostseason` are dropped before the team rule reads them, so a club still in a postseason whose only other upcoming rows are next season's would name next season.
+- **Rivalry index day.** The index tags "Played" on the site's Eastern day; the rivalry page flips on the venue's day, so a Pacific game can be tagged up to three hours before its page changes. A canceled game is not treated as played on its page, but the index row carries no status and would still be tagged.
+- **Events hub lag.** /events/monster-jam revalidates daily and stop pages hourly, so the hub can keep "2026-27" for up to a day after the last December show.
+- **Flipped team page has no rendered test.** The early-season tests read source and pure helpers; the served checks at the gate are the only rendered evidence.
+- **MLS home games constant.** `HOME_GAMES_BY_LEAGUE` says 17 for MLS, which will be wrong for the 2027 Sprint Season; the ratio sentence is suppressed on an early page and must be checked before MLS 2027 opens.
+- **Hub does not say which clubs have published.** /mlb leads with 2027 and "8 of 30 clubs" but the team cards are unmarked; a card for a club with nothing published lands on a finished 2026 page (ux-review 2026-11-25, D3).
+- **Calendar on an early page opens on the current month.** On a flipped team page the month grid opens on an empty November 2026 and takes four taps to reach March 2027 (D4).
+- **Early page repeats its counts and mixes certainty.** With nothing completed, sentences read "11 giveaway nights, 11 still to come", and the three question blocks and one FAQ still read as season totals beside "announced so far" (D5, D6).
+- **"Still to come" label spacing on an early page.** The label sits flush against the hero's bottom edge at 390 and 768 (D8).
+- **Division rivals intro says "this season"** on a page naming next season (D9).
+- **Past promos count mismatch.** The team page says "All 114 past promos" and the archive page says "102 promotions already played" (D10, on production too).
+- **Played rivalry page has no result** and says played three times in the first screen; the sibling list on a rivalry page shows a played game with no mark (D11, D12).
+- **Hub FAQ names a this-week rail** that does not exist in the offseason (D14, on production too).

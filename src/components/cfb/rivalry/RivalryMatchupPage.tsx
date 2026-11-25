@@ -293,6 +293,13 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
                   {[resolvedVenue.city, resolvedVenue.state].filter(Boolean).join(', ')}
                 </div>
               )}
+              {/* The trip section carried the page's only link to the stadium
+                  guide; a played page keeps that one, and it is not an offer. */}
+              {played && gatesHref && (
+                <Link href={gatesHref} data-matchup-stadium-guide className="mt-2 inline-block py-2 text-sm font-semibold text-white underline underline-offset-4">
+                  Stadium guide
+                </Link>
+              )}
             </div>
           )}
         </section>

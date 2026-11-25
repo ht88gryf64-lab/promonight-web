@@ -300,6 +300,8 @@ export function matchupSchoolNames(data: MatchupPage): [string, string] {
  *  day when the venue has no zone). The ONE read the head, the page body and
  *  the JSON-LD all make, so none of them can be in a different state. */
 export function matchupIsPlayed(data: Pick<MatchupPage, 'game' | 'venueZone'>, now: Date = new Date()): boolean {
+  // A canceled game was never played, whatever its date.
+  if (data.game?.status === 'canceled') return false;
   return matchupPlayed(data.game?.date, data.venueZone ? ymdInZone(now, data.venueZone) : siteYmd(now));
 }
 

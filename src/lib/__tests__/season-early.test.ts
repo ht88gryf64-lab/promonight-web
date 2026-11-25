@@ -85,13 +85,14 @@ test('all six hubs read the hub season, and none reads seasonLabel directly', ()
   for (const h of ['mlb', 'mls', 'wnba', 'nba', 'nhl', 'nfl']) {
     const src = readFileSync(new URL(`../../app/${h}/page.tsx`, import.meta.url), 'utf-8');
     const L = h.toUpperCase();
-    assert.match(src, new RegExp(`hubCopy\\(\\(await getLeagueHubSeason\\('${L}'\\)\\)\\.label\\)`), `${h}: the head`);
+    assert.match(src, new RegExp(`hubCopy\\((\\.\\.\\.)?\\(await getLeagueHubSeason\\('${L}'\\)`), `${h}: the head`);
+    if (['mlb', 'mls', 'wnba'].includes(h)) assert.match(src, /hubCopy\(hubSeason\.label, hubSeason\.early\)/, `${h}: early copy`);
     assert.match(src, new RegExp(`const hubSeason = await getLeagueHubSeason\\('${L}'\\);`), `${h}: the body`);
     assert.match(src, /hubSeason\.note \? <HubSeasonNote text=\{hubSeason\.note\} \/> : undefined/, `${h}: the note`);
     assert.doesNotMatch(src, /seasonLabel\(/, `${h}: no direct label read`);
   }
   const data = readFileSync(new URL('../data.ts', import.meta.url), 'utf-8');
-  assert.match(data, /note: `\$\{clubs\.size\} of \$\{teams\.length\} clubs have published \$\{label\} promotions so far\.`/);
+  assert.match(data, /\$\{clubs\.size === 1 \? 'has' : 'have'\} published \$\{label\} promotions so far\.`/);
   // A league in play makes no read: the early return sits before the query.
   const fn = data.slice(data.indexOf('export const getLeagueHubSeason'), data.indexOf('// The super-header bands'));
   assert.ok(fn.indexOf("hubLabelDay(league, today, 1) === today) return same;") < fn.indexOf("db.collectionGroup('promos')"));

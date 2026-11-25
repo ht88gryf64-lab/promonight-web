@@ -42,18 +42,22 @@ const HUB_URL = 'https://www.getpromonight.com/wnba';
 // it moves on the first day of the next season's lead-in without a deploy.
 // Never new Date().getFullYear(), which would flip the copy at midnight on
 // Jan 1, before the new season's data exists.
-function hubCopy(YEAR: string) {
+// `early`: the hub names next season before it opens, while only some clubs
+// have published. The copy then promises no full schedule.
+function hubCopy(YEAR: string, early = false) {
   return {
     YEAR,
     TITLE: `WNBA Promotions & Giveaways ${YEAR}`,
-    DESCRIPTION: `Every WNBA team's ${YEAR} promo schedule in one place: theme nights, jersey giveaways, bobblehead nights, and more across all 15 teams, grouped by conference and refreshed through the season.`,
+    DESCRIPTION: early
+      ? `WNBA ${YEAR} promo schedules as teams announce them: theme nights, jersey giveaways, bobblehead nights, and more, with all 15 teams grouped by conference.`
+      : `Every WNBA team's ${YEAR} promo schedule in one place: theme nights, jersey giveaways, bobblehead nights, and more across all 15 teams, grouped by conference and refreshed through the season.`,
   };
 }
 
 export async function generateMetadata(): Promise<Metadata> {
   // The season the hub names: the labelled one, or the next one early once
   // this season has ended and a club has published (getLeagueHubSeason).
-  const { TITLE, DESCRIPTION } = hubCopy((await getLeagueHubSeason('WNBA')).label);
+  const { TITLE, DESCRIPTION } = hubCopy(...(await getLeagueHubSeason('WNBA').then((x) => [x.label, x.early] as const)));
   return {
     title: TITLE,
     description: DESCRIPTION,
@@ -93,7 +97,7 @@ const FAQS: HubFaqItem[] = [
 
 export default async function WnbaHubPage() {
   const hubSeason = await getLeagueHubSeason('WNBA');
-  const { YEAR, TITLE, DESCRIPTION } = hubCopy(hubSeason.label);
+  const { YEAR, TITLE, DESCRIPTION } = hubCopy(hubSeason.label, hubSeason.early);
   const [slate, stats, conferences, today] = await Promise.all([
     getLeagueSlate('WNBA'),
     getLeagueHubStats('WNBA'),
@@ -187,7 +191,7 @@ export default async function WnbaHubPage() {
           sectionId="wnba-browse-team"
           surface="web_wnba_hub_team_card"
           collection="wnba_hub"
-          intro={`All 15 WNBA teams by conference. Open any team for its full ${YEAR} promotional schedule.`}
+          intro={hubSeason.early ? 'All 15 WNBA teams by conference. Open any team for its promotional schedule.' : `All 15 WNBA teams by conference. Open any team for its full ${YEAR} promotional schedule.`}
           selectorLabel="Filter teams by conference"
           allLabel="All teams"
         />

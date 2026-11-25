@@ -42,18 +42,22 @@ const HUB_URL = 'https://www.getpromonight.com/mlb';
 // it moves on the first day of the next season's lead-in without a deploy.
 // Never new Date().getFullYear(), which would flip the copy at midnight on
 // Jan 1, before the new season's data exists.
-function hubCopy(YEAR: string) {
+// `early`: the hub names next season before it opens, while only some clubs
+// have published. The copy then promises no full schedule.
+function hubCopy(YEAR: string, early = false) {
   return {
     YEAR,
     TITLE: `MLB Promotions & Giveaways ${YEAR}`,
-    DESCRIPTION: `Every MLB team's ${YEAR} promo schedule in one place: bobblehead nights, jersey giveaways, theme nights, and food deals across all 30 clubs, grouped by division and refreshed through the season.`,
+    DESCRIPTION: early
+      ? `MLB ${YEAR} promo schedules as clubs announce them: bobblehead nights, jersey giveaways, theme nights, and food deals, with all 30 clubs grouped by division.`
+      : `Every MLB team's ${YEAR} promo schedule in one place: bobblehead nights, jersey giveaways, theme nights, and food deals across all 30 clubs, grouped by division and refreshed through the season.`,
   };
 }
 
 export async function generateMetadata(): Promise<Metadata> {
   // The season the hub names: the labelled one, or the next one early once
   // this season has ended and a club has published (getLeagueHubSeason).
-  const { TITLE, DESCRIPTION } = hubCopy((await getLeagueHubSeason('MLB')).label);
+  const { TITLE, DESCRIPTION } = hubCopy(...(await getLeagueHubSeason('MLB').then((x) => [x.label, x.early] as const)));
   return {
     title: TITLE,
     description: DESCRIPTION,
@@ -93,7 +97,7 @@ const FAQS: HubFaqItem[] = [
 
 export default async function MlbHubPage() {
   const hubSeason = await getLeagueHubSeason('MLB');
-  const { YEAR, TITLE, DESCRIPTION } = hubCopy(hubSeason.label);
+  const { YEAR, TITLE, DESCRIPTION } = hubCopy(hubSeason.label, hubSeason.early);
   const [slate, stats, divisions, today] = await Promise.all([
     getLeagueSlate('MLB'),
     getLeagueHubStats('MLB'),
@@ -187,7 +191,7 @@ export default async function MlbHubPage() {
           sectionId="mlb-browse-team"
           surface="web_mlb_hub_team_card"
           collection="mlb_hub"
-          intro={`All 30 MLB clubs by division. Open any team for its full ${YEAR} promotional schedule.`}
+          intro={hubSeason.early ? 'All 30 MLB clubs by division. Open any team for its promotional schedule.' : `All 30 MLB clubs by division. Open any team for its full ${YEAR} promotional schedule.`}
           selectorLabel="Filter teams by division"
           allLabel="All divisions"
         />

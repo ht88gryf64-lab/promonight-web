@@ -44,7 +44,17 @@ export function resolveAboutLeagueState(
   }
   const active = new Set([...inSeason, ...opening]);
   const activeTeamIds = new Set(teams.filter((t) => active.has(t.league)).map((t) => t.id));
-  const ahead = new Set(upcoming.filter((p) => activeTeamIds.has(p.teamId) && p.date >= today).map((p) => p.teamId));
+  // Ahead IN THE SEASON NAMED: a row of a later season that has not reached its
+  // lead-in (the Galaxy's 2027 rows while MLS 2026 is in play) is not counted.
+  const ahead = new Set(
+    upcoming
+      .filter((p) => {
+        if (!activeTeamIds.has(p.teamId) || p.date < today) return false;
+        const w = seasonOfDate(p.league, p.date);
+        return !!w && leadInStart(w) <= today;
+      })
+      .map((p) => p.teamId),
+  );
   const nextClubs = new Set<string>();
   for (const league of finished) {
     const next = nextSeasonNotYetOpen(league, today);
@@ -66,13 +76,13 @@ export function aboutLeagueStateSentence(s: AboutLeagueState): string {
   const active = [...s.inSeason, ...s.opening];
   if (active.length > 0) {
     const where = s.opening.length === 0 ? 'in season' : s.inSeason.length === 0 ? 'about to start a season' : 'in season or about to start one';
-    out.push(`${list(active)} ${active.length === 1 ? 'is' : 'are'} ${where}: ${s.activeTeamsAhead} of the ${s.activeTeams} teams there have promotions listed ahead.`);
+    out.push(`${list(active)} ${active.length === 1 ? 'is' : 'are'} ${where}: ${s.activeTeamsAhead} of their ${s.activeTeams} teams have promotions listed ahead this season.`);
   }
   if (s.finished.length > 0) {
     const one = s.finished.length === 1;
     out.push(`${list(s.finished)} ${one ? 'has' : 'have'} finished ${one ? 'its' : 'their'} season, and ${one ? 'its' : 'their'} team pages carry the record of it.`);
     if (s.finishedClubsNextSeason > 0) {
-      out.push(`${s.finishedClubsNextSeason} ${s.finishedClubsNextSeason === 1 ? 'club there has' : 'clubs there have'} already published promotions for next season.`);
+      out.push(`${s.finishedClubsNextSeason} ${list(s.finished)} ${s.finishedClubsNextSeason === 1 ? 'club has' : 'clubs have'} already published promotions for next season.`);
     }
   }
   return out.join(' ');

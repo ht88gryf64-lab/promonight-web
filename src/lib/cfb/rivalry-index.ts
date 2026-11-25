@@ -144,7 +144,7 @@ export function buildRivalryIndexFaqs(rows: RivalryIndexRow[], today: string): R
   if (total > 0) {
     faqs.push({
       question: `How many college football rivalries does this page track for ${cfbSeasonLabel()}?`,
-      answer: `This page tracks ${total} named college football rivalries. ${dated} of them have a scheduled ${cfbSeasonLabel()} meeting, and every rivalry links to a page with the date, the stadium and how to plan the trip.`,
+      answer: `This page tracks ${total} named college football rivalries. ${dated} of them have a scheduled ${cfbSeasonLabel()} meeting, and every rivalry links to a page with the date and the stadium, plus how to plan the trip while the game is still ahead.`,
     });
   }
   const range = rivalryWeekRange(rows);
@@ -162,7 +162,7 @@ export function buildRivalryIndexFaqs(rows: RivalryIndexRow[], today: string): R
   }
   faqs.push({
     question: 'Where can I find kickoff times and TV channels for these games?',
-    answer: 'Each rivalry page shows the kickoff time and the network once they are officially announced. Until then the page lists the kickoff as TBA rather than a guess.',
+    answer: 'For a game still ahead, its rivalry page shows the kickoff time and the network once they are officially announced. Until then the page lists the kickoff as TBA rather than a guess. The page for a game already played says so.',
   });
   return faqs;
 }

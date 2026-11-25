@@ -185,7 +185,8 @@ export function buildRivalryMatchupJsonLd(data: MatchupPage): Schema[] {
     // Broadcast rides on the verify gate AND the confirmed flag; a "TBD"
     // network never ships. BroadcastEvent via subjectOf is the schema.org
     // shape (BroadcastEvent.broadcastOfEvent's inverse relation).
-    if (game.verified === true && game.broadcast?.confirmed === true && game.broadcast.network && !/tbd/i.test(game.broadcast.network)) {
+    // Not on a played game: a live broadcast is not a claim to make afterwards.
+    if (!matchupIsPlayed(data) && game.verified === true && game.broadcast?.confirmed === true && game.broadcast.network && !/tbd/i.test(game.broadcast.network)) {
       event.subjectOf = {
         '@type': 'BroadcastEvent',
         isLiveBroadcast: true,

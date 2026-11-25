@@ -1884,7 +1884,7 @@ export const getLeagueHubSeason = cache(async (league: string): Promise<LeagueHu
     early: true,
     clubsPublished: clubs.size,
     teamCount: teams.length,
-    note: `${clubs.size} of ${teams.length} clubs have published ${label} promotions so far.`,
+    note: `${clubs.size} of ${teams.length} ${league === 'WNBA' || league === 'NBA' ? 'teams' : 'clubs'} ${clubs.size === 1 ? 'has' : 'have'} published ${label} promotions so far.`,
   };
 });
 

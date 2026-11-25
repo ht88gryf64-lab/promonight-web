@@ -675,7 +675,7 @@ export function PromoList({
             {upcoming.length > 0 && (earlySeasonLabel ? (
               <p className="text-rd-ink-faint text-xs font-rd tracking-[0.02em] mt-2">
                 {`${upcoming.length} ${upcoming.length === 1 ? 'event' : 'events'} announced so far for the ${earlySeasonLabel} season`}
-                {upcomingHidden.length > 0 ? ' · full schedule below' : ''}
+                {/* no "full schedule" tail: an early season is not a full one */}
               </p>
             ) : (
               <p className="text-rd-ink-faint text-xs font-rd tracking-[0.02em] mt-2">
@@ -787,7 +787,7 @@ export function PromoList({
           {upcoming.length > 0 && (earlySeasonLabel ? (
             <p className="text-text-muted text-xs font-mono tracking-[0.5px] mt-2">
               {`${upcoming.length} ${upcoming.length === 1 ? 'event' : 'events'} announced so far for the ${earlySeasonLabel} season`}
-              {upcomingHidden.length > 0 ? ' · full schedule below' : ''}
+              {/* no "full schedule" tail: an early season is not a full one */}
             </p>
           ) : (
             <p className="text-text-muted text-xs font-mono tracking-[0.5px] mt-2">
