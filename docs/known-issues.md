@@ -4552,3 +4552,14 @@ One line each.
 - **IndexNow submit route reports no per-endpoint result.** `/api/indexnow/submit` answers `{"ok":true,"submitted":N}` whatever api.indexnow.org and bing.com returned; the two statuses are only in the function logs (both were 200 for the 75 URLs of 2026-11-25). A failed endpoint is invisible to the caller.
 - **Code comments still say 222 buildings.** `venueHubs` holds 223 docs since `cotton-bowl-stadium` was added on 2026-08-11 (203 indexable); comments in `src/lib/venue-hub.ts`, `src/app/venues/[slug]/page.tsx`, `src/components/venue-hub/VenueHubView.tsx`, two probe scripts and the pipeline's seed script still say 222. The standing numbers are in `docs/fix-round-2026-11.md`.
 
+## 133. Deferred from feature/bare-title-display (logged 2026-11-25)
+
+One line each.
+
+- **Digest email prints the stored title.** `src/lib/digest-email.ts` builds its own rows and hero, so a bare item title ("Bobblehead") prints as stored there, under a line that names the team. Not the shared card component, so the display rule was not applied.
+- **Social feed.** `src/lib/social-feed/rss.ts` builds each item title as team name plus stored title ("Seattle Kraken Bobblehead"), so it already reads whole; the share card image draws the stored title under a team eyebrow.
+- **Promo page JSON-LD name is the bare title.** On `/nhl/seattle-kraken/promos/bobblehead` the Event `name` is "Bobblehead"; the page `<title>` and og:title carry the team ("Bobblehead | Seattle Kraken 2026-27 | PromoNight"). Left as it is by ruling; the home and away teams are in the Event's own fields.
+- **Completed team-page rows keep the stored title.** The completed list's rows are not handed the team object, so a bare title in the archive prints as stored while the same title in the upcoming list prints with the club.
+- **Two Kraken dates share one promo page.** Jan 31 and Mar 21, 2027 both store "Bobblehead" and resolve to `/nhl/seattle-kraken/promos/bobblehead`, although the sponsors differ (Symetra, Toyota).
+- **Kings "Rally Towel" has a theme the title dropped.** The 2027-01-02 row's description says "Pride rally towel giveaway"; the display rule prints "Kings Rally Towel".
+

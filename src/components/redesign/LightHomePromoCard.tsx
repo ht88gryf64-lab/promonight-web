@@ -1,5 +1,6 @@
 'use client';
 
+import { promoDisplayTitle } from '@/lib/promo-display-title';
 import type { MouseEvent } from 'react';
 import { IconFlame, IconTicket } from '@tabler/icons-react';
 import type { PromoWithTeam } from '@/lib/types';
@@ -87,7 +88,7 @@ export function LightHomePromoCard({
           {promoDisplayTime(promo) && <span className="font-rd text-[10px] text-rd-ink-faint">{promoDisplayTime(promo)}</span>}
         </div>
         <div className="line-clamp-2 text-sm font-semibold text-rd-ink transition-colors group-hover:text-rd-red md:text-base">
-          {promo.title}
+          {promoDisplayTitle(promo.title, promo.team)}
         </div>
         {/* pr-14 keeps the truncated line clear of the Tickets button, which
             sits over this card's bottom-right corner. */}

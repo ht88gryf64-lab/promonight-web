@@ -1,5 +1,6 @@
 'use client';
 
+import { promoDisplayTitle } from '@/lib/promo-display-title';
 import type { MouseEvent, ReactNode } from 'react';
 import Link from 'next/link';
 import { IconFlame, IconTicket } from '@tabler/icons-react';
@@ -182,7 +183,8 @@ export function RedesignPromoRow({
         {/* The title reddens on hover of the whole row, since the whole row is
             the link (LightHomePromoCard's pattern). */}
         <div className={`text-sm font-semibold text-rd-ink md:text-base ${linkHref ? 'transition-colors group-hover:text-rd-red' : ''}`}>
-          {promo.title}
+          {/* The row's own team when the promo carries one (the daily board), else the page's. */}
+          {promoDisplayTitle(promo.title, (promo as { team?: { name?: string } }).team ?? team)}
         </div>
         {promo.description && (
           <p className="mt-1 text-xs text-rd-ink-soft md:text-sm">{promo.description}</p>

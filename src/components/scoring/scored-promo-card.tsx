@@ -1,3 +1,4 @@
+import { promoDisplayTitle } from '@/lib/promo-display-title';
 import { IconFlame } from '@tabler/icons-react';
 import type { ScoredPromoWithTeam } from '@/lib/types';
 import type { AnalyticsSurface, ScoringPageSurface } from '@/lib/analytics';
@@ -127,7 +128,7 @@ export function ScoredPromoCard({
               )}
             </div>
             <div className="text-sm font-semibold leading-snug text-rd-ink transition-colors group-hover:text-rd-red">
-              {promo.title}
+              {promoDisplayTitle(promo.title, team)}
             </div>
             <div className="mt-1 truncate font-rd text-xs text-rd-ink-soft">
               {teamName}
@@ -199,7 +200,7 @@ export function ScoredPromoCard({
             )}
           </div>
           <div className="text-white font-semibold text-sm group-hover:text-accent-red transition-colors leading-snug">
-            {promo.title}
+            {promoDisplayTitle(promo.title, team)}
           </div>
           <div className="text-text-secondary text-xs mt-1 truncate">
             {teamName}

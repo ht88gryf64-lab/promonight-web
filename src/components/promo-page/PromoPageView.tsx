@@ -1,3 +1,4 @@
+import { promoDisplayTitle } from '@/lib/promo-display-title';
 import { TICKET_CTA_LABEL, ticketAriaLabel } from '@/lib/ticket-labels';
 import { ResaleNote } from '@/components/affiliates/AffiliateDisclosure';
 import Link from 'next/link';
@@ -570,7 +571,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
             <span className={`rounded-md px-2 py-1 font-rd text-[11px] font-semibold uppercase tracking-[0.12em] ${removed ? 'bg-rd-ink-soft text-white' : 'bg-[var(--pp-accent)] text-[var(--pp-accent-ink)]'}`}>{badge}</span>
             {quantity ? <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">{quantity}</span> : null}
           </div>
-          <h1 className="rd-display m-0 text-[40px] uppercase leading-[0.95] tracking-[-0.01em] text-rd-ink">{cleanText(primary.title) || 'Untitled promotion'}</h1>
+          <h1 className="rd-display m-0 text-[40px] uppercase leading-[0.95] tracking-[-0.01em] text-rd-ink">{promoDisplayTitle(cleanText(primary.title), team) || 'Untitled promotion'}</h1>
           {removed ? (
             <p className="m-0 text-[15px] leading-[1.45] text-rd-ink-soft">
               <strong className="text-rd-ink">{`Removed from the ${teamName} schedule${removedOn ? ` on ${removedOn}` : ''}.`}</strong>

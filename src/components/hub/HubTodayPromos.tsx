@@ -1,3 +1,4 @@
+import { promoDisplayTitle } from '@/lib/promo-display-title';
 import { IconArrowRight } from '@tabler/icons-react';
 import type { PromoWithTeam } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
@@ -107,7 +108,7 @@ export function HubTodayPromos({
                 {cat.label}
               </span>
               <div className="mt-2 font-rd font-semibold text-rd-ink transition-colors group-hover:text-rd-red">
-                {p.title}
+                {promoDisplayTitle(p.title, p.team)}
               </div>
               <div className="mt-0.5 font-rd text-[13px] text-rd-ink-soft">
                 {teamDisplayName(p.team)}
