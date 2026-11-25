@@ -32,12 +32,12 @@ export type { TicketTestLeague };
 
 export const TICKET_TEST = {
   seed: 'stubhub-ticketnetwork-2026-11-25',
-  /** First site day of phase A. Set at launch (Phase 4). */
-  startDate: '2026-12-01',
+  /** First site day of phase A: the launch day (amended Gate 3 ruling). */
+  startDate: '2026-11-25',
   /** First site day of phase B: start + 30 days. */
-  flipDate: '2026-12-31',
+  flipDate: '2026-12-25',
   /** First site day after the test: start + 60 days. */
-  endDate: '2027-01-30',
+  endDate: '2027-01-24',
   leagues: ['nba', 'nhl', 'nfl'] as readonly TicketTestLeague[],
   /** Always StubHub on the test's surfaces, outside the pairs: TicketNetwork
    *  lists no home events at these clubs' buildings (tnHomeUnavailable). */

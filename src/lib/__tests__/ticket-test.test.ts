@@ -268,18 +268,12 @@ test('no test, no prop: a ticket link outside the test passes no ticketTest key 
 
 // ── Gate 3 rulings ───────────────────────────────────────────────────────────
 
-test('before the start: with the switch ON, the day before the start resolves no club, is not a boundary and maps no StubHub URL', () => {
-  const dayBefore = new Date(Date.parse(`${TICKET_TEST.startDate}T00:00:00Z`) - 86400000).toISOString().slice(0, 10);
-  assert.equal(dayBefore, '2026-11-30');
-  for (const id of ticketTestTeamIds()) assert.equal(resolveTicketTest(id, dayBefore, true), null, id);
-  assert.equal(ticketTestBoundary(dayBefore, true), null);
-  assert.equal(isTicketTestActive(dayBefore, true), false, 'the mapper keeps shEventUrl off every game object');
-  // The start day itself is the first day of the test; the end day is the first day after it.
+test('the dates and the one gate at the mapper: active from the start day, not from the end day on, never with the switch off', () => {
+  assert.deepEqual([TICKET_TEST.startDate, TICKET_TEST.flipDate, TICKET_TEST.endDate], ['2026-11-25', '2026-12-25', '2027-01-24']);
   assert.equal(isTicketTestActive(TICKET_TEST.startDate, true), true);
   assert.equal(isTicketTestActive(TICKET_TEST.endDate, true), false);
   assert.equal(isTicketTestActive(TICKET_TEST.startDate, false), false);
-  assert.deepEqual([TICKET_TEST.startDate, TICKET_TEST.flipDate, TICKET_TEST.endDate], ['2026-12-01', '2026-12-31', '2027-01-30']);
-  // And the one gate at the mapper is that function, not the bare switch.
+  // The mapper exposes shEventUrl through that function, not the bare switch.
   const { readFileSync } = require('node:fs') as typeof import('node:fs');
   const data = readFileSync(new URL('../data.ts', import.meta.url), 'utf-8');
   assert.match(data, /if \(isTicketTestActive\(\)\) \{\s+const shUrl = stubHubEventUrlFor/);
