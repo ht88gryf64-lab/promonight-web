@@ -458,9 +458,10 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   assert.ok(!/Presented by<\/span>/.test(h), 'no Presented-by tile');
   assert.equal((h.slice(h.indexOf('<article'), h.lastIndexOf('</article>')).match(/Presented by Federal Ammunition\./g) ?? []).length, 1, 'once in the body (the schema descriptions aside)');
   assert.match(h, /Get Tickets<\/a>/);
-  // "Remind me" is the promo_cta surface (hotfix 2026-10-31): the team in src,
+  // "Get the app" (labelled "Remind me" until 2026-11-26, when the email block
+  // took that name) is the promo_cta surface (hotfix 2026-10-31): the team in src,
   // the promo id and page slug as their own params, never team_cta.
-  assert.match(h, /<a href="\/download\?src=promo_cta_minnesota-wild&amp;promoId=[A-Za-z0-9]+&amp;pageSlug=blaze-orange-hat"[^>]*>Remind me<\/a>/);
+  assert.match(h, /<a href="\/download\?src=promo_cta_minnesota-wild&amp;promoId=[A-Za-z0-9]+&amp;pageSlug=blaze-orange-hat"[^>]*>Get the app<\/a>/);
   assert.ok(!h.includes('team_cta_'), 'no team_cta link on a promo page');
   // The read date is the team's scan stamp, never the row's updatedAt.
   assert.match(h, /Source: <a href="https:\/\/www\.nhl\.com\/wild\/fans\/giveaway-schedule"[^>]*>nhl\.com<\/a><span> · checked Oct 23, 2026<\/span>/);
@@ -545,7 +546,7 @@ test('a series with more than three dates shows the next three and folds the res
   assert.ok(faq, 'a FAQPage');
   assert.match(faq!.mainEntity[0].acceptedAnswer.text, /^5 Anaheim Ducks home games this season: Nov 1, 2026, Nov 8, 2026, Nov 15, 2026, Nov 22, 2026, Nov 29, 2026\.$/);
   // The CTA row follows the header directly.
-  assert.match(h, /<\/header><section class="[^"]*">(?:<div class="flex shrink-0 flex-col gap-1\.5">[\s\S]*?<\/div>)?<div class="flex min-w-0 flex-1 flex-col gap-2\.5"><div class="flex gap-2"><a href="https:\/\/ticketnetwork\.lusg\.net\/[^"]*"[^>]*aria-label="Get Tickets for Anaheim Ducks on TicketNetwork"/);
+  assert.match(h, /<\/header><section class="[^"]*"><div class="flex items-stretch gap-3">(?:<div class="flex shrink-0 flex-col gap-1\.5">[\s\S]*?<\/div>)?<div class="flex min-w-0 flex-1 flex-col gap-2\.5"><div class="flex gap-2"><a href="https:\/\/ticketnetwork\.lusg\.net\/[^"]*"[^>]*aria-label="Get Tickets for Anaheim Ducks on TicketNetwork"/);
 });
 
 test('a series pads the open list to three with played dates, and a fold of played dates says "earlier"', async () => {
@@ -1346,7 +1347,7 @@ test('played (ruling 2026-11-08): every date before today in the venue zone; the
   assert.match(h, /<a [^>]*href="\/nhl\/past-club\/promos\/yesterday-towel-2027-28"[^>]*>Next edition: Yesterday Towel 2027-28 · Wednesday, Oct 20, 2027<\/a>/);
   // Nothing to sell: no ticket, parking, hotel or reminder link, and no
   // affiliate anchor of any kind.
-  for (const gone of ['>Get Tickets<', 'Also on Ticketmaster', '>Parking</a>', '>Hotels</a>', '>Remind me<', 'rel="noopener noreferrer sponsored"', '/download?src=promo_cta']) {
+  for (const gone of ['>Get Tickets<', 'Also on Ticketmaster', '>Parking</a>', '>Hotels</a>', '>Get the app<', '>Remind me<', 'rel="noopener noreferrer sponsored"', '/download?src=promo_cta']) {
     assert.ok(!h.includes(gone), `played page still carries ${gone}`);
   }
   // The Event happened: EventScheduled, no offers.
@@ -1364,7 +1365,7 @@ test('played (ruling 2026-11-08): every date before today in the venue zone; the
   assert.ok(!next.h.includes('This game has been played'));
   assert.match(next.h, />Get Tickets<\/a>/);
   assert.match(next.h, />Parking<\/a>/);
-  assert.match(next.h, />Remind me<\/a>/);
+  assert.match(next.h, />Get the app<\/a>/);
   assert.ok(!next.h.includes('Next Past Club promo'));
   const nextEvents = jsonLd(next.h).filter((s) => s['@type'] === 'Event');
   assert.ok(nextEvents[0].offers?.url, 'offers on an upcoming Event');
@@ -1556,4 +1557,92 @@ test('the forecast row: a failed NWS call renders the page without it and does n
   assert.ok(!far.h.includes('data-forecast-row'));
   assert.equal(nwsCalls.length, 0, 'no call outside the window');
   nwsHandler = () => new Response('', { status: 500 });
+});
+
+// ── the email block (Gate 1 rulings, 2026-11-26) ─────────────────────────────
+// The block's markup, compared byte for byte against a golden per variant.
+// Regenerate on a deliberate change: UPDATE_REMIND_GOLDEN=1 npm test
+const remindBlock = (h: string): string | null => {
+  const start = h.indexOf('<div id="remind"');
+  return start < 0 ? null : h.slice(start, h.indexOf('</section>', start));
+};
+async function remindGolden(name: string, block: string) {
+  const { existsSync, readFileSync, writeFileSync, mkdirSync } = await import('node:fs');
+  const { dirname, join } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const file = join(dirname(fileURLToPath(import.meta.url)), '__fixtures__', `remind-${name}.html`);
+  if (process.env.UPDATE_REMIND_GOLDEN === '1' || !existsSync(file)) {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, block);
+    if (process.env.UPDATE_REMIND_GOLDEN !== '1') assert.fail(`wrote missing golden ${file}; review it and re-run`);
+  }
+  assert.equal(block, readFileSync(file, 'utf8'), `the ${name} email block drifted from its golden file`);
+}
+
+test('the email block, upcoming: the reminder variant inside the CTA section, under the ticket row; the article gains no direct child', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const { h } = await render('nhl', 'minnesota-wild', 'winter-beanie'); // 2026-12-05, well before its reminder's moment
+  const block = remindBlock(h);
+  assert.ok(block, 'the block renders');
+  await remindGolden('upcoming', block);
+  assert.match(block, /^<div id="remind" data-remind-mode="reminder"/);
+  assert.match(block, /<h2 [^>]*>Get a reminder for Winter Beanie<\/h2>/);
+  assert.match(block, /<p [^>]*>Minnesota Wild(?: vs [^,<]+)?, Saturday, Dec(?:ember)? 5, 2026<\/p>/);
+  assert.match(block, /<input [^>]*type="email"[^>]*>/);
+  assert.match(block, /<button type="submit"[^>]*>Remind me<\/button>/);
+  assert.ok(block.includes('We’ll email you the day before. You’ll also get the weekly Minnesota Wild promo email; unsubscribe anytime.'), 'the consent line');
+  // 44px minimum tap target: the input and the button are both 48px tall.
+  assert.equal((block.match(/class="[^"]*\bh-12\b/g) ?? []).length, 2);
+  assert.ok(block.includes('ph-no-capture'), 'the address never reaches analytics');
+  // ONE "Remind me" on the page, the form's; the app link is "Get the app".
+  assert.equal((h.match(/>Remind me</g) ?? []).length, 1);
+  // Inside the CTA section: the third direct child of the article holds the
+  // ticket button AND the block, in that order, and nothing is between the
+  // section and the article.
+  const kids = articleChildren(h);
+  assert.match(kids[0], /^<nav /);
+  assert.match(kids[1], /^<header /);
+  assert.match(kids[2], /^<section class="mt-4 flex flex-col gap-4">/);
+  const section = h.slice(h.indexOf(kids[2]), h.indexOf('</section>', h.indexOf('<div id="remind"')));
+  assert.ok(section.indexOf('>Get Tickets<') > 0 && section.indexOf('>Get Tickets<') < section.indexOf('<div id="remind"'), 'below the ticket button, same section');
+  assert.equal((h.match(/id="remind"/g) ?? []).length, 1);
+  // No modal, no dialog.
+  assert.ok(!/role="dialog"|<dialog/.test(block));
+  // Copy rules: no em or en dash, no count, no superlative.
+  assert.ok(!/[\u2014\u2013]/.test(block), 'no dash');
+  assert.ok(!/\b(best|every|all|cheapest|lowest|biggest|never miss)\b/i.test(block.replace(/<[^>]+>/g, ' ')), 'no superlative or completeness claim');
+  guard(h, 'winter-beanie');
+});
+
+test('the email block, played: the weekly email only variant, under the "Next promo" row, same section', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const { h } = await render('nhl', 'past-club', 'yesterday-towel');
+  const block = remindBlock(h);
+  assert.ok(block, 'the block renders on a played page');
+  await remindGolden('past', block);
+  assert.match(block, /^<div id="remind" data-remind-mode="weekly"/);
+  assert.match(block, /<h2 [^>]*>Get Past Club’s next promos<\/h2>/);
+  assert.match(block, /<button type="submit"[^>]*>Sign up<\/button>/);
+  assert.ok(block.includes('You’ll get the weekly Past Club promo email; unsubscribe anytime.'));
+  assert.ok(!block.includes('day before'), 'no reminder promised on a played page');
+  assert.ok(!/<p [^>]*>Past Club vs /.test(block), 'no matchup subline');
+  const kids = articleChildren(h);
+  assert.match(kids[2], /^<section class="mt-4 flex flex-col gap-4">/);
+  const section = h.slice(h.indexOf(kids[2]), h.indexOf('</section>', h.indexOf('<div id="remind"')));
+  assert.ok(section.indexOf('Next Past Club promo') < section.indexOf('<div id="remind"'));
+});
+
+test('the email block, too late: an upcoming game past 10:00 venue time on the day before offers the weekly email only; a removed page has no block', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  // The clock is 2026-10-29T16:00Z: noon Eastern on the day before the game.
+  const { h } = await render('nhl', 'past-club', 'tomorrow-towel'); // 2026-10-30
+  const block = remindBlock(h);
+  assert.ok(block);
+  assert.match(block, /^<div id="remind" data-remind-mode="weekly"/);
+  assert.match(block, /<h2 [^>]*>Get Past Club’s next promos<\/h2>/);
+  assert.ok(!block.includes('day before'));
+  assert.match(h, />Get Tickets<\/a>/, 'still an upcoming page');
+  const removed = await render('nhl', 'minnesota-wild', 'removed-future-poster');
+  assert.equal(remindBlock(removed.h), null, 'no block on a removed page');
+  assert.ok(!removed.h.includes('type="email"'));
 });

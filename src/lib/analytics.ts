@@ -43,7 +43,7 @@ export type AnalyticsEvent =
   | 'hub_to_team'
   | 'venue_hub_promo_click'
   | 'app_download_click'
-  // The promo page's "Remind me" app CTA (surface promo_cta, hotfix
+  // The promo page's "Get the app" (labelled "Remind me" until 2026-11-26) app CTA (surface promo_cta, hotfix
   // 2026-10-31). Fires beside app_download_click, which the same click still
   // sends for the install funnel; this one carries the promo.
   | 'web_app_cta_click'
@@ -481,7 +481,7 @@ export type EventLinkClickProperties = {
 export type AppDownloadClickProperties = {
   // The page surface inferred from the path, except on the links built by
   // src/lib/app-link.ts, which name their own: team_cta (the team-page app
-  // card), promo_cta (the promo page's "Remind me"), download (/download's
+  // card), promo_cta (the promo page's "Get the app" (labelled "Remind me" until 2026-11-26)), download (/download's
   // buttons). download_qr is the QR codes'
   // surface; a scan never reaches this page, so it appears only in the store
   // links' own attribution, never on this event.
@@ -506,7 +506,7 @@ export type AppDownloadClickProperties = {
 } & UtmTriplet;
 
 // web_app_cta_click: an in-page app CTA that names what it was pitching. Only
-// the promo page's "Remind me" fires it today (surface promo_cta); promo_id is
+// the promo page's "Get the app" (labelled "Remind me" until 2026-11-26) fires it today (surface promo_cta); promo_id is
 // the stored document id, page_slug the promo page's slug, so the click joins
 // to the /download store links' ct / utm_content, which carry the same two.
 export type WebAppCtaClickProperties = UtmTriplet & {
@@ -623,6 +623,13 @@ export type EmailCtaClickProperties = {
   // localStorage, and resolving during render would make a storage write a
   // render side effect.
   variant: CaptureVariant;
+  // Set only by the promo page's "Get the app" (labelled "Remind me" until 2026-11-26) block (surface web_promo_page,
+  // 2026-11-26), where this event is the FIRST FOCUS of the email input, once
+  // per page view, not a click on a link to /follow. promo_id is the stored
+  // document id of the page's primary promo.
+  promo_id?: string;
+  team_id?: string;
+  league?: string;
 };
 
 export type FollowPageViewProperties = {
@@ -665,6 +672,14 @@ export type NewsletterSignupProperties = {
   // Retained optional fields for forward-compat with a future multi-list split.
   placement?: string;
   list_id?: string;
+  // Set only by the promo page's "Get the app" (labelled "Remind me" until 2026-11-26) block (surface web_promo_page):
+  // the page's primary promo and its team. Present on the weekly email only
+  // variant too, where no reminder is scheduled; `reminder` says which it was.
+  promo_id?: string;
+  team_id?: string;
+  league?: string;
+  /** What /api/subscribe answered for the reminder (promo page block only). */
+  reminder?: 'scheduled' | 'too_late' | 'none';
 };
 
 export type SearchQueryProperties = {

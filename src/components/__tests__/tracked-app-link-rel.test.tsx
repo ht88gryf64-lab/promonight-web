@@ -1,6 +1,6 @@
 // TrackedAppLink puts rel="nofollow" on /download?src= links in both of its
 // render branches (chore/bot-firewall, 2026-11-02). The team card renders the
-// plain <a>, the promo page "Remind me" also renders the plain <a>; next/link
+// plain <a>, the promo page "Get the app" also renders the plain <a>; next/link
 // is covered so a future caller without plainAnchor gets the same rel.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

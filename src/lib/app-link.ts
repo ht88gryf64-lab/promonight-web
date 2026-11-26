@@ -11,7 +11,7 @@
 //   (appStoreCampaign).
 // - Google Play: an install `referrer` carrying utm_source=web,
 //   utm_medium=<surface>, utm_content=<teamId>, utm_campaign=<placement>.
-// - A visitor who reaches /download from a promo page's "Remind me" button
+// - A visitor who reaches /download from a promo page's "Get the app" (labelled "Remind me" until 2026-11-26) button
 //   (surface promo_cta, hotfix 2026-10-31) also carries the promo. Play gets
 //   promoId and pageSlug after the team in utm_content, joined by `_` (team
 //   ids, slugs and promo ids never contain one, so it splits back into its
@@ -171,7 +171,7 @@ export function downloadHref(teamId: string): string {
   return `/download?src=team_cta_${teamId}`;
 }
 
-/** The promo page's "Remind me" link: the team in `src` as the team card
+/** The promo page's "Get the app" (labelled "Remind me" until 2026-11-26) link: the team in `src` as the team card
  *  does, the promo as two separate params /download carries into its store
  *  links (promoFromDownloadParams). */
 export function promoDownloadHref(teamId: string, promoId: string, pageSlug: string): string {

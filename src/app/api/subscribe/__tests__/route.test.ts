@@ -30,12 +30,32 @@ type SendResult = { ok: boolean; id?: string; skipped?: boolean; error?: string 
 
 let sendResult: SendResult = { ok: true, id: 'test-message-id' };
 let sendThrows: Error | null = null;
-let sendCalls: Array<{ email: string; confirmToken: string; manageToken: string }> = [];
+type ReminderPromo = { title: string; teamName: string; date: string };
+let sendCalls: Array<{ email: string; confirmToken: string; manageToken: string; reminder?: ReminderPromo | null }> = [];
+
+// ── mocked reminder scheduler ───────────────────────────────────────────────
+// The real one (src/lib/reminders.ts) reads the stored promo; its rules are
+// covered in src/lib/__tests__/reminder-core.test.ts. Here it is a stand-in
+// that keeps the one property the route depends on: one reminder per
+// subscriber per promo, however many times it is asked.
+type ScheduleResult = { outcome: 'scheduled' | 'too_late' | 'none'; promo?: ReminderPromo };
+let scheduleResult: ScheduleResult = { outcome: 'scheduled', promo: { title: 'Winter Beanie', teamName: 'Minnesota Wild', date: '2026-12-05' } };
+let scheduleThrows: Error | null = null;
+let scheduleCalls: Array<{ subscriberId: string; teamId: string; promoId: string }> = [];
+const reminderDocs = new Set<string>();
+
+async function fakeScheduleReminderForSignup(input: { subscriberId: string; teamId: string; promoId: string; now: Date }): Promise<ScheduleResult> {
+  scheduleCalls.push({ subscriberId: input.subscriberId, teamId: input.teamId, promoId: input.promoId });
+  if (scheduleThrows) throw scheduleThrows;
+  if (scheduleResult.outcome === 'scheduled') reminderDocs.add(`${input.subscriberId}_${input.promoId}`);
+  return scheduleResult;
+}
 
 async function fakeSendConfirmationEmail(sub: {
   email: string;
   confirmToken: string;
   manageToken: string;
+  reminder?: ReminderPromo | null;
 }): Promise<SendResult> {
   sendCalls.push(sub);
   if (sendThrows) throw sendThrows;
@@ -48,6 +68,9 @@ mock.module(new URL('../../../../lib/firebase.ts', import.meta.url).href, {
 });
 mock.module(new URL('../../../../lib/email.ts', import.meta.url).href, {
   namedExports: { sendConfirmationEmail: fakeSendConfirmationEmail },
+});
+mock.module(new URL('../../../../lib/reminders.ts', import.meta.url).href, {
+  namedExports: { scheduleReminderForSignup: fakeScheduleReminderForSignup },
 });
 
 const EMAIL = 'newfan@example.com';
@@ -71,6 +94,10 @@ beforeEach(() => {
   sendResult = { ok: true, id: 'test-message-id' };
   sendThrows = null;
   sendCalls = [];
+  scheduleResult = { outcome: 'scheduled', promo: { title: 'Winter Beanie', teamName: 'Minnesota Wild', date: '2026-12-05' } };
+  scheduleThrows = null;
+  scheduleCalls = [];
+  reminderDocs.clear();
 });
 
 // ── the happy path stamps delivery ──────────────────────────────────────────
@@ -87,6 +114,8 @@ test('a successful send stamps confirmationSentAt with a targeted write', async 
     created: true,
     team_count: 1,
     confirmation: 'sent',
+    // No reminder was asked for (the field exists since 2026-11-26).
+    reminder: 'none',
   });
   assert.strictEqual(sendCalls.length, 1, 'exactly one confirmation email');
   assert.ok(subscriberDoc().confirmationSentAt != null, 'delivery stamped');
@@ -269,6 +298,7 @@ test('the suppressed response is byte-identical to a sending one apart from crea
     created: false,
     team_count: 2,
     confirmation: 'not_needed',
+    reminder: 'none',
   });
 });
 
@@ -306,4 +336,102 @@ test('a signup with every Vercel geo header present stores no location at all', 
     const data = JSON.stringify(w);
     assert.ok(!/geo(City|Region|Lat|Lng)/.test(data), `a write touched a geo field: ${data}`);
   }
+});
+
+// ── the promo page's reminder (Gate 1 rulings, 2026-11-26) ───────────────────
+
+const REMIND = { email: EMAIL, teams: ['minnesota-wild'], source: 'web_promo_page', reminder: { teamId: 'minnesota-wild', promoId: 'c7057219198efd77' } };
+
+test('a reminder signup: subscriber upserted, the team followed, source web_promo_page, the reminder scheduled and named in the confirmation email', async () => {
+  const { POST } = await import('../route');
+  const res = await POST(post(REMIND));
+  const json = await res.json();
+  assert.strictEqual(res.status, 200);
+  assert.strictEqual(json.reminder, 'scheduled');
+  assert.strictEqual(json.confirmation, 'sent');
+  const doc = subscriberDoc();
+  assert.deepStrictEqual(doc.teams, ['minnesota-wild']);
+  assert.strictEqual(doc.source, 'web_promo_page', 'stored as its own surface, not web_other');
+  assert.strictEqual(doc.status, 'pending', 'still double opt-in');
+  const id = [...coll('subscribers').keys()][0];
+  assert.deepStrictEqual(scheduleCalls, [{ subscriberId: id, teamId: 'minnesota-wild', promoId: 'c7057219198efd77' }]);
+  assert.deepStrictEqual(sendCalls[0].reminder, { title: 'Winter Beanie', teamName: 'Minnesota Wild', date: '2026-12-05' });
+});
+
+test('a double submit is one subscriber, the team followed once, and one reminder', async () => {
+  const { POST } = await import('../route');
+  await POST(post(REMIND));
+  const second = await (await POST(post(REMIND))).json();
+  assert.strictEqual(second.reminder, 'scheduled');
+  assert.strictEqual(coll('subscribers').size, 1);
+  assert.deepStrictEqual(subscriberDoc().teams, ['minnesota-wild'], 'no duplicate team');
+  assert.strictEqual(reminderDocs.size, 1, 'one reminder per subscriber per promo');
+});
+
+test('too late from a stale page: the signup goes through, the answer is too_late, and the confirmation email names no reminder', async () => {
+  scheduleResult = { outcome: 'too_late' };
+  const { POST } = await import('../route');
+  const res = await POST(post(REMIND));
+  const json = await res.json();
+  assert.strictEqual(res.status, 200);
+  assert.strictEqual(json.ok, true);
+  assert.strictEqual(json.reminder, 'too_late');
+  assert.strictEqual(coll('subscribers').size, 1, 'the weekly signup still happened');
+  assert.strictEqual(reminderDocs.size, 0);
+  assert.strictEqual(sendCalls.length, 1);
+  assert.ok(!('reminder' in sendCalls[0]) || sendCalls[0].reminder == null, 'no reminder in the confirmation email');
+});
+
+test('no reminder in the body: the scheduler is never asked, the answer is none, the confirmation email is the plain one', async () => {
+  const { POST } = await import('../route');
+  const json = await (await POST(post({ email: EMAIL, teams: ['minnesota-wild'], source: 'web_promo_page' }))).json();
+  assert.strictEqual(json.reminder, 'none');
+  assert.strictEqual(scheduleCalls.length, 0);
+  assert.ok(!('reminder' in sendCalls[0]));
+});
+
+test('a failing scheduler never fails the signup', async () => {
+  scheduleThrows = new Error('firestore unavailable');
+  const { POST } = await import('../route');
+  const res = await POST(post(REMIND));
+  const json = await res.json();
+  assert.strictEqual(res.status, 200);
+  assert.strictEqual(json.ok, true);
+  assert.strictEqual(json.reminder, 'none');
+  assert.strictEqual(coll('subscribers').size, 1);
+});
+
+test('a malformed reminder is ignored, never used to build a document path', async () => {
+  const { POST } = await import('../route');
+  for (const reminder of [
+    'c7057219198efd77',
+    { teamId: 'minnesota-wild' },
+    { teamId: 'minnesota-wild', promoId: 'a/b' },
+    { teamId: 'minnesota-wild', promoId: '../x' },
+    { teamId: 'Minnesota Wild', promoId: 'c7057219198efd77' },
+    { teamId: 'teams/x', promoId: 'c7057219198efd77' },
+    { teamId: 'minnesota-wild', promoId: 'x'.repeat(65) },
+    { teamId: 'minnesota-wild', promoId: 42 },
+  ]) {
+    resetFirestore();
+    const json = await (await POST(post({ ...REMIND, reminder }))).json();
+    assert.strictEqual(json.ok, true);
+    assert.strictEqual(json.reminder, 'none', JSON.stringify(reminder));
+  }
+  assert.strictEqual(scheduleCalls.length, 0);
+});
+
+test('an already-confirmed subscriber gets the reminder with no confirmation email', async () => {
+  const { POST } = await import('../route');
+  await POST(post({ email: EMAIL, teams: [], source: 'web_homepage' }));
+  const id = [...coll('subscribers').keys()][0];
+  coll('subscribers').set(id, { ...coll('subscribers').get(id)!, status: 'confirmed' });
+  sendCalls = [];
+  const json = await (await POST(post(REMIND))).json();
+  assert.strictEqual(json.status, 'confirmed');
+  assert.strictEqual(json.confirmation, 'not_needed');
+  assert.strictEqual(json.reminder, 'scheduled');
+  assert.strictEqual(sendCalls.length, 0);
+  assert.deepStrictEqual(subscriberDoc().teams, ['minnesota-wild']);
+  assert.strictEqual(subscriberDoc().source, 'web_homepage', 'the first source is kept');
 });

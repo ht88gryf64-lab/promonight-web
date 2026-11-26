@@ -1,6 +1,6 @@
 import 'server-only';
 import type { DigestContext, DigestPromo } from './digest';
-import { collapseEntries, digestPreheader, digestSubject, giveawayEntryCount, renderDigest, teamListLabel, windowLabel, type DigestEmailInput, type SubjectInput } from './digest-email';
+import { collapseEntries, digestPreheader, digestSubject, giveawayEntryCount, renderDigest, renderPromoReminder, teamListLabel, windowLabel, type DigestEmailInput, type ReminderEmailInput, type SubjectInput } from './digest-email';
 import type { CascadeLevel } from './geo/local-promos';
 
 // Transactional email via the Resend REST API. Intentionally dependency-free
@@ -154,7 +154,32 @@ function postalHtml(): string {
   return `<div style="margin-top:10px;font-size:11px;line-height:1.5;color:${EMAIL_INK_FAINT};">${esc(SENDER_POSTAL_ADDRESS)}</div>`;
 }
 
-function confirmationHtml(email: string, confirm: string, manageUnsub: string): string {
+/** What a signup's reminder names in the confirmation email (Gate 1 ruling 3,
+ *  2026-11-26): the promo, the team and the game's date. */
+export interface ConfirmationReminder {
+  title: string;
+  teamName: string;
+  /** YYYY-MM-DD, the game's own calendar day. */
+  date: string;
+}
+
+/** "Saturday, December 5". Pure day math in UTC: the date is a calendar day,
+ *  never an instant. */
+function longDayLabel(ymd: string): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' });
+}
+
+/** The one sentence a reminder adds to the confirmation email. The confirm
+ *  click covers both the weekly email and the reminder, so the email that
+ *  asks for the click names both. */
+export function confirmationReminderLine(r: ConfirmationReminder): string {
+  return `Confirming also sets your reminder for ${r.title} (${r.teamName}, ${longDayLabel(r.date)}): we will email you the day before.`;
+}
+
+// `reminderLine` null renders the email exactly as it was before the reminder
+// existed (guarded byte for byte by confirmation-email.test.ts).
+function confirmationHtml(email: string, confirm: string, manageUnsub: string, reminderLine: string | null = null): string {
   return `<!doctype html>
 <html lang="en">
 <body style="margin:0;padding:0;background:#f4f1ea;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
@@ -169,7 +194,10 @@ function confirmationHtml(email: string, confirm: string, manageUnsub: string): 
           <p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:${EMAIL_INK_BODY};">
             Tap below to confirm <strong>${esc(email)}</strong> and start getting one weekly
             email with every giveaway, theme night, and food deal for the teams you follow.
-          </p>
+          </p>${reminderLine ? `
+          <p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:${EMAIL_INK_BODY};">
+            ${esc(reminderLine)}
+          </p>` : ''}
           <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
             <tr><td style="border-radius:12px;background:#d31145;">
               <a href="${confirm}" style="display:inline-block;padding:14px 28px;font-size:16px;font-weight:600;color:${EMAIL_ON_DARK};text-decoration:none;">Confirm my email</a>
@@ -213,7 +241,10 @@ export async function sendConfirmationEmail(sub: {
   email: string;
   confirmToken: string;
   manageToken: string;
+  /** Set only when this signup also scheduled a day-before reminder. */
+  reminder?: ConfirmationReminder | null;
 }): Promise<SendResult> {
+  const reminderLine = sub.reminder ? confirmationReminderLine(sub.reminder) : null;
   const confirm = confirmUrl(sub.confirmToken);
   // Header target: hit by RFC 8058 one-click (POST, mutates) and, if a scanner
   // GETs it, redirects harmlessly. Visible link: the preferences page, which
@@ -224,6 +255,7 @@ export async function sendConfirmationEmail(sub: {
     'Confirm your PromoNight subscription:',
     confirm,
     '',
+    ...(reminderLine ? [reminderLine, ''] : []),
     'If you did not sign up, ignore this email or unsubscribe:',
     manageUnsub,
     '',
@@ -233,7 +265,7 @@ export async function sendConfirmationEmail(sub: {
   return sendEmail({
     to: sub.email,
     subject: 'Confirm your PromoNight email',
-    html: confirmationHtml(sub.email, confirm, manageUnsub),
+    html: confirmationHtml(sub.email, confirm, manageUnsub, reminderLine),
     text,
     headers: {
       // One-click unsubscribe (RFC 8058) for inbox-provider native controls.
@@ -273,6 +305,8 @@ export const EMAIL_SURFACE_PERSONALIZED = 'web_email_personalized';
 export const EMAIL_SURFACE_GENERIC = 'web_email_generic';
 // The empty-window variant (a personalized subscriber whose teams are quiet).
 export const EMAIL_SURFACE_EMPTY = 'web_email_empty';
+// The day-before reminder a subscriber asked for on a promo page.
+export const EMAIL_SURFACE_REMINDER = 'web_email_reminder';
 
 /** The direct ticket link on the hero is held until TicketNetwork approves
  *  email marketing (decided 2026-11-05). Read per send, so the switch is the
@@ -460,4 +494,38 @@ export function buildEmptyWindowDigest(args: EmptyWindowDigestArgs): BuiltDigest
 export async function sendEmptyWindowDigest(args: EmptyWindowDigestArgs): Promise<SendResult> {
   const b = buildEmptyWindowDigest(args);
   return sendEmail({ to: args.email, subject: b.subject, html: b.html, text: b.text, headers: b.headers });
+}
+
+// ── Day-before promo reminder ───────────────────────────────────────────────
+// One promo, to one subscriber who asked for it on the promo page (Gate 1
+// rulings, 2026-11-26). Same sender, same RFC 8058 one-click headers with the
+// recipient's own manage token, same postal line and the same ticket gate as
+// the digest; the markup is renderPromoReminder (src/lib/digest-email.ts).
+
+export type PromoReminderArgs = Pick<ReminderEmailInput, 'promo' | 'team' | 'teamName'> & {
+  email: string;
+  manageToken: string;
+};
+
+export function buildPromoReminder(args: PromoReminderArgs): { subject: string; html: string; text: string; headers: Record<string, string> } {
+  const r = renderPromoReminder({
+    siteUrl: SITE_URL,
+    manageToken: args.manageToken,
+    surface: EMAIL_SURFACE_REMINDER,
+    promo: args.promo,
+    team: args.team,
+    teamName: args.teamName,
+    ticketsApproved: isTicketNetworkEmailApproved(),
+    postalAddress: SENDER_POSTAL_ADDRESS,
+  });
+  return { ...r, headers: listUnsubHeaders(args.manageToken) };
+}
+
+// Bounded like the confirmation send: the cron sends one at a time and a hung
+// Resend must fail one reminder, not hold the run until the platform kills it.
+const REMINDER_SEND_TIMEOUT_MS = 8_000;
+
+export async function sendPromoReminder(args: PromoReminderArgs): Promise<SendResult> {
+  const b = buildPromoReminder(args);
+  return sendEmail({ to: args.email, subject: b.subject, html: b.html, text: b.text, headers: b.headers, timeoutMs: REMINDER_SEND_TIMEOUT_MS });
 }

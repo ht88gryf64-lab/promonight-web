@@ -9,6 +9,10 @@ import { FuboCTA } from '@/components/affiliates/FuboCTA';
 import { TrackedAppLink } from '@/components/analytics-events';
 import { PromoShareImageButton, PromoShareRowButton, ShareLandingCapture, type PromoShareProps } from '@/components/promo-page/PromoShare';
 import { PromoShort } from '@/components/promo-page/PromoShort';
+import { PromoRemind } from '@/components/promo-page/PromoRemind';
+import { remindConsent, remindHeading, remindSubline, type RemindMode } from '@/lib/promo-remind-copy';
+import { reminderOpen } from '@/lib/reminder-core';
+import { addDaysYmd } from '@/lib/site-today';
 import { shortJsonLd } from '@/lib/youtube-shorts';
 import { AFFILIATE_DISCLOSURE_TEXT, AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { EbayListingLink } from '@/components/promo-page/EbayListingLink';
@@ -279,6 +283,16 @@ export function PromoPageView({ page, ctx, today, now, imageSize, ticketTest = n
   // offers, and the arrival question leaves the FAQ.
   const past = !removed && dates.length > 0 && dates.every((d) => d < venueToday);
   const nextPromoHref = ctx.nextTeamPromos[0]?.href ?? teamHref;
+  // THE EMAIL BLOCK (Gate 1 rulings, 2026-11-26), inside the CTA section so
+  // the article gains no direct child and no ad anchor moves. `reminder` while
+  // a day-before email can still be promised for the primary date: before
+  // 10:00 in the venue's zone on the day before (src/lib/reminder-core.ts;
+  // the zone is the game's, else the building's, else the site's). From then
+  // on, and on a played page, the weekly email only. The page is cached for
+  // up to a day, so this is the offer, not the promise: /api/subscribe
+  // decides again and the form's success copy follows its answer.
+  const remindMode: RemindMode =
+    !past && YMD_RE.test(primary.date) && (now ? reminderOpen(now, primary.date, ctx.game?.timeZone) : today < addDaysYmd(primary.date, -1)) ? 'reminder' : 'weekly';
   // eBay listings (step 5a): never beside a tier 1 photo on an upcoming
   // page, never on a removed page; a played page shows them whatever its image.
   const ebayListings = !removed && (past || image.kind !== 'photo') ? ctx.ebayListings : [];
@@ -298,6 +312,15 @@ export function PromoPageView({ page, ctx, today, now, imageSize, ticketTest = n
     const t = promoDisplayTitle(r.title, team);
     return t === r.title ? r : { ...r, title: t };
   };
+  const remindBlock = removed ? null : (
+    <div id="remind" data-remind-mode={remindMode} className="flex scroll-mt-20 flex-col gap-2 border-t border-rd-line pt-4">
+      <h2 className="m-0 font-rd text-[17px] font-semibold leading-[1.3] text-rd-ink">{remindHeading(remindMode, shownName, teamName)}</h2>
+      {remindMode === 'reminder' ? (
+        <p className="m-0 text-[14px] leading-[1.45] text-rd-ink-soft">{remindSubline(teamName, cleanText(primary.displayOpponent), formatLongDate(primary.date))}</p>
+      ) : null}
+      <PromoRemind mode={remindMode} teamId={team.id} teamName={teamName} league={team.league} promoId={primary.promoId} consent={remindConsent(remindMode, teamName)} />
+    </div>
+  );
   const storedFaqs = promoFaqs({ row: shown(primary), teamName, dates, removed, removedOn, past });
   const faqs = [...storedFaqs, ...(explainer?.faqs.map((f) => ({ question: f.q, answer: f.a })) ?? [])];
   const sourceHost = hostOf(primary.sourceUrl);
@@ -655,9 +678,12 @@ export function PromoPageView({ page, ctx, today, now, imageSize, ticketTest = n
           // forward in place of the tickets. "Next {team} promo" is the
           // team's next upcoming promo page, else the team page; the other
           // editions of this promotion follow when they exist. Share stays.
-          // Parking, hotels, the reminder and every affiliate ticket link
-          // do not render.
-          <section className="mt-4 flex items-stretch gap-3">
+          // Parking, hotels, the app link and every affiliate ticket link
+          // do not render. The email block under the row is the weekly
+          // email only (ruling 2026-11-26): the section is one direct child
+          // of the article, as before.
+          <section className="mt-4 flex flex-col gap-4">
+          <div className="flex items-stretch gap-3">
             {!multi && YMD_RE.test(primary.date) ? <DateTile ymd={primary.date} state={tileState(primary.date)} size="full" /> : null}
             <div className="flex min-w-0 flex-1 flex-col gap-2.5">
               <div className="flex gap-2">
@@ -675,9 +701,16 @@ export function PromoPageView({ page, ctx, today, now, imageSize, ticketTest = n
                 </p>
               ) : null}
             </div>
+          </div>
+          {remindBlock}
           </section>
         ) : !removed ? (
-          <section className="mt-4 flex items-stretch gap-3">
+          // ONE direct child of the article, as before the email block
+          // (2026-11-26): the tile and CTA row, then the block under it at
+          // full width. The ad anchors (".page-content > *") do not move, so
+          // no unit can land between the ticket button and the form.
+          <section className="mt-4 flex flex-col gap-4">
+          <div className="flex items-stretch gap-3">
             {/* The date tile (spec Visuals 2) beside the CTA column, so the
                 CTA stays above the first in-content unit. A series stacks its
                 next dates as shrunk tiles; only the next one carries the
@@ -813,10 +846,12 @@ export function PromoPageView({ page, ctx, today, now, imageSize, ticketTest = n
                 plainAnchor
                 className="flex h-11 min-w-[104px] flex-1 basis-0 items-center justify-center whitespace-nowrap rounded-xl border border-rd-line-strong bg-rd-card px-2 font-rd text-[14px] font-medium text-rd-ink no-underline hover:border-rd-ink"
               >
-                Remind me
+                Get the app
               </TrackedAppLink>
             </div>
             </div>
+          </div>
+          {remindBlock}
           </section>
         ) : null}
 

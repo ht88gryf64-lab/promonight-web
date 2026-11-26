@@ -21,7 +21,7 @@ import { archivoHouse } from '@/components/redesign/fonts-house';
 // pc), or the page itself (dl) on a direct visit; never the team. Reading searchParams makes this
 // page render per request; it was ISR (revalidate 86400) before app funnel G1.
 //
-// ?src=promo_cta_{teamId}&promoId=…&pageSlug=… is a promo page's "Remind me"
+// ?src=promo_cta_{teamId}&promoId=…&pageSlug=… is a promo page's "Get the app" (labelled "Remind me" until 2026-11-26)
 // link (hotfix 2026-10-31). The team rides in as above; the promo id and page
 // slug follow it into Play's utm_content (src/lib/app-link.ts).
 function storeLinks(teamId: string | undefined, visit: Pick<AppLinkOptions, 'promoId' | 'pageSlug' | 'from' | 'utm'> = {}) {

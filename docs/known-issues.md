@@ -4588,3 +4588,10 @@ One line each, all on production before this branch (ux-review 2026-11-25-compac
 - **Not measured:** whether the compact ticket card still matches the compact SpotHero and Expedia cards in height where the three stack (the college football schedule modal), and the keyboard focus ring on the taller card.
 - **Seen once, not reproduced:** one dev-server load at 768 with ads blocked rendered no row "Tickets" buttons after 30 seconds; five further loads rendered all four.
 
+
+## 136. Deferred from feature/promo-remind-capture (logged 2026-11-26)
+
+One line each. The promo page's "Remind me" email block and the day-before reminder (`promoReminders`, `/api/cron/promo-reminders`).
+
+- **The digest's hero "Remind me" link still goes to the top of the promo page.** The digest spec says "anchors if they exist, else the page", and `#remind` now exists. Ruled out of this build (Gate 1 ruling 7, 2026-11-26): changing it moves the digest's hero goldens.
+- **The digest's app band still pitches the app for a day-before reminder** ("Want a reminder the day before each game instead of once a week?"), which the email block now also does. Same ruling: the digest's copy is out of this build.

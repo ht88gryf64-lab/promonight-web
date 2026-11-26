@@ -67,9 +67,22 @@ test('the entry boundary still accepts every legitimate CTA surface', () => {
   }
   assert.strictEqual(
     ENTRY_SURFACES.length,
-    CAPTURE_SURFACES.length - 1,
-    'exactly one surface is excluded from entry, and it is the sheet',
+    CAPTURE_SURFACES.length - 2,
+    'exactly two surfaces are excluded from entry: the sheet and the promo page block',
   );
+});
+
+test('web_promo_page is the promo page block and nothing else (Gate 1 ruling 8, 2026-11-26)', () => {
+  // In the vocabulary, so /api/subscribe stores it instead of web_other.
+  assert.ok(CAPTURE_SURFACES.includes('web_promo_page'));
+  assert.strictEqual(coerceCaptureSurface('web_promo_page'), 'web_promo_page');
+  // Never an entry surface: the block posts in place and never links to
+  // /follow, so the value on a /follow URL is hand-typed.
+  assert.ok(!ENTRY_SURFACES.includes('web_promo_page'));
+  assert.strictEqual(coerceEntrySurface('web_promo_page'), 'web_other');
+  // The footer on a promo page stays web_other: the path never infers it.
+  assert.strictEqual(inferCaptureSurface('/nhl/minnesota-wild/promos/winter-beanie'), 'web_other');
+  assert.strictEqual(inferCaptureSurface('/nhl/minnesota-wild/promos/past'), 'web_other');
 });
 
 test('the API boundary DOES accept the sheet surface', () => {

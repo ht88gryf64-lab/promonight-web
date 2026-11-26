@@ -17,6 +17,19 @@
  * confirmationSentAt, which this route stamps in a second write once the sender
  * reports success. A failed or skipped send leaves it unset so the next submit
  * re-sends rather than stranding the subscriber.
+ *
+ * REMINDER (Gate 1 rulings, 2026-11-26). The promo page's "Remind me" block
+ * posts here with `reminder: { teamId, promoId }`. After the subscriber is
+ * upserted the server schedules the day-before reminder from the STORED promo
+ * (src/lib/reminders.ts) and reports `reminder` in the response:
+ *   'scheduled'  a reminder exists for this subscriber and promo.
+ *   'too_late'   the reminder's moment has passed (a cached page can still
+ *                offer one); the signup itself went through.
+ *   'none'       no reminder was asked for, or the promo is unknown or removed,
+ *                or scheduling failed. The signup itself went through.
+ * The client's success copy follows this answer, never what the page rendered.
+ * A reminder never fails the signup. When one was scheduled and a confirmation
+ * email goes out, that email names it: the confirm click covers both.
  */
 
 import { NextResponse } from 'next/server';
@@ -29,6 +42,7 @@ import {
 import { coerceCaptureSurface } from '@/lib/follow-surface';
 import { sendConfirmationEmail } from '@/lib/email';
 import { checkSubscribeRateLimit, clientIp } from '@/lib/rate-limit';
+import { scheduleReminderForSignup, type ReminderOutcome, type ScheduleResult } from '@/lib/reminders';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,6 +51,20 @@ interface SubscribeBody {
   email?: unknown;
   teams?: unknown;
   source?: unknown;
+  reminder?: unknown;
+}
+
+// A team id is a slug and a promo id is a Firestore document id: both are
+// checked before either is used to build a document path.
+const TEAM_ID_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const PROMO_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+
+function parseReminder(v: unknown): { teamId: string; promoId: string } | null {
+  if (!v || typeof v !== 'object') return null;
+  const { teamId, promoId } = v as { teamId?: unknown; promoId?: unknown };
+  if (typeof teamId !== 'string' || typeof promoId !== 'string') return null;
+  if (teamId.length > 80 || !TEAM_ID_RE.test(teamId) || !PROMO_ID_RE.test(promoId)) return null;
+  return { teamId, promoId };
 }
 
 export async function POST(request: Request) {
@@ -65,6 +93,7 @@ export async function POST(request: Request) {
 
   const teams = sanitizeTeams(body.teams);
   const source = coerceCaptureSurface(body.source);
+  const reminderAsk = parseReminder(body.reminder);
   // No location is stored: the x-vercel-ip-* headers are not read here
   // (2026-10-07). See upsertSubscriber.
 
@@ -92,12 +121,25 @@ export async function POST(request: Request) {
     // extra field is needed to tell them apart.
     let confirmation: 'sent' | 'not_needed' | 'failed' = 'not_needed';
 
+    // The reminder, before the confirmation email so the email can name it.
+    // Never fails the signup: the subscriber record is already committed.
+    let scheduled: ScheduleResult = { outcome: 'none' };
+    if (reminderAsk) {
+      try {
+        scheduled = await scheduleReminderForSignup({ subscriberId: result.id, ...reminderAsk, now: new Date() });
+      } catch (e) {
+        console.error(`[api:subscribe] reminder scheduling failed: ${e instanceof Error ? e.message : e}`);
+      }
+    }
+    const reminder: ReminderOutcome = scheduled.outcome;
+
     if (result.needsConfirmation) {
       try {
         const sent = await sendConfirmationEmail({
           email: result.email,
           confirmToken: result.confirmToken,
           manageToken: result.manageToken,
+          ...(scheduled.outcome === 'scheduled' && scheduled.promo ? { reminder: scheduled.promo } : {}),
         });
         confirmation = sent.ok ? 'sent' : 'failed';
         if (sent.ok) {
@@ -143,6 +185,7 @@ export async function POST(request: Request) {
       created: result.created,
       team_count: result.teams.length,
       confirmation,
+      reminder,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
