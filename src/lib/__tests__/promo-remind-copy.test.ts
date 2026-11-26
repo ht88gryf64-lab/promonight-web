@@ -37,7 +37,11 @@ test('a day-before email is promised only when the API scheduled one', () => {
 test('too late from a stale page says so, and still confirms the weekly email', () => {
   const s = say('reminder', 'too_late', 'confident');
   assert.equal(s, 'It is too late for a day-before email for this game. Check your inbox for a confirmation link. Once you confirm, you’ll get the weekly Minnesota Wild promo email.');
-  assert.ok(say('reminder', 'none', 'confident').startsWith('We could not set a reminder for this game. '));
+  // `none` is neutral (Gate 2 ruling 3): a removed promo, a failed write and a
+  // subscriber at the reminder cap all read the same, as the plain weekly line.
+  assert.equal(say('reminder', 'none', 'confident'), say('weekly', 'none', 'confident'));
+  assert.equal(say('reminder', 'none', 'already_subscribed'), say('weekly', 'none', 'already_subscribed'));
+  for (const outcome of ['confident', 'already_subscribed'] as const) assert.ok(!/cap|limit|too many|could not|reminder/i.test(say('reminder', 'none', outcome)));
   // The weekly variant never mentions a reminder it did not offer.
   assert.equal(say('weekly', 'none', 'confident'), 'Check your inbox for a confirmation link. Once you confirm, you’ll get the weekly Minnesota Wild promo email.');
 });

@@ -1587,7 +1587,14 @@ test('the email block, upcoming: the reminder variant inside the CTA section, un
   await remindGolden('upcoming', block);
   assert.match(block, /^<div id="remind" data-remind-mode="reminder"/);
   assert.match(block, /<h2 [^>]*>Get a reminder for Winter Beanie<\/h2>/);
-  assert.match(block, /<p [^>]*>Minnesota Wild(?: vs [^,<]+)?, Saturday, Dec(?:ember)? 5, 2026<\/p>/);
+  // No matchup line on a single-date page: the header carries the opponent
+  // and the date a few lines above (Gate 2 ruling 1). A series keeps it.
+  assert.ok(!/<p [^>]*>Minnesota Wild(?: vs [^,<]+)?, /.test(block), 'no subline on a single-date page');
+  assert.match(block, /<\/h2><div aria-live="polite"><form /, 'the form follows the heading directly');
+  const series = remindBlock((await render('nhl', 'anaheim-ducks', 'kids-socks-giveaway')).h);
+  assert.ok(series);
+  assert.match(series, /^<div id="remind" data-remind-mode="reminder"/);
+  assert.match(series, /<\/h2><p [^>]*>Anaheim Ducks vs Sharks, Sunday, Nov 1, 2026<\/p><div aria-live="polite"><form /, 'a series names the date the reminder is for');
   assert.match(block, /<input [^>]*type="email"[^>]*>/);
   assert.match(block, /<button type="submit"[^>]*>Remind me<\/button>/);
   assert.ok(block.includes('We’ll email you the day before. You’ll also get the weekly Minnesota Wild promo email; unsubscribe anytime.'), 'the consent line');

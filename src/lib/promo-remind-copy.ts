@@ -45,19 +45,17 @@ export function remindConsent(mode: RemindMode, teamName: string): string {
  *
  * `reminder` decides whether a day-before email is promised; `outcome` (from
  * the confirmation email's fate, src/lib/subscribe-outcome.ts) decides whether
- * the reader is told to look for a confirmation link. A reminder the page
- * offered but the server could not schedule is said plainly, so the reader is
- * never left expecting an email that will not come.
+ * the reader is told to look for a confirmation link. A day-before email is
+ * promised only when one was scheduled; too late is said plainly.
  */
 export function remindSuccessCopy(input: { mode: RemindMode; reminder: ReminderAnswer; outcome: SuccessVariant; teamName: string }): string {
   const { mode, reminder, outcome, teamName } = input;
   const weekly = `the weekly ${teamName} promo email`;
-  const missed =
-    mode === 'reminder' && reminder === 'too_late'
-      ? 'It is too late for a day-before email for this game. '
-      : mode === 'reminder' && reminder === 'none'
-        ? 'We could not set a reminder for this game. '
-        : '';
+  // `none` gets no line of its own (Gate 2 ruling 3): it covers a promo that
+  // was just removed, a failed write and a subscriber at the reminder cap,
+  // and the copy must not say which. The reader is simply not promised a
+  // day-before email.
+  const missed = mode === 'reminder' && reminder === 'too_late' ? 'It is too late for a day-before email for this game. ' : '';
   if (outcome === 'failed') {
     return 'You are signed up, but the confirmation email did not send. Submit your address again to get the link.';
   }

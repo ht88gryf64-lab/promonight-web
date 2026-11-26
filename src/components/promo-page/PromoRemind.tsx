@@ -165,7 +165,7 @@ export function PromoRemind({ mode, teamId, teamName, league, promoId, consent }
               setError(null);
             }
           }}
-          className={`ph-no-capture h-12 min-w-0 flex-1 rounded-xl border bg-rd-card ${invalid ? 'border-rd-link' : 'border-rd-line-strong'} px-3 font-rd text-[16px] text-rd-ink placeholder:text-rd-ink-faint focus:border-rd-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pp-accent-text)]`}
+          className={`ph-no-capture h-12 min-w-0 flex-1 rounded-xl border bg-rd-card ${invalid ? 'border-rd-link focus:border-rd-link' : 'border-rd-line-strong focus:border-rd-ink'} px-3 font-rd text-[16px] text-rd-ink placeholder:text-rd-ink-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pp-accent-text)]`}
         />
         <button
           type="submit"

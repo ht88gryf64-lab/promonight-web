@@ -13,7 +13,7 @@ import assert from 'node:assert';
 const OPERATOR = 'kovalikdigital@gmail.com';
 
 type Summary = Record<string, unknown> & { scheduled: number; toSend: number; sent: number; failed: number; stuckSending: number; ceiling: number; aborted?: string };
-const base = (over: Partial<Summary> = {}): Summary => ({ mode: 'dry-run', scheduled: 0, due: 0, toSend: 0, sent: 0, failed: 0, held: 0, errored: 0, moved: 0, followed: 0, waitingUnconfirmed: 0, cancelled: {}, stuckSending: 0, ceiling: 500, withinCeiling: true, ...over });
+const base = (over: Partial<Summary> = {}): Summary => ({ mode: 'dry-run', scheduled: 0, due: 0, toSend: 0, sent: 0, failed: 0, held: 0, alreadySent: 0, errored: 0, moved: 0, followed: 0, waitingUnconfirmed: 0, cancelled: {}, stuckSending: 0, ceiling: 500, withinCeiling: true, ...over });
 
 let runCalls: Array<{ execute: boolean; overCap?: boolean }> = [];
 let runResult: Summary | Error = base();
@@ -150,5 +150,20 @@ test('a clean execute run alerts nobody', async () => {
   const res = await GET(get('?execute=true'));
   assert.strictEqual(res.status, 200);
   assert.strictEqual((await res.json()).ok, true);
+  assert.strictEqual(emailCalls.length, 0);
+});
+
+test('a reminder marked sent on an idempotency mismatch alerts the operator once, and the run is still ok', async () => {
+  runResult = base({ scheduled: 2, due: 2, toSend: 2, sent: 1, alreadySent: 1 });
+  const { GET } = await import('../route');
+  const res = await GET(get('?execute=true'));
+  assert.strictEqual(res.status, 200);
+  assert.strictEqual(emailCalls.length, 1);
+  assert.strictEqual(emailCalls[0].subject, '[PromoNight] Promo reminders: idempotency_mismatch');
+  assert.ok(emailCalls[0].text.includes('1 reminder(s) were marked sent without a Resend id'));
+  // The next run has nothing marked that way (the reminder is settled): no second alert.
+  emailCalls = [];
+  runResult = base({ scheduled: 0 });
+  await GET(get('?execute=true'));
   assert.strictEqual(emailCalls.length, 0);
 });

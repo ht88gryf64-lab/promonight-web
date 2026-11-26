@@ -108,7 +108,7 @@ interface World {
   rows: Map<string, ReminderRow>; // key team|promoId
   subscribers: Map<string, ReminderSubscriber>;
   sent: { reminderId: string; to: string }[];
-  sendResult: { ok: boolean; id?: string; error?: string } | 'no_page' | 'held' | Error;
+  sendResult: { ok: boolean; id?: string; error?: string } | 'no_page' | 'held' | 'already_sent' | Error;
   /** Promo ids whose row read throws. */
   broken: Set<string>;
   writes: number;
@@ -152,7 +152,7 @@ function deps(w: World): ReminderDeps {
     },
     send: async (reminder, subscriber) => {
       if (w.sendResult instanceof Error) throw w.sendResult;
-      if (w.sendResult !== 'no_page' && w.sendResult !== 'held' && w.sendResult.ok) w.sent.push({ reminderId: reminder.id, to: subscriber.email });
+      if (typeof w.sendResult !== 'string' && w.sendResult.ok) w.sent.push({ reminderId: reminder.id, to: subscriber.email });
       return w.sendResult;
     },
   };
@@ -444,4 +444,19 @@ test('a run that is still sending when game day starts stops sending: the check 
   assert.deepEqual([run.toSend, run.sent], [2, 1]);
   assert.equal(w.sent.length, 1);
   assert.equal(w.reminders.get('sub2_p1')?.state, 'scheduled', 'not claimed; the next run cancels it as past');
+});
+
+test('Resend refusing the key for a different body means an email already went out: marked sent with no id, never retried', async () => {
+  const w = seed();
+  await signup(w, 'sub1');
+  w.sendResult = 'already_sent';
+  const run = await runReminders(deps(w), { now: DUE, execute: true });
+  assert.deepEqual([run.alreadySent, run.sent, run.failed], [1, 0, 0]);
+  const r = w.reminders.get('sub1_p1');
+  assert.deepEqual([r?.state, r?.sendAt, r?.resendId, r?.sentAt], ['sent', null, null, 'now']);
+  // The next hour finds nothing to do: no retry, no second alert.
+  w.sendResult = { ok: true, id: 'resend-9' };
+  const next = await runReminders(deps(w), { now: LATER, execute: true });
+  assert.deepEqual([next.scheduled, next.alreadySent, next.sent], [0, 0, 0]);
+  assert.equal(w.sent.length, 0);
 });

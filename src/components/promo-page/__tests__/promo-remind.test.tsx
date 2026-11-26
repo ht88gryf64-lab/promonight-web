@@ -138,6 +138,8 @@ test('a bad address makes no request and fires no signup; a 429 and a server err
   assert.equal(field.getAttribute('aria-invalid'), 'true');
   assert.ok(field.getAttribute('aria-describedby')?.split(' ').includes(el.querySelector('[role="alert"]')?.id ?? 'none'));
   assert.equal(document.activeElement, field);
+  // The error colour holds while the field has focus (re-check R1): no ink focus border on an invalid field.
+  assert.ok(/\bborder-rd-link\b/.test(field.className) && /focus:border-rd-link/.test(field.className) && !/focus:border-rd-ink/.test(field.className));
   assert.equal(field.getAttribute('name'), null, 'unnamed: a native submit cannot put the address in a URL');
   answer = { status: 429, body: { ok: false, error: 'rate_limited' } };
   await type(el, 'fan@example.com');

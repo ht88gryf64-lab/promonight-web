@@ -12,8 +12,12 @@ import { PROMO_TYPE_LABELS, type Team } from './types';
 import { siteTodayYmd } from './site-today';
 import { ymdInZone } from './promo-date-tile';
 import { deliveryInboxKey } from './subscribers';
-import { sendPromoReminder, type ConfirmationReminder } from './email';
+import { isTicketNetworkEmailApproved, sendPromoReminder, type ConfirmationReminder, type PromoReminderArgs } from './email';
+
+/** What a reminder email is rendered from, frozen at its first send attempt. */
+type ReminderEmailSnapshot = Pick<PromoReminderArgs, 'promo' | 'team' | 'teamName'> & { ticketsApproved: boolean };
 import {
+  REMINDER_CAP_PER_SUBSCRIBER,
   isYmd,
   reminderDocId,
   reminderOpen,
@@ -129,6 +133,16 @@ export async function scheduleReminderForSignup(input: { subscriberId: string; t
   const venueToday = ymdInZone(input.now, timeZone);
   const id = reminderDocId(input.subscriberId, input.promoId);
   const ref = db.collection(REMINDERS).doc(id);
+  // THE CAP (Gate 2 ruling 3). A subscriber holds at most
+  // REMINDER_CAP_PER_SUBSCRIBER queued reminders. One more answers `none`,
+  // the same answer an unknown promo gets, so the response says nothing about
+  // the cap or about the address. A reminder already queued for this promo is
+  // not "one more". Read outside the transaction: two submits racing past the
+  // cap can leave one extra, which is harmless.
+  if ((await ref.get()).data()?.state !== 'scheduled') {
+    const queued = await db.collection(REMINDERS).where('subscriberId', '==', input.subscriberId).get();
+    if (queued.docs.filter((d) => d.data().state === 'scheduled').length >= REMINDER_CAP_PER_SUBSCRIBER) return { outcome: 'none' };
+  }
   const sendAt = Timestamp.fromDate(reminderSendAt(row.date, timeZone));
   const armed = await db.runTransaction(async (tx) => {
     const existing = await tx.get(ref);
@@ -315,36 +329,52 @@ export function firestoreReminderDeps(now: Date): ReminderDeps {
     async send(reminder, subscriber) {
       const t = await team(reminder.teamId);
       if (!t) return 'no_page';
-      const page = await resolvePromoPage(t, reminder.pageSlug, siteTodayYmd(now));
-      const row = page?.state === 'live' ? page.rows.find((r) => r.promoId === reminder.promoId) : undefined;
-      if (!page || !row || !row.title.trim()) return 'no_page';
       // A game the spine marks postponed or canceled is not played tomorrow,
       // whatever the promo row still says (the weekly scan may not have
       // re-read the club's page yet). Held, not cancelled: the row's new
       // date, when the scan writes it, moves or follows the reminder.
-      if (await gameCalledOff(t, row.date)) return 'held';
-      return sendPromoReminder({
-        idempotencyKey: reminder.id,
-        email: subscriber.email,
-        manageToken: subscriber.manageToken,
-        team: toDigestTeam(t),
-        teamName: teamDisplayName(t),
-        promo: {
-          promoId: row.promoId,
-          title: shownTitle(row.title, t),
-          typeLabel: PROMO_TYPE_LABELS[row.type] ?? 'Promo',
-          date: row.date,
-          time: row.displayTime,
-          opponent: row.displayOpponent,
-          // Never the team's default building: a neutral-site game would name
-          // the wrong one (the digest's rule). The promo page names it.
-          venueName: null,
-          quantity: quantityLine(row),
-          href: promoPagePath(t.sportSlug, t.id, page.canonicalSlug ?? page.slug),
-          pageSlug: page.canonicalSlug ?? page.slug,
-          updatedAt: page.updatedAt ?? row.updatedAt,
-        },
-      });
+      if (await gameCalledOff(t, reminder.gameDate)) return 'held';
+
+      // THE SNAPSHOT (Gate 2 ruling 2). Resend matches an idempotency key
+      // AND the request body, so every attempt for one reminder must render
+      // the same bytes. What the email is drawn from (the promo's fields, the
+      // team's, the ticket gate) is stored on the reminder the first time it
+      // is about to be sent and read back on every retry: a title edited, a
+      // share card restamped or the gate flipped between two attempts cannot
+      // change the body. The renderer itself reads no clock.
+      const ref = db.collection(REMINDERS).doc(reminder.id);
+      let snapshot = (await ref.get()).data()?.emailSnapshot as ReminderEmailSnapshot | undefined;
+      if (!snapshot) {
+        const page = await resolvePromoPage(t, reminder.pageSlug, siteTodayYmd(now));
+        const row = page?.state === 'live' ? page.rows.find((r) => r.promoId === reminder.promoId) : undefined;
+        if (!page || !row || !row.title.trim()) return 'no_page';
+        snapshot = {
+          team: toDigestTeam(t),
+          teamName: teamDisplayName(t),
+          ticketsApproved: isTicketNetworkEmailApproved(),
+          promo: {
+            promoId: row.promoId,
+            title: shownTitle(row.title, t),
+            typeLabel: PROMO_TYPE_LABELS[row.type] ?? 'Promo',
+            date: row.date,
+            time: row.displayTime,
+            opponent: row.displayOpponent,
+            // Never the team's default building: a neutral-site game would
+            // name the wrong one (the digest's rule). The promo page names it.
+            venueName: null,
+            quantity: quantityLine(row),
+            href: promoPagePath(t.sportSlug, t.id, page.canonicalSlug ?? page.slug),
+            pageSlug: page.canonicalSlug ?? page.slug,
+            updatedAt: page.updatedAt ?? row.updatedAt,
+          },
+        };
+        await ref.update({ emailSnapshot: snapshot, updatedAt: FieldValue.serverTimestamp() });
+      }
+      const res = await sendPromoReminder({ ...snapshot, idempotencyKey: reminder.id, email: subscriber.email, manageToken: subscriber.manageToken });
+      // The key was already used with ANOTHER body: an email for this reminder
+      // was accepted earlier. Retrying is useless and a new key would mail the
+      // person twice.
+      return !res.ok && res.code === 'invalid_idempotent_request' ? 'already_sent' : res;
     },
   };
 }

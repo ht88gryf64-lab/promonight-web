@@ -34,6 +34,9 @@ export interface SendResult {
   // True when the send was skipped because RESEND_API_KEY is not configured.
   skipped?: boolean;
   error?: string;
+  /** Resend's own error name on a non-2xx (`invalid_idempotent_request`,
+   *  `concurrent_idempotent_requests`, ...), when the body carried one. */
+  code?: string;
 }
 
 interface SendArgs {
@@ -84,7 +87,14 @@ export async function sendEmail({ to, subject, html, text, headers, replyTo, tim
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       console.error(`[email] Resend send failed ${res.status}: ${body}`);
-      return { ok: false, error: `resend_${res.status}` };
+      let code: string | undefined;
+      try {
+        const name = (JSON.parse(body) as { name?: unknown }).name;
+        if (typeof name === 'string') code = name;
+      } catch {
+        /* not JSON: no code */
+      }
+      return { ok: false, error: `resend_${res.status}`, ...(code ? { code } : {}) };
     }
     const data = (await res.json().catch(() => ({}))) as { id?: string };
     return { ok: true, id: data.id };
@@ -513,8 +523,14 @@ export type PromoReminderArgs = Pick<ReminderEmailInput, 'promo' | 'team' | 'tea
   email: string;
   manageToken: string;
   /** The reminder's document id. A retry of the same reminder (a timeout, a
-   *  lost response) carries the same key, so Resend sends it once. */
+   *  lost response) carries the same key, so Resend sends it once. Resend
+   *  matches the key AND the request body: a retry must render the same
+   *  bytes, so the caller snapshots what it renders from (src/lib/reminders.ts)
+   *  and nothing here reads a clock. */
   idempotencyKey: string;
+  /** The ticket gate as it stood when the reminder was first rendered. Absent,
+   *  the env is read (TICKETNETWORK_EMAIL_APPROVED). */
+  ticketsApproved?: boolean;
 };
 
 export function buildPromoReminder(args: PromoReminderArgs): { subject: string; html: string; text: string; headers: Record<string, string> } {
@@ -525,7 +541,7 @@ export function buildPromoReminder(args: PromoReminderArgs): { subject: string; 
     promo: args.promo,
     team: args.team,
     teamName: args.teamName,
-    ticketsApproved: isTicketNetworkEmailApproved(),
+    ticketsApproved: args.ticketsApproved ?? isTicketNetworkEmailApproved(),
     postalAddress: SENDER_POSTAL_ADDRESS,
   });
   return { ...r, headers: listUnsubHeaders(args.manageToken) };

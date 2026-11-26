@@ -24,6 +24,9 @@ import { ymdInZone } from './promo-date-tile';
 
 /** 10:00, venue local, the day before the game. */
 export const REMINDER_SEND_HOUR = 10;
+/** Most reminders one subscriber may have queued at a time (Gate 2 ruling 3):
+ *  bounds what a third party who knows a confirmed address can queue for it. */
+export const REMINDER_CAP_PER_SUBSCRIBER = 10;
 /** Most reminder emails one cron run may send (the run aborts above it). */
 export const REMINDER_RUN_CEILING = 500;
 
@@ -194,8 +197,14 @@ export interface ReminderDeps {
    *  `held` when the game is postponed or canceled on the schedule (nothing
    *  is sent and the reminder stays in line for its new date). A retry of
    *  the same reminder must be safe to repeat (the adapter sends with an
-   *  idempotency key), because a timeout cannot tell "sent" from "not". */
-  send(reminder: Reminder, subscriber: ReminderSubscriber): Promise<ReminderSendResult | 'no_page' | 'held'>;
+   *  idempotency key), because a timeout cannot tell "sent" from "not".
+   *
+   *  `already_sent` is Resend refusing the idempotency key because the body
+   *  differs from the one it accepted under that key: an email for this
+   *  reminder went out earlier and this attempt would have been a second,
+   *  different one. The reminder is marked sent (its Resend id is unknown)
+   *  and never retried (Gate 2 ruling 2). */
+  send(reminder: Reminder, subscriber: ReminderSubscriber): Promise<ReminderSendResult | 'no_page' | 'held' | 'already_sent'>;
 }
 
 export interface ReminderRunSummary {
@@ -209,6 +218,8 @@ export interface ReminderRunSummary {
   failed: number;
   /** Due, but the game is postponed or canceled on the schedule. */
   held: number;
+  /** Marked sent because Resend reported the key used with another body. */
+  alreadySent: number;
   /** Reminders whose reconcile threw: skipped this run, the rest went on. */
   errored: number;
   moved: number;
@@ -248,6 +259,7 @@ export async function runReminders(deps: ReminderDeps, opts: { now: Date; execut
     sent: 0,
     failed: 0,
     held: 0,
+    alreadySent: 0,
     errored: 0,
     moved: 0,
     followed: 0,
@@ -385,6 +397,10 @@ export async function runReminders(deps: ReminderDeps, opts: { now: Date; execut
       if (res === 'held') {
         summary.held += 1;
         await deps.update(reminder.id, { state: 'scheduled' });
+      } else if (res === 'already_sent') {
+        delivered = true;
+        summary.alreadySent += 1;
+        await deps.update(reminder.id, { state: 'sent', sendAt: null, sentAt: 'now', resendId: null });
       } else if (res === 'no_page') {
         summary.cancelled.no_page = (summary.cancelled.no_page ?? 0) + 1;
         await deps.update(reminder.id, { state: 'cancelled', cancelReason: 'no_page', sendAt: null });

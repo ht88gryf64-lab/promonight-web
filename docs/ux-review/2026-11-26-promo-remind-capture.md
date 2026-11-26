@@ -227,7 +227,7 @@ Settle D2 before merge: at 390 the block costs 154 to 204px directly under the b
 Every defect above is fixed, deferred with a known-issues entry (docs/known-issues.md, entry 136), or waived with its reason. The fixes were made AFTER this review ran and were not re-measured in a browser; they are covered by the page and form tests.
 
 - **D1 (played page shown on purpose):** not a defect of this diff. The played page is one of the two variants the review was asked to cover.
-- **D2 (medium, 390: the block moves the first content section below the fold, and its input sits at or under the sticky footer ad at first paint):** OPEN, for a ruling at Gate 2. The placement (inside the CTA section, directly under the ticket row) is Gate 1's ruling and the heading, subline and consent line are the brief's words, so the height is not something this build could cut without changing one of them. The ticket button is unmoved and clears the fold on every page. Not merged until ruled: fix (options at the gate) or waive.
+- **D2 (medium, 390: the block moves the first content section below the fold, and its input sits at or under the sticky footer ad at first paint):** RULED at Gate 2 (2026-11-26). The matchup and date line is dropped on single-date pages (a series keeps it, where it names the date the reminder is for), which takes 28.3px off the block there; the rest of D2 is WAIVED: the placement directly under the ticket row is Gate 1's ruling, and the ticket button is unmoved and clears the fold on every page. The re-check below measures what remains.
 - **D3 (two filled team-colour buttons in one section):** FIXED. The form's button is an ink outline; "Get Tickets" (and "Next {team} promo" on a played page) is the section's one filled action.
 - **D4 (input oversized at 1280):** FIXED. The form is capped at 520px from the `lg` breakpoint; 390 and 768 are unchanged.
 - **D5 (invalid state marks the message, not the field):** FIXED. The field takes the error colour on its border, `aria-describedby` names the error, and focus returns to the field.
@@ -238,3 +238,140 @@ Every defect above is fixed, deferred with a known-issues entry (docs/known-issu
 - **D10 (one more in-content unit on the played page at 768 and 1280, on a single load):** DEFERRED (known-issues 136) to the first production read after deploy: one load per environment cannot tell load variance from the added height.
 
 Also changed after the review, from the adversarial code review: the email input has no `name`, so a submit before hydration cannot put an address in the page URL; the form and its result sit inside one `aria-live` region so the result is announced.
+
+
+## Re-check at 390 (2026-11-26, after the Gate 2 changes)
+
+Run of 2026-11-26, 08:02 to 08:08 ET. 390x844 only, a narrow re-check of four changes to `<div id="remind">`; not a full review. Written by the ux-review agent.
+
+- Branch: `feature/promo-remind-capture`, HEAD `fbb4990`, dev server at `http://localhost:3100` (no `promonight-deploy` meta). The worktree had 13 uncommitted modified files at run time, one of them `src/components/promo-page/PromoPageView.tsx`: the subline removal (change 4) is in the working tree, not in a commit. The outline button, the 520px cap and the invalid-field focus are in `fbb4990`.
+- Production: `https://www.getpromonight.com`, `dpl_5FgQ3zuwmcqcqotg5H1ruirvc8aR` (same deployment as the review above).
+- Pages: Hawks (single date), Hornets (series), Islanders (single date), Sharks (single date). All four rendered `data-remind-mode="reminder"` on the branch.
+- No screenshot was written into the repo. No request to `/api/subscribe` or `/api/cron/` was made (a route trap on every context recorded none); no valid-looking address was typed.
+
+### Game date check
+
+Today is 2026-11-26 in ET and PT. Hawks 2026-12-03 (JSON-LD and game line), Hornets 2026-11-28 / 2027-01-02 / 2027-03-28, Islanders 2026-11-27 7:30 PM ET, Sharks 2026-11-27 1:00 PM PT. All upcoming; no played page in this run.
+
+### 1. Outline button (D3): confirmed
+
+Same on all four pages.
+
+| Measure | Value |
+|---|---|
+| Background (computed) | `rgb(255, 255, 255)`, the card colour, the same fill as Share, Parking, Hotels and Get the app |
+| Border | `1px solid rgb(33, 29, 24)` |
+| Text | `rgb(33, 29, 24)`, 15px / 600 |
+| Text contrast | 16.75:1 on the button's white |
+| Border against the button fill / against the cream page | 16.75:1 / 15.13:1 |
+| Size | 111.7 x 48 (was 109.7 x 48; the 1px border adds 2px of width) |
+| Label fit | scrollWidth 110, clientWidth 110, one line |
+| Hover (mouse) | background `rgb(33, 29, 24)`, text `rgb(255, 255, 255)`, 16.75:1; border unchanged |
+| Hover on a touch context | `(hover: hover)` is false; after a tap the button is still white with ink text. No stuck hover |
+| Keyboard focus | `:focus-visible` true; `outline: solid 2px` at `2px` offset in the page's `--pp-accent-text`: `rgb(33, 29, 24)` on the Hawks page, `rgb(29, 17, 96)` on the Hornets page. Authored, where the review found the browser default (`auto 1px rgb(0, 95, 204)`) |
+| Rest, no focus | `outline-style: none` |
+
+"Get Tickets" is now the only control in the CTA section with a team-colour fill: `rgb(218, 45, 32)` Hawks, `rgb(29, 17, 96)` Hornets, `rgb(0, 83, 155)` Islanders, `rgb(0, 109, 117)` Sharks, 144.5 x 52 (164.5 x 52 on the Hornets page). Every other control in the section is white or transparent. It reads as the one primary action. "Remind me" reads as a secondary button whose 1px ink border is heavier than the field beside it (`rgba(33, 29, 24, 0.16)`), which is enough to tell button from field. D3 is closed on reminder pages. The played-page pair ("Next {team} promo" and "Sign up") was not re-rendered in this run.
+
+### 2. 520px cap (D4): no effect at 390, confirmed
+
+At 390 the form's computed `max-width` is `none` on all four pages.
+
+| Measure | Review | Now |
+|---|---|---|
+| Form width | 358 | 358 |
+| Input width x height | 240.3 x 48 | 238.3 x 48 |
+| Button width x height | 109.7 x 48 | 111.7 x 48 |
+| Row scrollWidth / clientWidth | 358 / 358 | 358 / 358 |
+| Input and button on one line | yes | yes (same top, `flex-wrap: nowrap`) |
+| Document scrollWidth / clientWidth | 390 / 390 | 390 / 390, also after an invalid submit |
+
+The 2px moved from the input to the button is the button's border, not the cap. 768 and 1280 were not rendered, by instruction, so the cap itself is unobserved.
+
+### 3. Invalid-field focus (D5): confirmed in the accessibility tree and in focus, not in what the fan sees (R1, R2)
+
+"abc" typed, then submitted by tap on the button; cleared by typing; then "abcd" submitted with Enter; also Space on the focused button, and an empty submit. Hawks and Hornets with a mouse, Islanders on a touch context.
+
+| Check | Result |
+|---|---|
+| Inline error | "Enter a valid email address.", `role="alert"`, 13px, `rgb(198, 42, 30)`, on every path |
+| `aria-invalid` | `"true"` after each invalid submit; absent before and after typing again |
+| `aria-describedby` | before: the consent line's id only. After: error id then consent id (`_R_..H2_ _R_..H1_`); both ids resolve to elements |
+| Focus | `document.activeElement` is the input after tap, after Enter, after Space on the button, and after an empty submit (the review found it left on the button) |
+| Requests to `/api/subscribe` | 0 on every path. No same-origin request of any kind after the submit; the URL did not change |
+| Typing again | one more character removes the error paragraph, `aria-invalid` and the error id; block height returns to its resting value |
+| Block height with the error showing | +27.5px (Hawks 160.0 to 187.5, Hornets 166.2 to 193.7) |
+| Fit with the error showing | row 358 / 358, document 390 / 390 |
+
+Input border colour (computed `border-top-color`):
+
+| State | Border | Ring |
+|---|---|---|
+| At rest | `rgba(33, 29, 24, 0.16)` | none |
+| Focused, valid | `rgb(33, 29, 24)` | 2px, `--pp-accent-text` |
+| After an invalid submit (focus is on the input) | `rgb(33, 29, 24)` | 2px, `--pp-accent-text` |
+| Invalid, after focus leaves the input | `rgb(198, 42, 30)` | none |
+
+The error colour is on the field only once focus has left it. The fix returns focus to the field, and the field's focus style (`focus:border-rd-ink`) wins over the error border, so at the moment the error appears the field looks exactly as it does when focused and valid. See R1.
+
+### 4. Subline removal (D2, D7): confirmed; the first content section is still below the fold
+
+Children of `#remind`: Hawks, Islanders, Sharks `h2, div (the form)`: the heading is followed directly by the form, no matchup line. Hornets `h2, p "Charlotte Hornets vs Nets, Saturday, Nov 28, 2026", div (the form)`: the line is still there and still names the date the reminder is for.
+
+Old numbers are the review's (07:44 to 07:55 ET); new numbers are this run. Document coordinates at first paint, scroll 0. The sticky footer ad (`#AdThrive_Footer_1_phone`) measured `top 794, height 50` on both environments on every page, so it covers 794 to 844.
+
+| Page | Block height old / new | First content section top, production | Branch old / new | Push old / new | Input top old / new | Input bottom new |
+|---|---|---|---|---|---|---|
+| Hawks (single, 2-line heading) | 188.3 / 160.0 | 716.9 | 935.4 / 907.1 | 218.5 / 190.2 | 820.6 / 792.3 | 840.3 |
+| Hornets (series, 1-line heading) | 166.2 / 166.2 | 729.9 | 926.3 / 926.3 | 196.4 / 196.4 | 811.5 / 811.5 | 859.5 |
+| Islanders (single, 1-line heading) | 166.2 / 137.9 | 678.9 | 875.3 / 847.0 | 196.4 / 168.1 | 760.5 / 732.2 | 780.2 |
+| Sharks (single, 2-line heading) | 188.3 / 160.0 | 678.9 | 897.4 / 869.1 | 218.5 / 190.2 | 782.6 / 754.3 | 802.3 |
+
+The removal saves 28.3px on each single-date page and nothing on the series page. Of each push, 14.2px is the ticket-row difference between the dev server and production (D9), so the block's own cost (height plus the 16px gap) is 176.0 (Hawks, Sharks), 182.2 (Hornets) and 153.9 (Islanders).
+
+Against the 844 fold and the footer ad:
+
+| Page | First content section | Input against the footer ad (794 to 844) |
+|---|---|---|
+| Hawks | BELOW the fold, by 63.1 (was 91.4) | 46.3 of its 48px are behind the ad (792.3 to 840.3). Before: 820.6 to 868.6, behind the ad and partly below the fold. No better in practice |
+| Hornets | BELOW, by 82.3 (unchanged) | 32.5px behind the ad, 15.5px below the fold (unchanged) |
+| Islanders | BELOW, by 3.0 (was 31.3) | clear of the ad by 13.8px (was 14.5px behind it). The consent line (788.2 to 823) is behind the ad |
+| Sharks | BELOW, by 25.1 (was 53.4) | 8.3px behind the ad (was 36.6px) |
+
+On production all four sections were above the fold (716.9, 729.9, 678.9, 678.9); on the branch all four are still below it. Projected for production after merge, taking the 14.2px D9 remainder out (a projection, not a measurement): Hawks 892.9, Hornets 912.1, Sharks 854.9, Islanders 832.8. Only Islanders would cross above 844, and it would still start behind the footer ad at 794, so no sampled reminder page shows any of the giveaway description on the first screen. The input is fully visible at first paint on one of four pages (Islanders).
+
+The "Get Tickets" button is unmoved: Hawks 411.8 to 463.8, Islanders and Sharks 373.8 to 425.8, identical on both environments.
+
+### In passing
+
+| Check | Result |
+|---|---|
+| `id="remind"` | exactly 1 in the served HTML and 1 in the DOM on all four branch pages; 0 on production |
+| Input `name` | no `name` attribute on any page (`hasAttribute('name')` false) |
+| Article direct children, branch against production | identical in count and order: Hawks 11 and 11, Hornets 10 and 10, Islanders 11 and 11, Sharks 9 and 9. Only the content of the third (the CTA section) differs |
+| Input | 48px tall, 16px text, on all four |
+| Console | no hydration or React warning on any branch load, before or after the interactions. A clean load of the Islanders page with nothing blocked showed no Next.js issue badge. Branch-only lines are the same as in the review: `[venue-hub] sources map is partially inverted: 2 of 15 keys are URLs`, and ad-partner CORS errors against the localhost origin |
+| Caused by this run's script, not the page | where the script blocked PostHog it also blocked the dev server's PostHog chunk, which logs `[analytics] PostHog failed to load ChunkLoadError` and raises the dev overlay's "1 Issue" badge. Neither appears on the clean load |
+
+### New defects
+
+**R1. After an invalid submit the field does not show the error colour while it has focus, which is always, because focus is returned to it. Severity: low.** 390 (the classes are not width-dependent). Computed border after the submit is `rgb(33, 29, 24)` with the 2px focus ring, identical to a focused valid field; `rgb(198, 42, 30)` appears only after focus leaves. The D5 disposition says "the field takes the error colour on its border"; it does, but not at the moment the error is raised. The accessibility half of D5 (`aria-invalid`, `aria-describedby`, focus) is done. Seen on Hawks, Hornets (mouse) and Islanders (touch).
+
+**R2. At the first-paint scroll position the error message appears behind the sticky footer ad. Severity: low to medium.** 390. On the Islanders page, the one page where the field can be tapped without scrolling, the message sits at about 788 to 808 (8px under the row's bottom edge at 780.2, 19.5px tall, from the 27.5px the block grows) and the ad covers 794 to 844: about 14 of its 19.5px are hidden, and the page does not scroll because focus goes to a field that is already in view. Together with R1 the fan taps "Remind me" on a bad address and nothing visible changes: same field look, message under the ad. On the other three pages the fan has to scroll to reach the field, so the message lands wherever that scroll leaves it. Desktop Chrome touch emulation; on a real phone the keyboard opens when focus returns to the field and moves the layout, which this run cannot show.
+
+**D2 stays open, reduced.** The subline removal takes 28.3px off single-date pages and nothing off series pages. The first content section is below the fold on four of four reminder pages (by 3.0 to 82.3px) and the input is behind the footer ad on three of four.
+
+Not re-checked in this run: 768 and 1280, the weekly variant and the played page, the success state, real iOS Safari, `--pp-accent-text` focus-ring contrast on clubs other than the four sampled.
+
+Side effects of this run: the clean Islanders load blocked nothing but the two API paths, so its page view and one `email_cta_click` (and Google's `form_start`) went to analytics from the dev server; the other passes blocked PostHog and Google Analytics collection.
+
+### Recommendation
+
+Rule on D2 with these numbers rather than the review's: the subline removal did not bring the giveaway description back onto the first screen on any sampled page. R1 is a one-state styling gap and should be settled with it, since R1 and R2 together make an invalid submit look like a dead button on the page where the field is reachable without scrolling.
+
+
+## Dispositions of the re-check (added by the build session, 2026-11-26)
+
+- **R1 (low, the error colour did not show while the field had focus):** FIXED after the re-check. The invalid field keeps the error colour on its border with focus on it (`focus:border-rd-link` while invalid; the ink focus border applies only to a valid field). Covered by the form test; not re-measured in a browser.
+- **R2 (low to medium, at the first-paint scroll position the error message can sit behind the sticky footer ad):** DEFERRED (known-issues 136). It is the remaining part of D2, waived at Gate 2: the block sits where the footer ad's band falls on a 390x844 first screen. With R1 fixed the field itself now shows the error colour when it is in view.
+- **D2 after the subline removal:** as ruled. The first content section is still below the fold on the sampled pages (by 3 to 63px on the single-date ones); waived.

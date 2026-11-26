@@ -92,6 +92,11 @@ export async function GET(request: Request) {
         reason: 'send_failures',
         detail: `${summary.failed} of ${summary.sent + summary.failed} sends failed; ${summary.errored} reminder(s) could not be read or reconciled; ${summary.stuckSending} left in "sending" by an earlier run.`,
       });
+    } else if (execute && summary.alreadySent > 0) {
+      await alert({
+        reason: 'idempotency_mismatch',
+        detail: `${summary.alreadySent} reminder(s) were marked sent without a Resend id: Resend refused the retry because an email with a different body had already been accepted under the same idempotency key. Each is marked sent and will not be retried, so this alert is not repeated for them.`,
+      });
     } else if (execute && summary.stuckSending > 0) {
       await alert({
         reason: 'stuck_sending',

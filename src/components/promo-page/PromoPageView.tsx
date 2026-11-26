@@ -315,7 +315,10 @@ export function PromoPageView({ page, ctx, today, now, imageSize, ticketTest = n
   const remindBlock = removed ? null : (
     <div id="remind" data-remind-mode={remindMode} className="flex scroll-mt-20 flex-col gap-2 border-t border-rd-line pt-4">
       <h2 className="m-0 font-rd text-[17px] font-semibold leading-[1.3] text-rd-ink">{remindHeading(remindMode, shownName, teamName)}</h2>
-      {remindMode === 'reminder' ? (
+      {/* The matchup and date line only on a series page, where it says WHICH
+          date the reminder is for; on a single-date page the header already
+          carries both a few lines above (Gate 2 ruling 1, ux-review D2). */}
+      {remindMode === 'reminder' && multi ? (
         <p className="m-0 text-[14px] leading-[1.45] text-rd-ink-soft">{remindSubline(teamName, cleanText(primary.displayOpponent), formatLongDate(primary.date))}</p>
       ) : null}
       <PromoRemind mode={remindMode} teamId={team.id} teamName={teamName} league={team.league} promoId={primary.promoId} consent={remindConsent(remindMode, teamName)} />

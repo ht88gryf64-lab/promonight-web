@@ -148,3 +148,50 @@ test('the send carries the reminder id as Resend’s Idempotency-Key, so a retry
     delete process.env.RESEND_API_KEY;
   }
 });
+
+test('the render is deterministic: the same input is the same request body, byte for byte, whenever it is built', async () => {
+  process.env.RESEND_API_KEY = 'test-key';
+  const bodies: string[] = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (_url: unknown, init?: { body?: string }) => {
+    bodies.push(init?.body ?? '');
+    return new Response(JSON.stringify({ id: 'msg' }), { status: 200 });
+  }) as typeof fetch;
+  const { mock: m } = await import('node:test');
+  try {
+    const { sendPromoReminder } = await import('../email');
+    const args = { ...ARGS, ticketsApproved: false };
+    m.timers.enable({ apis: ['Date'], now: new Date('2026-12-04T16:05:00Z') });
+    await sendPromoReminder(args);
+    m.timers.setTime(new Date('2026-12-04T23:05:00Z').getTime());
+    // The env gate flipping between attempts does not reach a snapshotted render.
+    process.env.TICKETNETWORK_EMAIL_APPROVED = 'true';
+    await sendPromoReminder(args);
+    assert.equal(bodies.length, 2);
+    assert.equal(bodies[1], bodies[0], 'identical request bodies seven hours apart');
+    assert.ok(!bodies[0].includes('lusg.net'));
+  } finally {
+    m.timers.reset();
+    globalThis.fetch = realFetch;
+    delete process.env.RESEND_API_KEY;
+    delete process.env.TICKETNETWORK_EMAIL_APPROVED;
+  }
+});
+
+test('sendEmail reports Resend\u2019s error name, so a key/payload mismatch can be told from any other 409', async () => {
+  process.env.RESEND_API_KEY = 'test-key';
+  const realFetch = globalThis.fetch;
+  const realError = console.error;
+  console.error = () => {};
+  try {
+    const { sendPromoReminder } = await import('../email');
+    globalThis.fetch = (async () => new Response(JSON.stringify({ statusCode: 409, name: 'invalid_idempotent_request', message: 'modified body' }), { status: 409 })) as typeof fetch;
+    assert.deepEqual(await sendPromoReminder(ARGS), { ok: false, error: 'resend_409', code: 'invalid_idempotent_request' });
+    globalThis.fetch = (async () => new Response('upstream error', { status: 502 })) as typeof fetch;
+    assert.deepEqual(await sendPromoReminder(ARGS), { ok: false, error: 'resend_502' });
+  } finally {
+    console.error = realError;
+    globalThis.fetch = realFetch;
+    delete process.env.RESEND_API_KEY;
+  }
+});

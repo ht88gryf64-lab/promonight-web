@@ -71,7 +71,9 @@ let pageRows: Row[] = [];
 let pageState: 'live' | 'removed' = 'live';
 let games: Array<{ homeTeamSlug: string; date: string; status: string; gameTimeTz?: string }> = [];
 let buildingZone: string | null = null;
-let sends: Array<{ email: string; idempotencyKey: string; promo: { title: string; href: string; date: string } }> = [];
+let sends: Array<{ email: string; idempotencyKey: string; ticketsApproved: boolean; teamName: string; promo: { title: string; href: string; date: string; updatedAt: string | null } }> = [];
+let sendAnswer: { ok: boolean; id?: string; error?: string; code?: string } = { ok: true, id: 'resend-1' };
+let ticketGate = false;
 
 mock.module('server-only', { namedExports: {} });
 mock.module(new URL('../firebase.ts', import.meta.url).href, { namedExports: { db } });
@@ -99,9 +101,10 @@ mock.module(new URL('../digest.ts', import.meta.url).href, {
 mock.module(new URL('../subscribers.ts', import.meta.url).href, { namedExports: { deliveryInboxKey: (e: string) => e.toLowerCase() } });
 mock.module(new URL('../email.ts', import.meta.url).href, {
   namedExports: {
+    isTicketNetworkEmailApproved: () => ticketGate,
     sendPromoReminder: async (a: (typeof sends)[number]) => {
-      sends.push(a);
-      return { ok: true, id: 'resend-1' };
+      sends.push(JSON.parse(JSON.stringify(a)));
+      return sendAnswer;
     },
   },
 });
@@ -118,6 +121,8 @@ beforeEach(() => {
   store.clear();
   writes = 0;
   sends = [];
+  sendAnswer = { ok: true, id: 'resend-1' };
+  ticketGate = false;
   pageRows = [row()];
   pageState = 'live';
   games = [{ homeTeamSlug: WILD.id, date: GAME, status: 'scheduled', gameTimeTz: 'America/Chicago' }];
@@ -261,11 +266,15 @@ test('the cron store: the send names the promo as its page does, links the page,
   assert.equal(await deps.send(r, sub), 'held');
   games = [];
   assert.notEqual(await deps.send(r, sub), 'held', 'no game on the spine is not called off');
+  // A reminder never attempted (no snapshot yet) whose promo has no live page.
+  const { emailSnapshot: _dropped, ...bare } = reminder() as Record<string, unknown>;
+  store.set('promoReminders/sub1_p1', bare);
   pageState = 'removed';
   assert.equal(await deps.send(r, sub), 'no_page');
   pageState = 'live';
   pageRows = [];
   assert.equal(await deps.send(r, sub), 'no_page');
+  assert.equal(reminder()?.emailSnapshot, undefined, 'no snapshot is written for an email that is never built');
   assert.equal(sends.length, 2);
 });
 
@@ -284,4 +293,66 @@ test('the cron store reads subscribers and promo rows as the rules need them', a
   assert.equal((await deps.getRow('minnesota-wild', 'post'))?.tombstoned, true, 'a postseason row is not a live row');
   assert.equal(await deps.getRow('minnesota-wild', 'gone'), null);
   assert.equal((await deps.getTeamRows('minnesota-wild')).length, 2);
+});
+
+test('a retry renders from the snapshot taken at the first attempt: an edited title, a restamped card and a flipped ticket gate do not change what is sent', async () => {
+  const { scheduleReminderForSignup, firestoreReminderDeps } = await import('../reminders');
+  await scheduleReminderForSignup(ask());
+  const deps = firestoreReminderDeps(CLOSED);
+  const [r] = await deps.listScheduled();
+  const sub = { status: 'confirmed' as const, email: 'fan@example.com', manageToken: 'tok' };
+  // First attempt: Resend times out, so whether it went out is unknown.
+  sendAnswer = { ok: false, error: 'send_timeout' };
+  assert.deepEqual(await deps.send(r, sub), { ok: false, error: 'send_timeout' });
+  const snapshot = reminder()?.emailSnapshot as { promo: { title: string }; ticketsApproved: boolean };
+  assert.ok(snapshot, 'the snapshot is stored on the reminder');
+  assert.deepEqual([snapshot.promo.title, snapshot.ticketsApproved], ['Winter Beanie', false]);
+  assert.ok(!JSON.stringify(snapshot).includes('@') && !JSON.stringify(snapshot).includes('tok'), 'no address and no token in the snapshot');
+  // Before the retry everything the email is drawn from changes.
+  pageRows = [row({ title: 'Winter Beanie Night', displayTime: '6:00 PM', displayOpponent: 'Jets', updatedAt: '2026-12-04T20:00:00.000Z', attendanceCap: 10000 })];
+  ticketGate = true;
+  sendAnswer = { ok: true, id: 'resend-2' };
+  assert.deepEqual(await deps.send(r, sub), { ok: true, id: 'resend-2' });
+  assert.equal(sends.length, 2);
+  assert.deepEqual(sends[1], sends[0], 'the retry is the same request, field for field');
+  assert.equal(sends[1].promo.title, 'Winter Beanie');
+  assert.equal(sends[1].ticketsApproved, false);
+});
+
+test('a key/payload mismatch from Resend is "already sent"; a concurrent-request 409 and any other failure are ordinary failures', async () => {
+  const { scheduleReminderForSignup, firestoreReminderDeps } = await import('../reminders');
+  await scheduleReminderForSignup(ask());
+  const deps = firestoreReminderDeps(CLOSED);
+  const [r] = await deps.listScheduled();
+  const sub = { status: 'confirmed' as const, email: 'fan@example.com', manageToken: 'tok' };
+  sendAnswer = { ok: false, error: 'resend_409', code: 'invalid_idempotent_request' };
+  assert.equal(await deps.send(r, sub), 'already_sent');
+  sendAnswer = { ok: false, error: 'resend_409', code: 'concurrent_idempotent_requests' };
+  assert.deepEqual(await deps.send(r, sub), sendAnswer, 'safe to retry later, so a plain failure');
+  sendAnswer = { ok: false, error: 'resend_500' };
+  assert.deepEqual(await deps.send(r, sub), sendAnswer);
+});
+
+test('the cap: a subscriber holds at most ten queued reminders; the eleventh answers none and writes nothing; one already queued, and other states, do not count', async () => {
+  const { scheduleReminderForSignup } = await import('../reminders');
+  for (let i = 0; i < 10; i++) store.set(`promoReminders/sub1_q${i}`, { subscriberId: 'sub1', state: 'scheduled' });
+  // Sent, cancelled and another subscriber's reminders are not in the count.
+  store.set('promoReminders/sub1_old', { subscriberId: 'sub1', state: 'sent' });
+  store.set('promoReminders/sub1_gone', { subscriberId: 'sub1', state: 'cancelled' });
+  store.set('promoReminders/sub2_x', { subscriberId: 'sub2', state: 'scheduled' });
+  const before = writes;
+  assert.deepEqual(await scheduleReminderForSignup(ask()), { outcome: 'none' }, 'the eleventh');
+  assert.equal(reminder(), undefined);
+  assert.equal(writes, before, 'nothing written');
+  // Another subscriber is unaffected.
+  assert.equal((await scheduleReminderForSignup(ask(OPEN, 'sub2'))).outcome, 'scheduled');
+  // One fewer queued: the next one fits, and re-submitting it at the cap is still "scheduled".
+  store.delete('promoReminders/sub1_q0');
+  assert.equal((await scheduleReminderForSignup(ask())).outcome, 'scheduled');
+  assert.equal((await scheduleReminderForSignup(ask())).outcome, 'scheduled', 'already queued is not one more');
+  // A cancelled reminder cannot be re-armed past the cap either.
+  store.set('promoReminders/sub1_p1', { ...reminder(), state: 'cancelled' });
+  store.set('promoReminders/sub1_q0', { subscriberId: 'sub1', state: 'scheduled' });
+  assert.deepEqual(await scheduleReminderForSignup(ask()), { outcome: 'none' });
+  assert.equal(reminder()?.state, 'cancelled');
 });
