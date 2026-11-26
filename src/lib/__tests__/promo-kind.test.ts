@@ -116,6 +116,11 @@ test('promoGameKey: team and date, the bracket game for postseason, null with no
   assert.equal(promoGameKey('golden-state-valkyries', { date: '2026-10-17', isPostseason: true, bracketGameId: 401918305 }), 'bracket:401918305');
   assert.equal(promoGameKey('golden-state-valkyries', { date: '2026-10-17', isPostseason: true }), null);
   assert.equal(promoGameKey('golden-state-valkyries', { date: '2026-10-17', isPostseason: true, bracketGameId: ' ' }), null);
+  // Only the boolean marks a postseason row; a team id is a slug; a date is a real day.
+  assert.equal(promoGameKey('golden-state-valkyries', { date: '2026-10-17', isPostseason: 'true', bracketGameId: '401' }), 'golden-state-valkyries|2026-10-17');
+  for (const bad of ['a|b', ' ', 'Miami Heat']) assert.equal(promoGameKey(bad, { date: '2026-01-01' }), null);
+  for (const date of ['2026-13-45', '2026-02-30', '2025-02-29', '2026-00-10', '2026-04-31']) assert.equal(promoGameKey('miami-heat', { date }), null, date);
+  assert.equal(promoGameKey('miami-heat', { date: '2028-02-29' }), 'miami-heat|2028-02-29');
 });
 
 test('mapPromoDoc: a doc with kind maps to exactly the Promo it mapped to without it', async () => {

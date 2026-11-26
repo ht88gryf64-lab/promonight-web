@@ -64,6 +64,13 @@ export function promoGameKey(
     const id = typeof p.bracketGameId === 'string' || typeof p.bracketGameId === 'number' ? String(p.bracketGameId).trim() : '';
     return id ? `bracket:${id}` : null;
   }
-  if (!teamId || typeof p.date !== 'string' || !YMD_RE.test(p.date)) return null;
+  // A team id is a slug; a date is a real calendar day ("2026-13-45" has the
+  // shape and is not one). The pipeline's promoGameKey is the same rule.
+  if (typeof teamId !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(teamId)) return null;
+  if (typeof p.date !== 'string' || !YMD_RE.test(p.date)) return null;
+  const [y, m, d] = p.date.split('-').map(Number);
+  const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (m < 1 || m > 12 || d < 1 || d > days[m - 1]) return null;
   return `${teamId}|${p.date}`;
 }
