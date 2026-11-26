@@ -108,19 +108,24 @@ interface World {
   rows: Map<string, ReminderRow>; // key team|promoId
   subscribers: Map<string, ReminderSubscriber>;
   sent: { reminderId: string; to: string }[];
-  sendResult: { ok: boolean; id?: string; error?: string } | 'no_page' | Error;
+  sendResult: { ok: boolean; id?: string; error?: string } | 'no_page' | 'held' | Error;
+  /** Promo ids whose row read throws. */
+  broken: Set<string>;
   writes: number;
 }
 
 function world(): World {
-  return { reminders: new Map(), rows: new Map(), subscribers: new Map(), sent: [], sendResult: { ok: true, id: 'resend-1' }, writes: 0 };
+  return { reminders: new Map(), rows: new Map(), subscribers: new Map(), sent: [], sendResult: { ok: true, id: 'resend-1' }, writes: 0, broken: new Set() };
 }
 
 function deps(w: World): ReminderDeps {
   return {
     listScheduled: async () => [...w.reminders.values()].filter((r) => r.state === 'scheduled').map((r) => ({ ...r })),
     countSending: async () => [...w.reminders.values()].filter((r) => r.state === 'sending').length,
-    getRow: async (teamId, promoId) => w.rows.get(`${teamId}|${promoId}`) ?? null,
+    getRow: async (teamId, promoId) => {
+      if (w.broken.has(promoId)) throw new Error('DEADLINE_EXCEEDED');
+      return w.rows.get(`${teamId}|${promoId}`) ?? null;
+    },
     getTeamRows: async (teamId) => [...w.rows.entries()].filter(([k]) => k.startsWith(`${teamId}|`)).map(([, v]) => v),
     zoneFor: async () => CT,
     getSubscriber: async (id) => w.subscribers.get(id) ?? null,
@@ -147,7 +152,7 @@ function deps(w: World): ReminderDeps {
     },
     send: async (reminder, subscriber) => {
       if (w.sendResult instanceof Error) throw w.sendResult;
-      if (w.sendResult !== 'no_page' && w.sendResult.ok) w.sent.push({ reminderId: reminder.id, to: subscriber.email });
+      if (w.sendResult !== 'no_page' && w.sendResult !== 'held' && w.sendResult.ok) w.sent.push({ reminderId: reminder.id, to: subscriber.email });
       return w.sendResult;
     },
   };
@@ -402,4 +407,41 @@ test('the per-run ceiling: an execute run over it sends nothing unless overCap i
   assert.equal(w.sent.length, 0);
   const forced = await runReminders(deps(w), { now: DUE, execute: true, ceiling: 2, overCap: true });
   assert.equal(forced.sent, 3);
+});
+
+test('a game called off on the schedule is held: nothing sent, the reminder stays in line', async () => {
+  const w = seed();
+  await signup(w, 'sub1');
+  w.sendResult = 'held';
+  const run = await runReminders(deps(w), { now: DUE, execute: true });
+  assert.deepEqual([run.sent, run.failed, run.held], [0, 0, 1]);
+  assert.equal(w.reminders.get('sub1_p1')?.state, 'scheduled');
+  assert.equal(w.sent.length, 0);
+});
+
+test('one reminder that cannot be read does not stop the others', async () => {
+  const w = seed();
+  w.rows.set('minnesota-wild|bad', row({ promoId: 'bad' }));
+  await signup(w, 'sub1', 'bad');
+  w.subscribers.set('sub2', { status: 'confirmed', email: 'other@example.com', manageToken: 'tok2' });
+  await signup(w, 'sub2');
+  w.broken.add('bad');
+  const run = await runReminders(deps(w), { now: DUE, execute: true });
+  assert.deepEqual([run.errored, run.sent], [1, 1]);
+  assert.deepEqual(w.sent, [{ reminderId: 'sub2_p1', to: 'other@example.com' }]);
+  assert.equal(w.reminders.get('sub1_bad')?.state, 'scheduled', 'left for the next run');
+});
+
+test('a run that is still sending when game day starts stops sending: the check is made again at each send', async () => {
+  const w = seed();
+  w.subscribers.set('sub2', { status: 'confirmed', email: 'other@example.com', manageToken: 'tok2' });
+  await signup(w, 'sub1');
+  await signup(w, 'sub2');
+  // The run begins at 23:59 venue time; the first send is on time, the clock
+  // then passes midnight before the second.
+  const ticks = [new Date('2026-12-05T05:59:30Z'), new Date('2026-12-05T06:00:30Z')];
+  const run = await runReminders(deps(w), { now: new Date('2026-12-05T05:59:00Z'), execute: true, clock: () => ticks.shift() ?? new Date('2026-12-05T06:01:00Z') });
+  assert.deepEqual([run.toSend, run.sent], [2, 1]);
+  assert.equal(w.sent.length, 1);
+  assert.equal(w.reminders.get('sub2_p1')?.state, 'scheduled', 'not claimed; the next run cancels it as past');
 });

@@ -46,6 +46,8 @@ const ERRORS = {
 export function PromoRemind({ mode, teamId, teamName, league, promoId, consent }: PromoRemindProps) {
   const inputId = useId();
   const noteId = useId();
+  const errorId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const focused = useRef(false);
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<Status>('idle');
@@ -69,6 +71,8 @@ export function PromoRemind({ mode, teamId, teamName, league, promoId, consent }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
       setError('invalid_email');
       setStatus('error');
+      // Back to the field that needs fixing (ux-review 2026-11-26, D5).
+      inputRef.current?.focus();
       return;
     }
     setStatus('submitting');
@@ -112,16 +116,29 @@ export function PromoRemind({ mode, teamId, teamName, league, promoId, consent }
     }
   };
 
+  // The live region is the CONTAINER, present from the first render, so the
+  // swap from the form to the result is announced: a status element inserted
+  // already holding its text often is not.
   if (status === 'success') {
     return (
-      <p role="status" data-remind-result="" className="m-0 text-[15px] leading-[1.5] text-rd-ink">
-        {success}
-      </p>
+      <div aria-live="polite">
+        <p data-remind-result="" className="m-0 text-[15px] leading-[1.5] text-rd-ink">
+          {success}
+        </p>
+      </div>
     );
   }
 
+  const invalid = status === 'error' && error === 'invalid_email';
   return (
-    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-2">
+    <div aria-live="polite">
+    {/* NO `name` ON THE INPUT, on purpose. This form is in the server HTML of
+        an ad-heavy page, so it can be submitted before React has attached
+        onSubmit (or with scripts off). A native submit of a named field
+        would be a GET that puts the address in the page URL, where request
+        logs, ad scripts and Referer headers see it. Unnamed, a native submit
+        carries nothing. autoComplete still drives the browser's autofill. */}
+    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-2 lg:max-w-[520px]">
       <div className="flex gap-2">
         <label htmlFor={inputId} className="sr-only">
           Email address
@@ -129,8 +146,8 @@ export function PromoRemind({ mode, teamId, teamName, league, promoId, consent }
         {/* 16px text: a smaller size makes iOS Safari zoom the page on focus. */}
         <input
           id={inputId}
+          ref={inputRef}
           type="email"
-          name="email"
           inputMode="email"
           autoComplete="email"
           autoCapitalize="none"
@@ -138,8 +155,8 @@ export function PromoRemind({ mode, teamId, teamName, league, promoId, consent }
           required
           placeholder="you@example.com"
           value={email}
-          aria-describedby={noteId}
-          aria-invalid={status === 'error' && error === 'invalid_email' ? true : undefined}
+          aria-describedby={status === 'error' && error ? `${errorId} ${noteId}` : noteId}
+          aria-invalid={invalid ? true : undefined}
           onFocus={onFocus}
           onChange={(e) => {
             setEmail(e.target.value);
@@ -148,18 +165,20 @@ export function PromoRemind({ mode, teamId, teamName, league, promoId, consent }
               setError(null);
             }
           }}
-          className="ph-no-capture h-12 min-w-0 flex-1 rounded-xl border border-rd-line-strong bg-rd-card px-3 font-rd text-[16px] text-rd-ink placeholder:text-rd-ink-faint focus:border-rd-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pp-accent-text)]"
+          className={`ph-no-capture h-12 min-w-0 flex-1 rounded-xl border bg-rd-card ${invalid ? 'border-rd-link' : 'border-rd-line-strong'} px-3 font-rd text-[16px] text-rd-ink placeholder:text-rd-ink-faint focus:border-rd-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pp-accent-text)]`}
         />
         <button
           type="submit"
           disabled={status === 'submitting'}
-          className="h-12 shrink-0 rounded-xl bg-[var(--pp-accent)] px-4 font-rd text-[15px] font-semibold text-[var(--pp-accent-ink)] hover:brightness-95 disabled:opacity-70"
+          // An outline, not a second filled team-colour button: "Get Tickets"
+          // stays the one primary action of the section (ux-review D3).
+          className="h-12 shrink-0 rounded-xl border border-rd-ink bg-rd-card px-4 font-rd text-[15px] font-semibold text-rd-ink hover:bg-rd-ink hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pp-accent-text)] disabled:opacity-70"
         >
           {status === 'submitting' ? 'Sending' : mode === 'reminder' ? 'Remind me' : 'Sign up'}
         </button>
       </div>
       {status === 'error' && error ? (
-        <p role="alert" className="m-0 font-rd text-[13px] text-rd-link">
+        <p id={errorId} role="alert" className="m-0 font-rd text-[13px] text-rd-link">
           {ERRORS[error]}
         </p>
       ) : null}
@@ -167,5 +186,6 @@ export function PromoRemind({ mode, teamId, teamName, league, promoId, consent }
         {consent}
       </p>
     </form>
+    </div>
   );
 }

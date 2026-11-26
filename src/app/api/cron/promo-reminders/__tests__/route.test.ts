@@ -13,7 +13,7 @@ import assert from 'node:assert';
 const OPERATOR = 'kovalikdigital@gmail.com';
 
 type Summary = Record<string, unknown> & { scheduled: number; toSend: number; sent: number; failed: number; stuckSending: number; ceiling: number; aborted?: string };
-const base = (over: Partial<Summary> = {}): Summary => ({ mode: 'dry-run', scheduled: 0, due: 0, toSend: 0, sent: 0, failed: 0, moved: 0, followed: 0, waitingUnconfirmed: 0, cancelled: {}, stuckSending: 0, ceiling: 500, withinCeiling: true, ...over });
+const base = (over: Partial<Summary> = {}): Summary => ({ mode: 'dry-run', scheduled: 0, due: 0, toSend: 0, sent: 0, failed: 0, held: 0, errored: 0, moved: 0, followed: 0, waitingUnconfirmed: 0, cancelled: {}, stuckSending: 0, ceiling: 500, withinCeiling: true, ...over });
 
 let runCalls: Array<{ execute: boolean; overCap?: boolean }> = [];
 let runResult: Summary | Error = base();
@@ -90,7 +90,7 @@ test('the response and the alert carry counts, never an address', async () => {
   assert.strictEqual(emailCalls.length, 1, 'one alert');
   assert.strictEqual(emailCalls[0].to, OPERATOR);
   assert.strictEqual(emailCalls[0].subject, '[PromoNight] Promo reminders: send_failures');
-  assert.ok(emailCalls[0].text.includes('1 of 2 sends failed.'));
+  assert.ok(emailCalls[0].text.includes('1 of 2 sends failed;'));
   assert.ok(emailCalls[0].text.includes('Sent: 1') && emailCalls[0].text.includes('Failed: 1'));
   assert.strictEqual(emailCalls[0].html, undefined, 'plain text ops mail');
   assert.ok(!emailCalls[0].text.replace(OPERATOR, '').includes('@'));

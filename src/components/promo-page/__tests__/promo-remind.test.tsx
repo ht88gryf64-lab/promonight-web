@@ -97,6 +97,7 @@ test('submit: the request carries the team, the surface and the reminder; newsle
   assert.deepEqual(signups[0].props, { ...PROPS, team_count: 1, variant: 'unassigned', reminder: 'scheduled' });
   const result = el.querySelector('[data-remind-result]');
   assert.ok(result, 'the form is replaced by the result');
+  assert.equal(result.parentElement?.getAttribute('aria-live'), 'polite', 'inside the live region that was there before the swap');
   assert.equal(result.textContent, 'Check your inbox for a confirmation link. Once you confirm, we’ll email you the day before, and you’ll get the weekly Minnesota Wild promo email.');
   assert.equal(el.querySelector('form'), null);
   // The address is never echoed into the page or onto an event.
@@ -132,6 +133,12 @@ test('a bad address makes no request and fires no signup; a 429 and a server err
   await submit(el);
   assert.equal(requests.length, 0);
   assert.equal(el.querySelector('[role="alert"]')?.textContent, 'Enter a valid email address.');
+  // The field is marked, described by the message, and has the focus back.
+  const field = el.querySelector('input[type="email"]') as HTMLInputElement;
+  assert.equal(field.getAttribute('aria-invalid'), 'true');
+  assert.ok(field.getAttribute('aria-describedby')?.split(' ').includes(el.querySelector('[role="alert"]')?.id ?? 'none'));
+  assert.equal(document.activeElement, field);
+  assert.equal(field.getAttribute('name'), null, 'unnamed: a native submit cannot put the address in a URL');
   answer = { status: 429, body: { ok: false, error: 'rate_limited' } };
   await type(el, 'fan@example.com');
   assert.equal(el.querySelector('[role="alert"]'), null, 'typing clears the error');

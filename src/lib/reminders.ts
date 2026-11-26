@@ -74,6 +74,17 @@ function shownTitle(title: string, team: Team): string {
   return promoDisplayTitle(cleanText(title), team) || cleanText(title);
 }
 
+/** True when the team has a home game on the date and none of them is still
+ *  to be played. No game on the spine (a league without one) is not "off". */
+async function gameCalledOff(team: Pick<Team, 'id' | 'sportSlug'>, gameDate: string): Promise<boolean> {
+  try {
+    const onDate = (await getGamesForTeam(team.id, team.sportSlug)).filter((g) => g.homeTeamSlug === team.id && g.date === gameDate);
+    return onDate.length > 0 && onDate.every((g) => g.status === 'postponed' || g.status === 'canceled');
+  } catch {
+    return false;
+  }
+}
+
 // ── signup ───────────────────────────────────────────────────────────────────
 
 export type ReminderOutcome = 'scheduled' | 'too_late' | 'none';
@@ -119,7 +130,7 @@ export async function scheduleReminderForSignup(input: { subscriberId: string; t
   const id = reminderDocId(input.subscriberId, input.promoId);
   const ref = db.collection(REMINDERS).doc(id);
   const sendAt = Timestamp.fromDate(reminderSendAt(row.date, timeZone));
-  await db.runTransaction(async (tx) => {
+  const armed = await db.runTransaction(async (tx) => {
     const existing = await tx.get(ref);
     const now = FieldValue.serverTimestamp();
     if (!existing.exists) {
@@ -141,13 +152,45 @@ export async function scheduleReminderForSignup(input: { subscriberId: string; t
         sentAt: null,
         resendId: null,
       });
-      return;
+      return true;
     }
-    if (existing.data()?.state === 'cancelled') {
+    const state = existing.data()?.state;
+    if (state === 'cancelled') {
       tx.update(ref, { state: 'scheduled' satisfies ReminderState, cancelReason: null, gameDate: row.date, timeZone, sendAt, updatedAt: now });
+      return true;
     }
+    // Already sent, being sent, or carried to another document: nothing more
+    // will go out under this id, so the answer must not promise an email.
+    return state === 'scheduled';
   });
+  if (!armed) return { outcome: 'too_late' };
   return { outcome: 'scheduled', promo: { title: shownTitle(row.title, team), teamName: teamDisplayName(team), date: row.date } };
+}
+
+/**
+ * Cancel every reminder still queued for a subscriber. Called when they
+ * unsubscribe. A reminder already sent, or being sent, is left as it is.
+ * Never throws: the caller's own work (the unsubscribe) is already done.
+ */
+export async function cancelRemindersForSubscriber(subscriberId: string): Promise<number> {
+  try {
+    const snap = await db.collection(REMINDERS).where('subscriberId', '==', subscriberId).get();
+    let cancelled = 0;
+    for (const doc of snap.docs) {
+      const ref = db.collection(REMINDERS).doc(doc.id);
+      const done = await db.runTransaction(async (tx) => {
+        const cur = await tx.get(ref);
+        if (!cur.exists || cur.data()?.state !== 'scheduled') return false;
+        tx.update(ref, { state: 'cancelled' satisfies ReminderState, cancelReason: 'unsubscribed', sendAt: null, updatedAt: FieldValue.serverTimestamp() });
+        return true;
+      });
+      if (done) cancelled += 1;
+    }
+    return cancelled;
+  } catch (e) {
+    console.error(`[reminders] cancel on unsubscribe failed: ${e instanceof Error ? e.message : e}`);
+    return 0;
+  }
 }
 
 // ── the cron's store ─────────────────────────────────────────────────────────
@@ -275,7 +318,13 @@ export function firestoreReminderDeps(now: Date): ReminderDeps {
       const page = await resolvePromoPage(t, reminder.pageSlug, siteTodayYmd(now));
       const row = page?.state === 'live' ? page.rows.find((r) => r.promoId === reminder.promoId) : undefined;
       if (!page || !row || !row.title.trim()) return 'no_page';
+      // A game the spine marks postponed or canceled is not played tomorrow,
+      // whatever the promo row still says (the weekly scan may not have
+      // re-read the club's page yet). Held, not cancelled: the row's new
+      // date, when the scan writes it, moves or follows the reminder.
+      if (await gameCalledOff(t, row.date)) return 'held';
       return sendPromoReminder({
+        idempotencyKey: reminder.id,
         email: subscriber.email,
         manageToken: subscriber.manageToken,
         team: toDigestTeam(t),

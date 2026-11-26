@@ -190,8 +190,12 @@ export interface ReminderDeps {
   update(id: string, patch: Partial<Reminder> & { sentAt?: 'now'; resendId?: string | null }): Promise<void>;
   /** scheduled -> sending, atomically. False when another run holds it. */
   claim(id: string): Promise<boolean>;
-  /** Builds and sends the email. `no_page` when the promo cannot be linked. */
-  send(reminder: Reminder, subscriber: ReminderSubscriber): Promise<ReminderSendResult | 'no_page'>;
+  /** Builds and sends the email. `no_page` when the promo cannot be linked;
+   *  `held` when the game is postponed or canceled on the schedule (nothing
+   *  is sent and the reminder stays in line for its new date). A retry of
+   *  the same reminder must be safe to repeat (the adapter sends with an
+   *  idempotency key), because a timeout cannot tell "sent" from "not". */
+  send(reminder: Reminder, subscriber: ReminderSubscriber): Promise<ReminderSendResult | 'no_page' | 'held'>;
 }
 
 export interface ReminderRunSummary {
@@ -203,6 +207,10 @@ export interface ReminderRunSummary {
   toSend: number;
   sent: number;
   failed: number;
+  /** Due, but the game is postponed or canceled on the schedule. */
+  held: number;
+  /** Reminders whose reconcile threw: skipped this run, the rest went on. */
+  errored: number;
   moved: number;
   followed: number;
   /** Due, but the subscriber has not confirmed yet: retried next hour. */
@@ -225,8 +233,11 @@ export interface ReminderRunSummary {
  * sends only after the ceiling check, each send claimed first so a second run
  * can never send the same reminder.
  */
-export async function runReminders(deps: ReminderDeps, opts: { now: Date; execute: boolean; overCap?: boolean; ceiling?: number }): Promise<ReminderRunSummary> {
+export async function runReminders(deps: ReminderDeps, opts: { now: Date; execute: boolean; overCap?: boolean; ceiling?: number; clock?: () => Date }): Promise<ReminderRunSummary> {
   const { now, execute } = opts;
+  // The instant each send is re-checked against. The route passes the wall
+  // clock; without one the run's own `now` stands (tests, dry runs).
+  const clock = opts.clock ?? (() => now);
   const ceiling = opts.ceiling ?? REMINDER_RUN_CEILING;
   const scheduled = await deps.listScheduled();
   const summary: ReminderRunSummary = {
@@ -236,6 +247,8 @@ export async function runReminders(deps: ReminderDeps, opts: { now: Date; execut
     toSend: 0,
     sent: 0,
     failed: 0,
+    held: 0,
+    errored: 0,
     moved: 0,
     followed: 0,
     waitingUnconfirmed: 0,
@@ -264,7 +277,9 @@ export async function runReminders(deps: ReminderDeps, opts: { now: Date; execut
   const sends: { reminder: Reminder; subscriber: ReminderSubscriber }[] = [];
   const inboxes = new Set<string>();
 
-  for (const original of scheduled) {
+  // Each reminder is isolated: one document that cannot be read or written
+  // is counted and skipped, and every other reminder still goes out.
+  const consider = async (original: Reminder): Promise<void> => {
     let r = original;
     const own = await deps.getRow(r.teamId, r.promoId);
     const needsTeam = !(own && !own.tombstoned && isYmd(own.date));
@@ -272,7 +287,7 @@ export async function runReminders(deps: ReminderDeps, opts: { now: Date; execut
 
     if (rec.action === 'cancel') {
       await cancel(r, rec.reason);
-      continue;
+      return;
     }
     if (rec.action === 'move') {
       const timeZone = await deps.zoneFor(r.teamId, rec.gameDate);
@@ -299,41 +314,49 @@ export async function runReminders(deps: ReminderDeps, opts: { now: Date; execut
         // The new id already exists (the subscriber signed up again on the
         // rescheduled page): that record is handled on its own, here or in a
         // later run, and whatever state it is in stands.
-        if (!created) continue;
+        if (!created) return;
       }
       r = next;
     }
 
     const stage = dueStage(now, r.gameDate, r.timeZone);
-    if (stage === 'wait') continue;
+    if (stage === 'wait') return;
     summary.due += 1;
 
     const subscriber = await deps.getSubscriber(r.subscriberId);
     if (!subscriber) {
       await cancel(r, 'subscriber_missing');
-      continue;
+      return;
     }
     if (subscriber.status === 'unsubscribed') {
       await cancel(r, 'unsubscribed');
-      continue;
+      return;
     }
     if (stage === 'past') {
       await cancel(r, subscriber.status === 'pending' ? 'unconfirmed' : 'expired');
-      continue;
+      return;
     }
     if (subscriber.status !== 'confirmed') {
       // Not confirmed yet. Left scheduled: a confirm later today still gets
       // the email on the next hourly run, until game day starts.
       summary.waitingUnconfirmed += 1;
-      continue;
+      return;
     }
     const inbox = `${deps.inboxKey(subscriber.email)}|${r.promoId}`;
     if (inboxes.has(inbox)) {
       await cancel(r, 'duplicate_inbox');
-      continue;
+      return;
     }
     inboxes.add(inbox);
     sends.push({ reminder: r, subscriber });
+  };
+  for (const original of scheduled) {
+    try {
+      await consider(original);
+    } catch (e) {
+      summary.errored += 1;
+      console.error(`[reminders] reconcile threw reminder=${original.id}: ${e instanceof Error ? e.message : e}`);
+    }
   }
 
   summary.toSend = sends.length;
@@ -353,10 +376,16 @@ export async function runReminders(deps: ReminderDeps, opts: { now: Date; execut
     let delivered = false;
     let claimed = false;
     try {
+      // Re-checked at the moment of sending: a long run that began on the day
+      // before must not mail once game day has started.
+      if (dueStage(clock(), reminder.gameDate, reminder.timeZone) !== 'due') continue;
       claimed = await deps.claim(reminder.id);
       if (!claimed) continue;
       const res = await deps.send(reminder, subscriber);
-      if (res === 'no_page') {
+      if (res === 'held') {
+        summary.held += 1;
+        await deps.update(reminder.id, { state: 'scheduled' });
+      } else if (res === 'no_page') {
         summary.cancelled.no_page = (summary.cancelled.no_page ?? 0) + 1;
         await deps.update(reminder.id, { state: 'cancelled', cancelReason: 'no_page', sendAt: null });
       } else if (res.ok) {

@@ -78,7 +78,7 @@ export async function GET(request: Request) {
     }
 
     const now = new Date();
-    summary = await runReminders(firestoreReminderDeps(now), { now, execute, overCap });
+    summary = await runReminders(firestoreReminderDeps(now), { now, execute, overCap, clock: () => new Date() });
     const durationMs = Date.now() - startedAt;
     console.log(`[cron:promo-reminders] ${JSON.stringify({ ...summary, durationMs })}`);
 
@@ -87,15 +87,18 @@ export async function GET(request: Request) {
       await alert({ reason: summary.aborted, detail });
       return NextResponse.json({ ok: false, reason: summary.aborted, detail, ...summary, durationMs }, { status: 409 });
     }
-    if (execute && summary.failed > 0) {
-      await alert({ reason: 'send_failures', detail: `${summary.failed} of ${summary.sent + summary.failed} sends failed.` });
+    if (execute && (summary.failed > 0 || summary.errored > 0)) {
+      await alert({
+        reason: 'send_failures',
+        detail: `${summary.failed} of ${summary.sent + summary.failed} sends failed; ${summary.errored} reminder(s) could not be read or reconciled; ${summary.stuckSending} left in "sending" by an earlier run.`,
+      });
     } else if (execute && summary.stuckSending > 0) {
       await alert({
         reason: 'stuck_sending',
         detail: `${summary.stuckSending} reminder(s) were claimed by an earlier run and never settled. They are not retried (a second email is the worse failure); check the promoReminders documents in state "sending".`,
       });
     }
-    return NextResponse.json({ ok: !execute || summary.failed === 0, ...summary, durationMs });
+    return NextResponse.json({ ok: !execute || (summary.failed === 0 && summary.errored === 0), ...summary, durationMs });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error(`[cron:promo-reminders] run threw: ${message}`);

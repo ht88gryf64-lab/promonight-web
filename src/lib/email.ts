@@ -52,9 +52,15 @@ interface SendArgs {
   // the platform kills the function. Omitted (cron/background) = unbounded,
   // which is the long-standing digest behavior.
   timeoutMs?: number;
+  // Resend's Idempotency-Key request header: a second POST with the same key
+  // inside 24 hours returns the first one's result instead of sending again.
+  // Set by a caller that RETRIES (the reminder cron), where a timeout leaves
+  // "did it go out" unknown and a blind retry could mail the same person
+  // twice. Omitted, the request is exactly what it always was.
+  idempotencyKey?: string;
 }
 
-export async function sendEmail({ to, subject, html, text, headers, replyTo, timeoutMs }: SendArgs): Promise<SendResult> {
+export async function sendEmail({ to, subject, html, text, headers, replyTo, timeoutMs, idempotencyKey }: SendArgs): Promise<SendResult> {
   const key = process.env.RESEND_API_KEY;
   if (!key) {
     console.warn(`[email] RESEND_API_KEY not set, skipping send to ${to}`);
@@ -68,6 +74,7 @@ export async function sendEmail({ to, subject, html, text, headers, replyTo, tim
       headers: {
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
+        ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
       },
       // `reply_to` is dropped from the payload when undefined, so existing
       // callers that omit it are unaffected.
@@ -505,6 +512,9 @@ export async function sendEmptyWindowDigest(args: EmptyWindowDigestArgs): Promis
 export type PromoReminderArgs = Pick<ReminderEmailInput, 'promo' | 'team' | 'teamName'> & {
   email: string;
   manageToken: string;
+  /** The reminder's document id. A retry of the same reminder (a timeout, a
+   *  lost response) carries the same key, so Resend sends it once. */
+  idempotencyKey: string;
 };
 
 export function buildPromoReminder(args: PromoReminderArgs): { subject: string; html: string; text: string; headers: Record<string, string> } {
@@ -527,5 +537,5 @@ const REMINDER_SEND_TIMEOUT_MS = 8_000;
 
 export async function sendPromoReminder(args: PromoReminderArgs): Promise<SendResult> {
   const b = buildPromoReminder(args);
-  return sendEmail({ to: args.email, subject: b.subject, html: b.html, text: b.text, headers: b.headers, timeoutMs: REMINDER_SEND_TIMEOUT_MS });
+  return sendEmail({ to: args.email, subject: b.subject, html: b.html, text: b.text, headers: b.headers, timeoutMs: REMINDER_SEND_TIMEOUT_MS, idempotencyKey: `promo-reminder/${args.idempotencyKey}` });
 }

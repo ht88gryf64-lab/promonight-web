@@ -1594,6 +1594,11 @@ test('the email block, upcoming: the reminder variant inside the CTA section, un
   // 44px minimum tap target: the input and the button are both 48px tall.
   assert.equal((block.match(/class="[^"]*\bh-12\b/g) ?? []).length, 2);
   assert.ok(block.includes('ph-no-capture'), 'the address never reaches analytics');
+  // No named field and no action: a submit before hydration (or with scripts
+  // off) is a GET that carries nothing, never the address in the URL.
+  assert.ok(!/<input [^>]*\bname=/.test(block) && !/<form [^>]*\baction=/.test(block), 'a native submit carries no address');
+  // The form's button is an outline: "Get Tickets" stays the one filled action.
+  assert.ok(!/<button [^>]*bg-\[var\(--pp-accent\)\]/.test(block));
   // ONE "Remind me" on the page, the form's; the app link is "Get the app".
   assert.equal((h.match(/>Remind me</g) ?? []).length, 1);
   // Inside the CTA section: the third direct child of the article holds the

@@ -435,3 +435,28 @@ test('an already-confirmed subscriber gets the reminder with no confirmation ema
   assert.deepStrictEqual(subscriberDoc().teams, ['minnesota-wild']);
   assert.strictEqual(subscriberDoc().source, 'web_homepage', 'the first source is kept');
 });
+
+test('a PENDING subscriber who adds a team with a reminder is sent the SAME link again, naming the reminder; without a reminder that submit stays silent', async () => {
+  const { POST } = await import('../route');
+  await POST(post({ email: EMAIL, teams: ['yankees'], source: 'web_team_page' }));
+  const token = subscriberDoc().confirmToken;
+  sendCalls = [];
+  // Adds a team, no reminder: the long-standing teams_only suppression.
+  await POST(post({ email: EMAIL, teams: ['mets'], source: 'web_team_page' }));
+  assert.strictEqual(sendCalls.length, 0);
+  // Adds a team WITH a reminder: the link they hold names the weekly email
+  // only, so it goes out again naming the reminder. The token is not rotated.
+  const json = await (await POST(post(REMIND))).json();
+  assert.strictEqual(json.status, 'pending');
+  assert.strictEqual(json.reminder, 'scheduled');
+  assert.strictEqual(json.confirmation, 'sent');
+  assert.strictEqual(sendCalls.length, 1);
+  assert.strictEqual(sendCalls[0].confirmToken, token, 'the earlier email keeps working');
+  assert.strictEqual(subscriberDoc().confirmToken, token);
+  assert.deepStrictEqual(sendCalls[0].reminder, { title: 'Winter Beanie', teamName: 'Minnesota Wild', date: '2026-12-05' });
+  // Too late: no reminder, so no extra email either.
+  scheduleResult = { outcome: 'too_late' };
+  sendCalls = [];
+  await POST(post({ ...REMIND, teams: ['minnesota-twins'] }));
+  assert.strictEqual(sendCalls.length, 0);
+});

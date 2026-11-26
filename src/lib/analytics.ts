@@ -623,7 +623,7 @@ export type EmailCtaClickProperties = {
   // localStorage, and resolving during render would make a storage write a
   // render side effect.
   variant: CaptureVariant;
-  // Set only by the promo page's "Get the app" (labelled "Remind me" until 2026-11-26) block (surface web_promo_page,
+  // Set only by the promo page's "Remind me" block (surface web_promo_page,
   // 2026-11-26), where this event is the FIRST FOCUS of the email input, once
   // per page view, not a click on a link to /follow. promo_id is the stored
   // document id of the page's primary promo.
@@ -672,7 +672,7 @@ export type NewsletterSignupProperties = {
   // Retained optional fields for forward-compat with a future multi-list split.
   placement?: string;
   list_id?: string;
-  // Set only by the promo page's "Get the app" (labelled "Remind me" until 2026-11-26) block (surface web_promo_page):
+  // Set only by the promo page's "Remind me" block (surface web_promo_page):
   // the page's primary promo and its team. Present on the weekly email only
   // variant too, where no reminder is scheduled; `reminder` says which it was.
   promo_id?: string;

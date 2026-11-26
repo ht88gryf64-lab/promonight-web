@@ -23,6 +23,7 @@ const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), '__fixtures__');
 const PARTNER_DOMAINS = ['lusg.net', 'evyy.net', 'spothero.com', 'expedia.com', 'ticketnetwork.com', 'ticketmaster.com', 'stubhub.com', 'fubo.tv', 'ebay.com', 'pxf.io', 'sjv.io'];
 
 const ARGS = {
+  idempotencyKey: 'sub1_c7057219198efd77',
   email: 'fan@example.com',
   manageToken: 'seededManageToken0123456789abcde',
   team: { id: 'minnesota-wild', name: 'Minnesota Wild', short: 'Wild', sportSlug: 'nhl', league: 'NHL', ticketNetworkSlug: 'minnesota-wild-tickets' },
@@ -124,4 +125,26 @@ test('a promo with no opponent, time or quantity renders without empty separator
   assert.ok(b.html.includes('>Sat Dec 5</div>'), 'the game line is the date alone');
   assert.ok(!/· ·|·\s*<\/div>/.test(b.html));
   assert.equal(b.subject, 'Tomorrow: Kids <Run> & Fun (Wild)');
+});
+
+test('the send carries the reminder id as Resend’s Idempotency-Key, so a retry after a timeout cannot mail twice; other emails send without one', async () => {
+  process.env.RESEND_API_KEY = 'test-key';
+  const seen: Array<Record<string, string>> = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (_url: unknown, init?: { headers?: Record<string, string> }) => {
+    seen.push(init?.headers ?? {});
+    return new Response(JSON.stringify({ id: 'msg' }), { status: 200 });
+  }) as typeof fetch;
+  try {
+    const { sendPromoReminder, sendConfirmationEmail } = await import('../email');
+    await sendPromoReminder(ARGS);
+    await sendPromoReminder(ARGS);
+    await sendConfirmationEmail({ email: 'fan@example.com', confirmToken: 'c'.repeat(32), manageToken: 'm'.repeat(32) });
+    assert.equal(seen[0]['Idempotency-Key'], 'promo-reminder/sub1_c7057219198efd77');
+    assert.equal(seen[1]['Idempotency-Key'], seen[0]['Idempotency-Key'], 'the same key on a retry');
+    assert.ok(!('Idempotency-Key' in seen[2]), 'the confirmation request is unchanged');
+  } finally {
+    globalThis.fetch = realFetch;
+    delete process.env.RESEND_API_KEY;
+  }
 });

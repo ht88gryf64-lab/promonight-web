@@ -168,6 +168,26 @@ export async function POST(request: Request) {
         confirmation = 'failed';
         console.error('[api:subscribe] confirmation send threw', e);
       }
+    } else if (result.suppressionReason === 'teams_only' && scheduled.outcome === 'scheduled' && scheduled.promo) {
+      // A PENDING subscriber who just added this team and set a reminder. No
+      // new link is due (the one they hold still works), but that earlier
+      // email names the weekly email only, and the confirm click has to cover
+      // the reminder too (Gate 1 ruling 3). So the SAME link goes out again,
+      // naming the reminder. The token is not rotated, so the earlier email
+      // keeps working; the cooldown suppressor never reaches this branch.
+      try {
+        const sent = await sendConfirmationEmail({
+          email: result.email,
+          confirmToken: result.confirmToken,
+          manageToken: result.manageToken,
+          reminder: scheduled.promo,
+        });
+        confirmation = sent.ok ? 'sent' : 'not_needed';
+        if (sent.ok) await markConfirmationSent(result.id, result.confirmToken);
+        else console.error(`[api:subscribe] reminder confirmation send failed reason=${sent.skipped ? 'skipped_no_api_key' : (sent.error ?? 'unknown')}`);
+      } catch (e) {
+        console.error('[api:subscribe] reminder confirmation send threw', e);
+      }
     } else if (result.suppressionReason) {
       // Info level so "no duplicate confirmations are firing" stays verifiable
       // in the Vercel logs without an analytics dependency. teams_only is the

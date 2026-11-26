@@ -18,6 +18,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { unsubscribeByManageToken } from '@/lib/subscribers';
 import { MANAGE_COOKIE } from '@/lib/manage-session';
+import { cancelRemindersForSubscriber } from '@/lib/reminders';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -73,5 +74,10 @@ export async function POST(request: Request) {
   if (!result.found) {
     return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
   }
+  // Unsubscribing also drops the day-before reminders still queued for this
+  // subscriber (2026-11-26), so a later re-subscribe to the weekly email does
+  // not bring back reminders set before it. Never throws and never changes
+  // the answer: the unsubscribe above already happened.
+  if (result.id) await cancelRemindersForSubscriber(result.id);
   return NextResponse.json({ ok: true, status: 'unsubscribed' });
 }
