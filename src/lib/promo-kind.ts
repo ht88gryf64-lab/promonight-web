@@ -5,9 +5,10 @@
 //
 //   item     something handed to fans at the game (a bobblehead, a cap, a
 //            voucher, a cookie), at the gate or with a ticket package
-//   event    a theme night, a deal, entertainment, a home opener or finale
+//   event    a theme night, a deal, entertainment, a home opener or finale,
+//            an in-season cup night (NBA Cup, Commissioner's Cup)
 //   fixture  the row is only the game itself ("Regular Season Match",
-//            "Friday Night Hockey", a playoff match, an in-season cup game)
+//            "Friday Night Hockey", a playoff match)
 //
 // RULES (Matt's rulings, 2026-11-25).
 //  - ABSENT MEANS TODAY'S BEHAVIOR. Every doc lacks the field today, and a row
