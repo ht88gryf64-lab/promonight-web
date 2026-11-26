@@ -33,6 +33,7 @@ below is relative to that folder.
 | `page-flood-guard` | Watch page-request floods | Over 300/min/IP: Log only | Live since 2026-08-31. Stays Log: our own tools trip it |
 | `cloud-crawler-watch-a` | Challenge an unidentified browser crawler on one cloud-hosting network | **Challenge** | Log from 2026-11-02 15:50:57Z; Challenge since 2026-11-04 16:12:09Z (owner's go after the 48h review) |
 | `cloud-crawler-watch-b` | Watch an unidentified browser on a second cloud network that may be ad verification | Log only, never Challenge | Live since 2026-11-02 15:50:57Z |
+| `cloud-crawler-watch-c` | Watch an unlabeled browser crawler that arrives through the Singapore edge and requests the site-wide nav and footer pages on a cycle; most of it comes from one cloud network | **Log** only. Any future Challenge targets that network, never the country | Log since 2026-11-26 02:48:55Z (config v9 to v10). Review Mon 2026-11-30. See "`cloud-crawler-watch-c`" |
 | Bot Protection (managed) | Vercel's bot scoring | Log, permanently | Challenge would hit RaptiveMegacrawler and the ad-verification crawlers, which Vercel does not identify |
 | AI Bots (managed) | | Off | Stays off |
 
@@ -45,6 +46,7 @@ below is relative to that folder.
 | 2026-11-05 16:27Z | Gate re-run for the `api-rate-limit` Deny | Passed: ClaudeBot and PerplexityBot re-read robots.txt and requested no `/api/` path outside the two card routes. Deny published 16:45:49Z |
 | 2026-11-06 16:45Z | `api-rate-limit` denials by bot name and path, first 24h | Expect zero from allow-listed bots and zero on the two card routes |
 | 2026-11-24 or later (48h after v9) | `go-rate-limit` log: which clients pass 60/min/IP on `/go/` | Promote to Deny, 5 min, only if the matches are target traffic alone (owner's go) |
+| Mon 2026-11-30 | `cloud-crawler-watch-c` log since 2026-11-26 02:48:55Z, from both sources in "`cloud-crawler-watch-c`" | Owner's call, one of: keep logging; Challenge scoped to the single cloud network, the way `cloud-crawler-watch-a` is; or remove the rule. A country-wide Challenge stays banned |
 
 A request carries one rule id in the metrics. Traffic that Bot Protection
 also logs shows as `managed_bot_filter`, so a watch rule's matches can read as
@@ -83,6 +85,58 @@ disallows `/go/` since 2026-11-22. Payload:
 operator's private folder, see the note at the top). The other five rules
 were byte-identical across the change, compared from those two files.
 
+## `cloud-crawler-watch-c`
+
+Added 2026-11-26 02:48:55Z (config v9 to v10), Log only. Since 2026-11-17 a
+client with no bot label has requested the site-wide nav and footer pages
+(`/`, `/download`, `/teams`, `/about`, `/my-teams`, `/promos/today`,
+`/privacy`, `/terms`, `/events` and similar) through the Singapore edge,
+each page hundreds of times a day and the same number of times per cycle:
+about 10,600 to 32,000 unlabeled requests a day there from 2026-11-22 to
+2026-11-25.
+None of it reaches PostHog or Raptive. Most of it comes from one cloud
+network; a smaller share comes from the network `cloud-crawler-watch-a`
+already challenges.
+
+Condition, all four must hold:
+
+- the client's country is Singapore;
+- the user agent does not contain PetalBot (Huawei's declared, verified
+  crawler, which also arrives through Singapore and must never match; kept
+  explicit for readability, since the always-allow list below covers it too);
+- the path is not `/ads.txt`, `/app-ads.txt` or `/robots.txt`;
+- the user agent does not match the always-allow list (copied from
+  `api-rate-limit` byte for byte).
+
+It is last in the rule list, so `cloud-crawler-watch-a` still challenges its
+own network first. Real visitors in Singapore can match; Log has no effect on
+them. That is why any future Challenge must target the cloud network, the way
+`cloud-crawler-watch-a` does, never the country: a country-wide Challenge is a
+country block and stays banned (ground rules above).
+
+Review evidence comes from two sources, read together:
+
+1. The rule's own id (`vercel metrics vercel.request.count --filter "waf_rule_id eq '<rule id>'" --group-by waf_action`,
+   then by path and user agent). This shows only the Singapore traffic that
+   Bot Protection does not log.
+2. The Singapore traffic tagged `managed_bot_filter`, which is most of the
+   target: `vercel.request.count` filtered to `client_ip_country eq 'SG'` and
+   `waf_rule_id eq 'managed_bot_filter'`, grouped by user agent, network and
+   path, with each row checked against the rule's four conditions from the
+   private after-config.
+
+First hour (2026-11-26 02:49Z to 03:50Z): 5 matches under the rule's own id
+and 152 rebuilt from `managed_bot_filter`, all `log`, none denied or
+challenged; PetalBot matched none (every PetalBot request was allowed).
+
+At the 2026-11-30 review the owner chooses: keep logging, Challenge scoped to
+the single cloud network, or remove. Payload:
+`private/proposed/item6-cloud-crawler-watch-c-log.apply.json`; before and
+after: `private/2026-11-25-watch-c-{before,after}.json` (named by the
+operator's local date). The other six rules, Bot Protection and the rest of
+the config were byte-identical across the change, compared from those two
+files.
+
 ## Publishing a change
 
 1. Save the active config:
@@ -103,6 +157,10 @@ All rollbacks are staged, then published; check `vercel firewall diff` first.
 - `cloud-crawler-watch-a` back to Log: `vercel firewall rules edit cloud-crawler-watch-a --action log --yes`, publish.
   Remove it entirely: `vercel firewall rules remove cloud-crawler-watch-a --yes`, publish.
 - `cloud-crawler-watch-b`: `vercel firewall rules remove cloud-crawler-watch-b --yes`, publish.
+- `cloud-crawler-watch-c`: `vercel firewall rules remove cloud-crawler-watch-c --yes`, publish.
+  It is Log only, so removing it changes no response. A Challenge (after the
+  review, owner's go) replaces the country condition with the network
+  condition; it never adds Challenge to the rule as written.
 - `go-rate-limit`: `vercel firewall rules remove go-rate-limit --yes`, publish.
   Promote it to Deny (after the review): `vercel firewall rules edit go-rate-limit`
   with the rate limit action `deny` and action duration `5m`; confirm with
