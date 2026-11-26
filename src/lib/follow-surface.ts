@@ -33,6 +33,13 @@ export const CAPTURE_SURFACES = [
   // running AHEAD of PostHog on this surface, since a curl POST emits no
   // client-side newsletter_signup.
   'web_engagement_capture',
+  // The promo page's inline "Remind me" block (Gate 1 ruling 8, 2026-11-26),
+  // and ONLY that block. Like the sheet it collects the address in place and
+  // POSTs /api/subscribe itself, so it is excluded from ENTRY_SURFACES below
+  // for the same reason. The site footer's link on a promo page is NOT this
+  // surface: inferCaptureSurface keeps answering web_other there, so this
+  // value counts the block's signups and nothing else.
+  'web_promo_page',
   // Fallback for entry points that can't resolve a more specific surface (the
   // global footer CTA on a route none of the above match). Never the seed for
   // a primary placement; only a safety net so a stray click still records.
@@ -74,8 +81,13 @@ export function coerceCaptureSurface(value: unknown): CaptureSurface {
 // page_type to disambiguate and no arm to fall back on. A forged tag is a
 // silent, directional contamination of the one number the sheet is judged by.
 // Cheaper to make it unreachable than to caveat it.
+//
+// web_promo_page is excluded on the same grounds: the promo page's block never
+// links to /follow either.
+const INLINE_ONLY_SURFACES: readonly CaptureSurface[] = ['web_engagement_capture', 'web_promo_page'];
+
 export const ENTRY_SURFACES: readonly CaptureSurface[] = CAPTURE_SURFACES.filter(
-  (s) => s !== 'web_engagement_capture',
+  (s) => !INLINE_ONLY_SURFACES.includes(s),
 );
 
 // Coerce the /follow `?source=` query param. Same fallback as
@@ -83,7 +95,7 @@ export const ENTRY_SURFACES: readonly CaptureSurface[] = CAPTURE_SURFACES.filter
 // web_engagement_capture lands on web_other, which is the honest label for a
 // /follow entry that cannot be attributed.
 export function coerceEntrySurface(value: unknown): CaptureSurface {
-  return isCaptureSurface(value) && value !== 'web_engagement_capture' ? value : 'web_other';
+  return isCaptureSurface(value) && !INLINE_ONLY_SURFACES.includes(value) ? value : 'web_other';
 }
 
 // Derive the surface from a pathname. Used by the site-wide footer CTA, which

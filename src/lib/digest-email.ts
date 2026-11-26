@@ -620,3 +620,143 @@ ${msoClose}
 
   return { html, text: renderText(input, hero, rows, next, siblings), hero: hero?.lead ?? null, entryCount: entries.length };
 }
+
+// ── the day-before reminder (Gate 1 rulings, 2026-11-26) ─────────────────────
+// One promo, sent at 10:00 venue time the day before its game to a subscriber
+// who asked for it on the promo page (src/lib/reminder-core.ts). It is drawn
+// with the digest's own pieces (the same palette, table markup, button and
+// footer content), so the two emails read as one system, and it follows the
+// digest's rules: the button goes to the promo page, and no partner domain
+// appears unless TICKETNETWORK_EMAIL_APPROVED is on, in which case the one
+// button is the ticket link with the resale line under it.
+//
+// Nothing above this line reads anything below it: the digest's output is
+// unchanged (its goldens are compared byte for byte).
+
+export interface ReminderEmailInput {
+  siteUrl: string;
+  manageToken: string;
+  /** subId1 surface, web_email_reminder. */
+  surface: EmailTnSubIdSurface;
+  promo: {
+    promoId: string;
+    title: string;
+    typeLabel: string;
+    /** YYYY-MM-DD. */
+    date: string;
+    time: string;
+    opponent: string;
+    venueName: string | null;
+    quantity: string | null;
+    /** Root-relative promo page, through promoPagePath (canonical stamped). */
+    href: string;
+    pageSlug: string;
+    updatedAt: string | null;
+  };
+  team: DigestTeam;
+  /** "City Name", for the copy. */
+  teamName: string;
+  ticketsApproved: boolean;
+  postalAddress: string;
+}
+
+export interface RenderedReminder {
+  subject: string;
+  html: string;
+  text: string;
+}
+
+/** "Fri Nov 27 · vs Jets · 7:00 PM · Grand Casino Arena · First 5,000 fans". */
+function reminderGameLine(input: ReminderEmailInput): string[] {
+  const p = input.promo;
+  return [weekdayMonthDay(p.date), p.opponent ? `vs ${p.opponent}` : '', p.time, p.venueName ?? '', p.quantity ?? ''].filter(Boolean);
+}
+
+export function reminderSubject(input: ReminderEmailInput): string {
+  return `Tomorrow: ${input.promo.title} (${input.team.short || input.teamName})`;
+}
+
+export function renderPromoReminder(input: ReminderEmailInput): RenderedReminder {
+  const p = input.promo;
+  const page = `${input.siteUrl}${p.href}?subId1=${input.surface}_${input.team.id}`;
+  const manage = `${input.siteUrl}/preferences?token=${encodeURIComponent(input.manageToken)}`;
+  const img = `${input.siteUrl}${shareCardPath(input.team.id, p.promoId, p.updatedAt)}`;
+  const game = reminderGameLine(input);
+  const matchup = `${input.teamName}${p.opponent ? ` vs ${p.opponent}` : ''}`;
+  const title = `Tomorrow: ${p.title}`;
+  const ticketUrl = input.ticketsApproved && ticketNetworkForGame(null, input.team)
+    ? buildTicketNetworkLink({ team: { id: input.team.id, ticketNetworkSlug: input.team.ticketNetworkSlug }, surface: input.surface, pageSlug: p.pageSlug })
+    : null;
+  const button = ticketUrl ? solidButton(ticketUrl, TICKET_CTA_LABEL) : solidButton(page, 'See this game');
+  const eyebrow = `${input.team.short || input.teamName} · ${p.typeLabel}`.toUpperCase();
+  const alt = `${p.title}, ${input.teamName}, ${weekdayMonthDay(p.date)}`;
+  const link = (href: string, label: string) => `<a href="${esc(href)}" style="color:${DIGEST_MUTED};text-decoration:underline;">${label}</a>`;
+
+  const header = row(cell(`padding:26px ${SIDE}px 0;`, table(row(
+    cell(`font-size:18px;font-weight:700;letter-spacing:0.08em;line-height:22px;color:${DIGEST_INK};`, 'PROMONIGHT', DIGEST_WHITE, ' align="left"') +
+    cell(`font-size:12px;line-height:22px;color:${DIGEST_MUTED};`, `<a href="${esc(manage)}" style="color:${DIGEST_MUTED};text-decoration:none;">Manage teams</a>`, DIGEST_WHITE, ' align="right"'),
+  ))));
+  const titleBlock = row(cell(`padding:36px ${SIDE}px 0;`,
+    `<h1 style="margin:0;font-family:${FONT};font-size:34px;line-height:1.05;font-weight:700;color:${DIGEST_INK};">${esc(title)}</h1>` +
+    `<div style="margin-top:10px;font-size:15px;line-height:1.4;color:${DIGEST_MUTED};">${esc(matchup)}</div>`,
+  ));
+  const card = table(
+    row(`<td bgcolor="${DIGEST_WHITE}" style="padding:0;background:${DIGEST_WHITE};font-family:${FONT};font-size:13px;line-height:18px;color:${DIGEST_MUTED};"><a href="${esc(page)}" style="display:block;"><img src="${esc(img)}" width="${HERO_W}" height="${HERO_H}" alt="${esc(alt)}" style="display:block;width:100%;max-width:${HERO_W}px;height:auto;border:0;outline:none;text-decoration:none;"></a></td>`) +
+    row(cell('padding:18px 24px 0;',
+      `<div style="font-size:11px;font-weight:600;letter-spacing:0.06em;line-height:14px;color:${DIGEST_ACCENT};">${esc(eyebrow)}</div>` +
+      `<div style="margin-top:5px;font-size:19px;font-weight:600;line-height:1.25;color:${DIGEST_INK};">${esc(p.title)}</div>` +
+      `<div style="margin-top:5px;font-size:13px;line-height:1.4;color:${DIGEST_MUTED};">${esc(game.join(' · '))}</div>`)) +
+    row(cell('padding:18px 24px 22px;', button)) +
+    (ticketUrl ? row(cell(`padding:0 24px 20px;font-size:12px;line-height:17px;color:${DIGEST_MUTED};`, esc(TICKETNETWORK_RESALE_NOTE))) : ''),
+    `border:1px solid ${DIGEST_RULE};border-collapse:separate;border-radius:12px;overflow:hidden;`,
+    ` bgcolor="${DIGEST_WHITE}"`,
+  );
+  const lead = `You asked PromoNight to remind you about this game. You also get the weekly email for the teams you follow. ${link(manage, 'Manage your teams')} · ${link(`${manage}&unsub=1`, 'Unsubscribe')}`;
+  const footer = row(cell(`padding:28px ${SIDE}px 32px;font-size:12px;line-height:1.6;color:${DIGEST_MUTED};`,
+    `<div style="color:${DIGEST_MUTED};">${lead} · ${DISCLOSURE}</div>` +
+    `<div style="margin-top:8px;color:${DIGEST_MUTED};">${esc(input.postalAddress)}</div>`));
+  const body = header + titleBlock + row(cell('padding:28px 23px 0;', card)) + footer;
+
+  const msoOpen = `<!--[if mso]><table role="presentation" align="center" width="${CONTAINER}" cellpadding="0" cellspacing="0" border="0"><tr><td width="${CONTAINER}"><![endif]-->`;
+  const msoClose = `<!--[if mso]></td></tr></table><![endif]-->`;
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>${esc(title)}</title>
+</head>
+<body bgcolor="${DIGEST_WHITE}" style="margin:0;padding:0;width:100%;background:${DIGEST_WHITE};">
+${preheaderHtml(`${matchup}, ${game.filter((g) => !g.startsWith('vs ')).join(', ')}.`)}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${DIGEST_WHITE}" style="width:100%;background:${DIGEST_WHITE};"><tr><td align="center" bgcolor="${DIGEST_WHITE}" style="padding:0;background:${DIGEST_WHITE};">
+${msoOpen}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="${DIGEST_WHITE}" style="width:100%;max-width:${CONTAINER}px;margin:0 auto;background:${DIGEST_WHITE};border-collapse:collapse;">
+${body}
+</table>
+${msoClose}
+</td></tr></table>
+</body>
+</html>`;
+
+  const text = [
+    'PROMONIGHT',
+    '',
+    title,
+    matchup,
+    game.join(' · '),
+    '',
+    `${ticketUrl ? TICKET_CTA_LABEL : 'See this game'}: ${ticketUrl ?? page}`,
+    ...(ticketUrl ? [TICKETNETWORK_RESALE_NOTE, `The promo page: ${page}`] : []),
+    '',
+    'You asked PromoNight to remind you about this game. You also get the weekly email for the teams you follow.',
+    `Manage your teams: ${manage}`,
+    `Unsubscribe: ${manage}&unsub=1`,
+    '',
+    DISCLOSURE,
+    input.postalAddress,
+  ].join('\n');
+
+  return { subject: reminderSubject(input), html, text };
+}

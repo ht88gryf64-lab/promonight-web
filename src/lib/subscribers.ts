@@ -549,14 +549,16 @@ export async function setSubscriberTeamsByManageToken(
 // Unsubscribe via manageToken. Idempotent. The weekly send (Phase C) iterates
 // confirmed subscribers only, so flipping to unsubscribed removes them from all
 // future sends.
-export async function unsubscribeByManageToken(token: string): Promise<{ found: boolean }> {
+export async function unsubscribeByManageToken(token: string): Promise<{ found: boolean; id?: string }> {
   const doc = await findByToken('manageToken', token);
   if (!doc) return { found: false };
   await doc.ref.update({
     status: 'unsubscribed',
     updatedAt: FieldValue.serverTimestamp(),
   });
-  return { found: true };
+  // The id (the address hash) lets the route cancel what else is queued for
+  // this subscriber (their day-before reminders, src/lib/reminders.ts).
+  return { found: true, id: doc.id };
 }
 
 // All confirmed subscribers, for the weekly send. Pending and unsubscribed are
