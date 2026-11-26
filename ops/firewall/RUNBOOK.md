@@ -33,7 +33,7 @@ below is relative to that folder.
 | `page-flood-guard` | Watch page-request floods | Over 300/min/IP: Log only | Live since 2026-08-31. Stays Log: our own tools trip it |
 | `cloud-crawler-watch-a` | Challenge an unidentified browser crawler on one cloud-hosting network | **Challenge** | Log from 2026-11-02 15:50:57Z; Challenge since 2026-11-04 16:12:09Z (owner's go after the 48h review) |
 | `cloud-crawler-watch-b` | Watch an unidentified browser on a second cloud network that may be ad verification | Log only, never Challenge | Live since 2026-11-02 15:50:57Z |
-| `cloud-crawler-watch-c` | Watch an unlabeled browser crawler that arrives through the Singapore edge and requests the site-wide nav and footer pages on a cycle; most of it comes from one cloud network | **Log** only. Any future Challenge targets that network, never the country | Log since 2026-11-26 02:48:55Z (config v9 to v10). Review Mon 2026-11-30. See "`cloud-crawler-watch-c`" |
+| `cloud-crawler-watch-c` | Challenge an unlabeled browser crawler on one cloud network that requests the site-wide nav and footer pages on a cycle (first seen through the Singapore edge) | **Challenge**, scoped to that one cloud network. Never the country | Log from 2026-11-26 02:48:55Z (config v9 to v10), scoped to Singapore; Challenge since 2026-11-26 16:35:40Z (config v10 to v11, owner's go), scoped to the network. 48h check Sat 2026-11-28. See "`cloud-crawler-watch-c`" |
 | Bot Protection (managed) | Vercel's bot scoring | Log, permanently | Challenge would hit RaptiveMegacrawler and the ad-verification crawlers, which Vercel does not identify |
 | AI Bots (managed) | | Off | Stays off |
 
@@ -46,7 +46,8 @@ below is relative to that folder.
 | 2026-11-05 16:27Z | Gate re-run for the `api-rate-limit` Deny | Passed: ClaudeBot and PerplexityBot re-read robots.txt and requested no `/api/` path outside the two card routes. Deny published 16:45:49Z |
 | 2026-11-06 16:45Z | `api-rate-limit` denials by bot name and path, first 24h | Expect zero from allow-listed bots and zero on the two card routes |
 | 2026-11-24 or later (48h after v9) | `go-rate-limit` log: which clients pass 60/min/IP on `/go/` | Promote to Deny, 5 min, only if the matches are target traffic alone (owner's go) |
-| Mon 2026-11-30 | `cloud-crawler-watch-c` log since 2026-11-26 02:48:55Z, from both sources in "`cloud-crawler-watch-c`" | Owner's call, one of: keep logging; Challenge scoped to the single cloud network, the way `cloud-crawler-watch-a` is; or remove the rule. A country-wide Challenge stays banned |
+| Sat 2026-11-28 around 16:35Z (48h after v11) | `cloud-crawler-watch-c` challenges under the rule's own id, by country, user agent and path; whether any challenged client was later served (solved); that no verified bot or always-allow agent was challenged; and that nothing from the network is still served under `managed_bot_filter` | Keep Challenge if the matches are still the crawler alone and none of the above has changed (owner's go for anything else) |
+| Mon 2026-11-30 (decided early) | `cloud-crawler-watch-c` review | Decided early on 2026-11-26 (owner's go): Challenge scoped to the one cloud network, published 16:35:40Z. The 48h check on Sat 2026-11-28 (row above) is the next touchpoint. A country-wide Challenge stays banned |
 
 A request carries one rule id in the metrics. Traffic that Bot Protection
 also logs shows as `managed_bot_filter`, so a watch rule's matches can read as
@@ -129,13 +130,54 @@ First hour (2026-11-26 02:49Z to 03:50Z): 5 matches under the rule's own id
 and 152 rebuilt from `managed_bot_filter`, all `log`, none denied or
 challenged; PetalBot matched none (every PetalBot request was allowed).
 
-At the 2026-11-30 review the owner chooses: keep logging, Challenge scoped to
-the single cloud network, or remove. Payload:
+Log payload:
 `private/proposed/item6-cloud-crawler-watch-c-log.apply.json`; before and
 after: `private/2026-11-25-watch-c-{before,after}.json` (named by the
 operator's local date). The other six rules, Bot Protection and the rest of
 the config were byte-identical across the change, compared from those two
 files.
+
+### Challenge, since 2026-11-26 16:35:40Z
+
+The owner decided early, on 2026-11-26, instead of waiting for the 2026-11-30
+review. In the 72h before (2026-11-23 16:00Z to 2026-11-26 16:00Z) the one
+cloud network carried about 95% of the Singapore target traffic that
+`cloud-crawler-watch-a` does not already challenge. Nothing on that network
+carried a bot label, matched the always-allow list or reached PostHog with a
+real session.
+
+The edit (config v10 to v11) replaced the country condition with a network
+condition; the other three conditions are unchanged. Condition, all four must
+hold:
+
+- the client's network is the one cloud network (its number is in the private
+  after-config);
+- the user agent does not contain PetalBot;
+- the path is not `/ads.txt`, `/app-ads.txt` or `/robots.txt`;
+- the user agent does not match the always-allow list (copied from
+  `api-rate-limit` byte for byte).
+
+Action: Challenge, no duration. The rule id and its place (last) did not
+change. Real visitors in Singapore no longer match: the rule no longer looks
+at country. It matches the network in every country, so the same crawler is
+also challenged where it arrives through the US and Malaysia edges. The
+smaller Singapore traffic from other networks is no longer logged by any watch
+rule.
+
+Gate 2 (16:36Z to 18:19Z, about 1h44m after publish): requests from the
+network fell from about 534 an hour before publish to under 40 an hour.
+Every one of them was challenged under the rule's own id; none was served,
+none solved the challenge, and no verified bot or always-allow agent was
+challenged. None was logged under `managed_bot_filter`, so Bot Protection
+(which stays Log) does not shadow the Challenge. Review evidence from here on
+is the rule's own id alone, by `waf_action`, country, user agent and path.
+
+Challenge payload:
+`private/proposed/item7-cloud-crawler-watch-c-challenge.apply.json`; before and
+after: `private/2026-11-26-watch-c-challenge-{before,after}.json`; Gate 2 notes:
+`private/2026-11-26-watch-c-challenge-gate2.md`. The other six rules, Bot
+Protection and the rest of the config were byte-identical across the change,
+compared from the before and after files.
 
 ## Publishing a change
 
@@ -157,10 +199,15 @@ All rollbacks are staged, then published; check `vercel firewall diff` first.
 - `cloud-crawler-watch-a` back to Log: `vercel firewall rules edit cloud-crawler-watch-a --action log --yes`, publish.
   Remove it entirely: `vercel firewall rules remove cloud-crawler-watch-a --yes`, publish.
 - `cloud-crawler-watch-b`: `vercel firewall rules remove cloud-crawler-watch-b --yes`, publish.
-- `cloud-crawler-watch-c`: `vercel firewall rules remove cloud-crawler-watch-c --yes`, publish.
-  It is Log only, so removing it changes no response. A Challenge (after the
-  review, owner's go) replaces the country condition with the network
-  condition; it never adds Challenge to the rule as written.
+- `cloud-crawler-watch-c` back to Log: restore the Log rule as it was before
+  2026-11-26 16:35:40Z, with the Singapore country condition in place of the
+  network condition:
+  `vercel firewall rules edit cloud-crawler-watch-c --json "$(jq -c . private/proposed/item6-cloud-crawler-watch-c-log.apply.json)" --yes`.
+  The diff must show only this rule: action Challenge to Log, the country
+  condition added and the network condition removed. Then publish. Never
+  leave Challenge on the country condition: a country-wide Challenge is a
+  country block and stays banned.
+  Remove it entirely: `vercel firewall rules remove cloud-crawler-watch-c --yes`, publish.
 - `go-rate-limit`: `vercel firewall rules remove go-rate-limit --yes`, publish.
   Promote it to Deny (after the review): `vercel firewall rules edit go-rate-limit`
   with the rate limit action `deny` and action duration `5m`; confirm with
