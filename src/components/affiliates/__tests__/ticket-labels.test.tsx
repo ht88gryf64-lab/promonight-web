@@ -179,3 +179,12 @@ test('every emitter of a TicketNetwork link takes its words from ticket-labels, 
     assert.doesNotMatch(s, /Resale tickets|Find tickets/, f.slice(root.length));
   }
 });
+
+test('a compact ticket card is at least 44px tall, whichever partner it carries; the full card is unchanged', async () => {
+  const compact = await render({ size: 'compact' });
+  const classes = [...compact.matchAll(/<a [^>]*class="([^"]+)"/g)].map((m) => m[1]);
+  assert.equal(classes.length, 2);
+  for (const c of classes) assert.match(c, /(^| )min-h-\[44px\]( |$)/);
+  const full = await render();
+  for (const m of full.matchAll(/<a [^>]*class="([^"]+)"/g)) assert.doesNotMatch(m[1], /min-h-/);
+});

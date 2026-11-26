@@ -4567,12 +4567,24 @@ One line each.
 
 One line each. The ticket partner test (StubHub vs TicketNetwork) is behind `NEXT_PUBLIC_TICKET_TEST`, default off; none of these exists while the switch is off.
 
-- **The floating video player covers the single ticket card at 1280.** On production it covers part of a two-card stack; a test team's page has one card, so it is the only above-the-fold ticket control.
-- **The compact TicketNetwork card is 43px tall.** On a TicketNetwork-day test page it is the only ticket control in the row dialog and the calendar panels (the StubHub card is 45px).
+- **The floating video player covers the team-page ticket card at common desktop sizes.** Raptive's sticky outstream player (`.adthrive-sticky-outstream`, fixed bottom right, about 227 by 150 px) sits over the right part of the sidebar column from about 1024 to 1700 px wide. Measured on production 2026-11-25 on `/nhl/minnesota-wild`: it covers the ticket card at rest at 1280x800 and 1536x730; clear at 1366x650 at rest (the card is below it, and passes under it on scroll); clear at 1920x950; promo pages are clear at every width (the button is in the centre column). Raptive exposes no position setting. Ruled 2026-11-25: no code change; Matt asks Raptive to move the desktop player to the bottom left site-wide. If Raptive declines, the fallback is to move the ticket card into the main column at desktop widths, shipped at the 2026-12-25 flip.
+- **The compact TicketNetwork card was 43px tall.** FIXED 2026-11-25 (fix/ticket-card-overlap): every compact ticket card is at least 44px, on both arms and on pages outside the test. The inline tiles on `/promos/today` keep their own 40px floor (a different layout, not changed).
+- **Official parking citations on `am.ticketmaster.com`.** NFL team pages cite the club's official parking page in the venue facts. Ruled 2026-11-25: left as is; they are source citations, not ticket buttons, and are the same on both arms.
 - **A game played today keeps its ticket link until the 00:15 Eastern refresh.** Same rule as the TicketNetwork event link on main (date on or after the site day, status scheduled); on a StubHub day the team-level card can point at a game that has just ended.
 - **eBay listings with item prices can sit on a StubHub-day promo page.** Ruled 2026-11-25: kept; they are merchandise, not a ticket marketplace.
 - **Apps and the email digest are outside the test.** The apps build ticket links from compiled constants and need a release to follow an arm; the digest renders no ticket link while `TICKETNETWORK_EMAIL_APPROVED` is unset.
 - **Six neutral-site games and NFL flex games without a confirmed StubHub date** have no `shEventUrl`; on a StubHub day they fall back to the TicketNetwork link (`fallback: true` on the click).
 - **StubHub `event_state` is not read by the pipeline matcher.** 40 written links carry state 4 or 6; the meaning of the states is not documented in the provider contract.
 - **No test covers the keep or drop of `shEventUrl` in `enrichGamesForTeam` or the `in_test` payload at the click.** Both are covered by served-HTML checks and by the card and promo page tests, not by a unit test of their own.
+
+## 135. Deferred from fix/ticket-card-overlap (logged 2026-11-25)
+
+One line each, all on production before this branch (ux-review 2026-11-25-compact-ticket-card-44px). The branch itself only raised the compact ticket card to 44px.
+
+- **The row ticket dialog is about twice as tall as its content.** 717px with 401px of content at 390, 870 with 396 at 768, 680 with 396 at 1280.
+- **The row "Tickets" button is 92x27 at 390.** The card inside the dialog is 44px; the way in is not.
+- **Other targets under 44x44 at 390.** Team page: day cells 41x41, month arrows 36x36, filter chips 34 tall, share buttons 32x32, menu 40x40, "Show 3 more completed promos" 39 tall. Promo page: breadcrumb links, image share 40x40, foot text links, menu 40x40.
+- **The TicketNetwork logo is drawn 60x16 in the compact card** and its wordmark is about 7px high.
+- **Not measured:** whether the compact ticket card still matches the compact SpotHero and Expedia cards in height where the three stack (the college football schedule modal), and the keyboard focus ring on the taller card.
+- **Seen once, not reproduced:** one dev-server load at 768 with ads blocked rendered no row "Tickets" buttons after 30 seconds; five further loads rendered all four.
 

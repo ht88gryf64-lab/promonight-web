@@ -144,7 +144,10 @@ export function TicketmasterCTA({
   // Full = mockup hero spec (px-[18px] py-4 = 16x18, gap-3, shadow 0 4px 16px).
   // Compact tightens for inline placements where the stack sits in a dense
   // context (modal, playoff card).
-  const padding = size === 'compact' ? 'px-3.5 py-2.5 gap-2.5' : 'px-[18px] py-4 gap-3';
+  // Compact cards are at least 44px tall (2026-11-25): the TicketNetwork card's
+  // 16px logo left it at 43px, under the tap-target floor, where it can be the
+  // only ticket control in a row dialog or a calendar panel.
+  const padding = size === 'compact' ? 'min-h-[44px] px-3.5 py-2.5 gap-2.5' : 'px-[18px] py-4 gap-3';
   const wordmarkSize = size === 'compact' ? 'text-[15px]' : 'text-[17px]';
   const ctaSize = size === 'compact' ? 'text-[14px]' : 'text-[16px]';
   const arrowSize = size === 'compact' ? 'text-[15px]' : 'text-[18px]';
