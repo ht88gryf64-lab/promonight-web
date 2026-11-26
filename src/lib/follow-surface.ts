@@ -100,8 +100,16 @@ export function coerceEntrySurface(value: unknown): CaptureSurface {
 // 'cfb' below: that would fold 86 sheet-less pages into web_team_page, which is
 // the sheet's comparison group. See the characterization test in
 // lib/__tests__/follow-surface.test.ts.
+//
+// THE HOMEPAGE HAS TWO SPELLINGS. usePathname() answers "/" in the browser and
+// in the build's prerender, and "/index" when Next regenerates the page on the
+// server (ISR): the root route's internal name. Until 2026-11-26 only "/" was
+// matched, so every regenerated copy of the homepage served the footer link
+// as /follow?source=web_other, and a fresh deploy served web_homepage until
+// its first regeneration. Both spellings are the homepage. No route is named
+// /index (it would 404), so nothing else can match it.
 export function inferCaptureSurface(pathname: string | null | undefined): CaptureSurface {
-  if (!pathname || pathname === '/') return 'web_homepage';
+  if (!pathname || pathname === '/' || pathname === '/index') return 'web_homepage';
   if (pathname.startsWith('/playoffs')) return 'web_playoffs_hub';
   if (pathname.startsWith('/promos') || pathname.startsWith('/best-promos')) {
     return 'web_aggregator';
