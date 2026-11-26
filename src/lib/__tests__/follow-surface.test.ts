@@ -150,6 +150,24 @@ test('path inference maps the routes it claims to map', () => {
   }
 });
 
+test('the homepage is web_homepage under both spellings of its route', () => {
+  // "/" in the browser and in the build's prerender; "/index" when Next
+  // regenerates the page on the server. Served HTML of a regenerated homepage
+  // carried /follow?source=web_other until this was matched (2026-11-26).
+  for (const p of ['/', '/index', '', null, undefined]) {
+    assert.strictEqual(inferCaptureSurface(p), 'web_homepage', `${String(p)}`);
+  }
+  // Only the exact internal name. A deeper path that merely starts or ends
+  // with "index" is not the homepage, and neither is a different casing.
+  for (const p of ['/index/', '/index.html', '/indexes', '/mlb/index', '/Index', 'index']) {
+    assert.notStrictEqual(inferCaptureSurface(p), 'web_homepage', p);
+  }
+  // The other mappings are untouched by the second spelling.
+  assert.strictEqual(inferCaptureSurface('/nba/chicago-bulls'), 'web_team_page');
+  assert.strictEqual(inferCaptureSurface('/promos/today'), 'web_aggregator');
+  assert.strictEqual(inferCaptureSurface('/playoffs'), 'web_playoffs_hub');
+});
+
 test('the league hubs and CFB fall to web_other, which is a KNOWN gap', () => {
   // Documented rather than asserted-as-correct. /mlb, /wnba and /mls are one
   // segment so they miss the two-segment team-page rule, and inferCaptureSurface
