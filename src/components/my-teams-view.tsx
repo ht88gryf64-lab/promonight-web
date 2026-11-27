@@ -1,5 +1,6 @@
 'use client';
 
+import { LeagueName } from '@/components/LeagueName';
 import { leagueLabel } from '@/lib/league-label';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -564,7 +565,7 @@ function FeaturedTeamCard({ team, light = false }: { team: Team; light?: boolean
         />
         <div className="p-3 pr-12">
           <div className="mb-1 font-rd text-[9px] uppercase tracking-[0.1em] text-rd-ink-faint">
-            {SPORT_ICONS[team.league]} {leagueLabel(team.league)}
+            {SPORT_ICONS[team.league]} <LeagueName league={team.league} />
           </div>
           <div className="text-[11px] text-rd-ink-soft">{team.city}</div>
           <div className="font-rd text-[15px] font-bold leading-tight text-rd-ink">
@@ -596,7 +597,7 @@ function FeaturedTeamCard({ team, light = false }: { team: Team; light?: boolean
       />
       <div className="p-3 pr-12">
         <div className="font-mono text-[9px] tracking-[1px] uppercase text-text-dim mb-1">
-          {SPORT_ICONS[team.league]} {leagueLabel(team.league)}
+          {SPORT_ICONS[team.league]} <LeagueName league={team.league} />
         </div>
         <div className="text-text-secondary text-[11px]">{team.city}</div>
         <div className="font-outfit font-extrabold text-[15px] text-white leading-tight">
@@ -778,7 +779,7 @@ function QuietTeamCard({ team, light = false }: { team: Team; light?: boolean })
         />
         <div className="p-3 pr-12">
           <div className="mb-1 font-rd text-[9px] uppercase tracking-[0.1em] text-rd-ink-faint">
-            {SPORT_ICONS[team.league]} {leagueLabel(team.league)}
+            {SPORT_ICONS[team.league]} <LeagueName league={team.league} />
           </div>
           <Link href={`/${team.sportSlug}/${team.id}`} className="group block">
             <div className="text-[11px] text-rd-ink-soft">{team.city}</div>
@@ -812,7 +813,7 @@ function QuietTeamCard({ team, light = false }: { team: Team; light?: boolean })
       />
       <div className="p-3 pr-12">
         <div className="font-mono text-[9px] tracking-[1px] uppercase text-text-dim mb-1">
-          {SPORT_ICONS[team.league]} {leagueLabel(team.league)}
+          {SPORT_ICONS[team.league]} <LeagueName league={team.league} />
         </div>
         <Link href={`/${team.sportSlug}/${team.id}`} className="block group">
           <div className="text-text-secondary text-[11px]">{team.city}</div>
@@ -1066,7 +1067,7 @@ function StarredChipsStrip({ teams, light = false }: { teams: Team[]; light?: bo
               </span>
               <span className="font-rd text-[12px] font-bold text-white">{teamDisplayName(team)}</span>
               <span className="font-rd text-[8px] tracking-[0.06em] text-white/70">
-                {leagueLabel(team.league)}
+                <LeagueName league={team.league} />
               </span>
             </Link>
           ))}
@@ -1097,7 +1098,7 @@ function StarredChipsStrip({ teams, light = false }: { teams: Team[]; light?: bo
               {teamDisplayName(team)}
             </span>
             <span className="font-mono text-[8px] text-white/70 tracking-[0.5px]">
-              {leagueLabel(team.league)}
+              <LeagueName league={team.league} />
             </span>
           </Link>
         ))}

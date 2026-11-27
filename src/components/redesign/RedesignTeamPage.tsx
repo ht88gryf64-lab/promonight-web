@@ -1,3 +1,4 @@
+import { LeagueName } from '@/components/LeagueName';
 import { leagueLabel } from '@/lib/league-label';
 import { ticketNetworkForGame } from '@/lib/affiliates';
 import type { Team, Venue, Promo, PromoType, PlayoffPromo } from '@/lib/types';
@@ -242,10 +243,10 @@ export function RedesignTeamPage({
           aria-label={`${leagueLabel(team.league)} promotions and giveaways hub`}
           className="underline-offset-2 transition-colors hover:text-white hover:underline"
         >
-          {leagueLabel(team.league)}
+          <LeagueName league={team.league} />
         </Link>
       ) : (
-        leagueLabel(team.league)
+        <LeagueName league={team.league} />
       )}
       {team.division ? <> · {team.division}</> : null}
     </>

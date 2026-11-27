@@ -11,3 +11,11 @@ const LEAGUE_LABELS: Readonly<Record<string, string>> = Object.freeze({ MILB: 'M
 export function leagueLabel(league: string): string {
   return Object.prototype.hasOwnProperty.call(LEAGUE_LABELS, league) ? LEAGUE_LABELS[league] : league;
 }
+
+/** True when the label already reads in capitals (every league but MILB): an
+ *  uppercase-styled surface may then render it as a plain string, unchanged.
+ *  False means it must go through <LeagueName> to survive text-transform. */
+export function leagueLabelIsCaps(league: string): boolean {
+  const label = leagueLabel(league);
+  return label === label.toUpperCase();
+}

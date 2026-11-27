@@ -1,3 +1,4 @@
+import { LeagueName } from '@/components/LeagueName';
 import { leagueLabel } from '@/lib/league-label';
 import type { PromoWithTeam } from '@/lib/types';
 import { PromoBadge } from './promo-badge';
@@ -125,7 +126,7 @@ export function ThisWeekStrip({ promos, today }: { promos: PromoWithTeam[]; toda
                             {promoDisplayOpponent(p) && (
                               <span className="text-text-dim"> vs {promoDisplayOpponent(p)}</span>
                             )}
-                            <span className="text-text-dim"> · {leagueLabel(p.team.league)}</span>
+                            <span className="text-text-dim"> · <LeagueName league={p.team.league} /></span>
                           </div>
                         </div>
                       </TrackedTapLink>

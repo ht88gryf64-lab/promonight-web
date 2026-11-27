@@ -1,8 +1,9 @@
 'use client';
 
-import { leagueLabel } from '@/lib/league-label';
+import { LeagueName } from '@/components/LeagueName';
+import { leagueLabel, leagueLabelIsCaps } from '@/lib/league-label';
 import Link from 'next/link';
-import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Team } from '@/lib/types';
 import { LEAGUE_ORDER, SPORT_ICONS } from '@/lib/types';
@@ -199,7 +200,7 @@ export function TeamsBrowser({ teams, promoCounts, sections = [], variant = 'dar
           return (
             <FilterPill
               key={league}
-              label={`${leagueLabel(league)} (${count})`}
+              label={leagueLabelIsCaps(league) ? `${leagueLabel(league)} (${count})` : <><LeagueName league={league} /> ({count})</>}
               active={active === league}
               onClick={() => switchTab(league)}
               light={light}
@@ -255,7 +256,7 @@ export function TeamsBrowser({ teams, promoCounts, sections = [], variant = 'dar
                     id={`teams-${section.league.toLowerCase()}`}
                     className="rd-display text-2xl text-rd-ink md:text-3xl"
                   >
-                    {leagueLabel(section.league)}
+                    <LeagueName league={section.league} />
                   </h2>
                   {/* `page-content` only while the league is shown (entry 73): a
                       hidden section's groups would still be Raptive anchors, and
@@ -325,7 +326,9 @@ function FilterPill({
   onClick,
   light = false,
 }: {
-  label: string;
+  // A ReactNode only for a mixed-case league label (MiLB), which must keep its
+  // case inside this uppercase pill; every other pill passes a string.
+  label: string | ReactNode;
   active: boolean;
   onClick: () => void;
   light?: boolean;
@@ -387,7 +390,7 @@ function TeamBrowserCard({
               border: `1px solid ${team.primaryColor}30`,
             }}
           >
-            {SPORT_ICONS[team.league]} {leagueLabel(team.league)}
+            {SPORT_ICONS[team.league]} <LeagueName league={team.league} />
           </span>
         </div>
         <div>

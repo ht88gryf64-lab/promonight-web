@@ -1,5 +1,6 @@
 'use client';
 
+import { LeagueName } from '@/components/LeagueName';
 import { leagueLabel } from '@/lib/league-label';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -62,7 +63,7 @@ export function FooterTeamSitemap({ teams }: { teams: Team[] }) {
                     : 'bg-transparent text-text-secondary border-border-subtle hover:border-border-hover'
                 }`}
               >
-                {leagueLabel(league)} ({byLeague.get(league)?.length ?? 0})
+                <LeagueName league={league} /> ({byLeague.get(league)?.length ?? 0})
               </button>
             ))}
           </div>

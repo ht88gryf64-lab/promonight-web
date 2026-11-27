@@ -1,3 +1,4 @@
+import { LeagueName } from '@/components/LeagueName';
 import { leagueLabel } from '@/lib/league-label';
 import Link from 'next/link';
 import { PromoCard } from '@/components/promo-rail/PromoCard';
@@ -63,7 +64,7 @@ export function PastPromosView({ team, seasons }: { team: Team; seasons: readonl
   return (
     <article className="page-content mx-auto w-full max-w-[640px] px-4 pb-10 lg:max-w-3xl" data-ad-region="content" style={{ ...themeStyle(palette), overflowAnchor: 'none' } as CSSProperties}>
       <nav aria-label="Breadcrumb" className="flex flex-wrap gap-1.5 pt-3.5 text-[12px] text-rd-ink-faint">
-        {leagueHref ? <Link href={leagueHref} className="no-underline hover:text-rd-ink">{leagueLabel(team.league)}</Link> : <span>{leagueLabel(team.league)}</span>}
+        {leagueHref ? <Link href={leagueHref} className="no-underline hover:text-rd-ink"><LeagueName league={team.league} /></Link> : <span><LeagueName league={team.league} /></span>}
         <span aria-hidden="true">/</span>
         <Link href={teamHref} className="no-underline hover:text-rd-ink">{teamName}</Link>
         <span aria-hidden="true">/</span>

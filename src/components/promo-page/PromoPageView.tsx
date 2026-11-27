@@ -1,4 +1,5 @@
-import { leagueLabel } from '@/lib/league-label';
+import { LeagueName } from '@/components/LeagueName';
+import { leagueLabel, leagueLabelIsCaps } from '@/lib/league-label';
 import { promoDisplayTitle } from '@/lib/promo-display-title';
 import { TICKET_CTA_LABEL, ticketAriaLabel } from '@/lib/ticket-labels';
 import { ResaleNote, TicketTestNote } from '@/components/affiliates/AffiliateDisclosure';
@@ -428,9 +429,13 @@ export function PromoPageView({ page, ctx, today, now, imageSize, ticketTest = n
     ctx.crossTeam?.kind === 'theme'
       ? 'Same promo, other teams'
       : ctx.crossTeam?.kind === 'league-type'
-        ? `More ${leagueLabel(team.league)} ${typePlural(primary.type, team.league)} coming up`
+        ? leagueLabelIsCaps(team.league)
+          ? `More ${leagueLabel(team.league)} ${typePlural(primary.type, team.league)} coming up`
+          : <>More <LeagueName league={team.league} /> {typePlural(primary.type, team.league)} coming up</>
         : ctx.crossTeam?.kind === 'league'
-          ? `More ${leagueLabel(team.league)} promos coming up`
+          ? leagueLabelIsCaps(team.league)
+            ? `More ${leagueLabel(team.league)} promos coming up`
+            : <>More <LeagueName league={team.league} /> promos coming up</>
           : `More ${typePlural(primary.type)} across pro sports`;
   const crossSub = ctx.crossTeam?.kind === 'theme' && theme ? `${theme} at other clubs this season` : null;
 
@@ -611,9 +616,9 @@ export function PromoPageView({ page, ctx, today, now, imageSize, ticketTest = n
       <article className="page-content mx-auto w-full max-w-[640px] px-4 pb-10 lg:max-w-3xl" data-ad-region="content" style={{ ...themeStyle(palette), overflowAnchor: 'none' } as CSSProperties}>
         <nav aria-label="Breadcrumb" className="flex flex-wrap gap-1.5 pt-3.5 text-[12px] text-rd-ink-faint">
           {leagueHref ? (
-            <Link href={leagueHref} className="no-underline hover:text-rd-ink">{leagueLabel(team.league)}</Link>
+            <Link href={leagueHref} className="no-underline hover:text-rd-ink"><LeagueName league={team.league} /></Link>
           ) : (
-            <span>{leagueLabel(team.league)}</span>
+            <span><LeagueName league={team.league} /></span>
           )}
           <span aria-hidden="true">/</span>
           <Link href={teamHref} className="no-underline hover:text-rd-ink">{teamDisplayName(team)}</Link>

@@ -1,5 +1,6 @@
 'use client';
 
+import { LeagueName } from '@/components/LeagueName';
 import { leagueLabel } from '@/lib/league-label';
 import { promoDisplayTitle } from '@/lib/promo-display-title';
 import { useMemo, useState } from 'react';
@@ -193,7 +194,7 @@ export function RedesignAggregatorList({
                             <span className="truncate">
                               {teamDisplayName(p.team)}
                               {promoDisplayOpponent(p) && <span className="text-rd-ink-faint"> vs {promoDisplayOpponent(p)}</span>}
-                              <span className="text-rd-ink-faint"> · {leagueLabel(p.team.league)}</span>
+                              <span className="text-rd-ink-faint"> · <LeagueName league={p.team.league} /></span>
                             </span>
                           </div>
                         </div>

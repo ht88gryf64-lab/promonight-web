@@ -1,5 +1,6 @@
 'use client';
 
+import { LeagueName } from '@/components/LeagueName';
 import { leagueLabel } from '@/lib/league-label';
 import { useState, useEffect } from 'react';
 import { TeamCard } from './team-card';
@@ -85,7 +86,7 @@ export function TeamSearch({ teams, promoCounts, initialLeague }: TeamSearchProp
                   : 'bg-transparent text-text-secondary border-border-subtle hover:border-border-hover'
               }`}
             >
-              {leagueLabel(league)} ({count})
+              <LeagueName league={league} /> ({count})
             </button>
           );
         })}

@@ -1,5 +1,6 @@
 'use client';
 
+import { LeagueName } from '@/components/LeagueName';
 import { leagueLabel } from '@/lib/league-label';
 import { useMemo, useState } from 'react';
 import type { Team } from '@/lib/types';
@@ -187,7 +188,7 @@ export function TeamStarPicker({
             {grouped.map((group) => (
               <div key={group.league} className="mb-2 last:mb-0">
                 <div className="px-2 py-1 font-rd text-[10px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">
-                  {SPORT_ICONS[group.league]} {leagueLabel(group.league)}
+                  {SPORT_ICONS[group.league]} <LeagueName league={group.league} />
                 </div>
                 <div className="space-y-1">
                   {group.teams.map((t) => (
