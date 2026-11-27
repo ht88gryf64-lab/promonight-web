@@ -34,19 +34,36 @@ const count = (n: number) => ({ get: async () => ({ data: () => ({ count: n }) }
 /** milbDoc: undefined = no appConfig/milb doc; an object = its data; an Error = the read throws. */
 export function makeFakeDb({ milbDoc }: { milbDoc: Data | Error | undefined }) {
   let milbPromoReads = 0;
-  const promosOf = (teamId: string) => ({
-    orderBy: () => ({
-      get: async () => {
-        if (TEAMS.find(([id]) => id === teamId)?.[1].league === 'MILB') milbPromoReads += 1;
-        return snap(PROMOS[teamId] ?? []);
-      },
-    }),
-    count: () => count((PROMOS[teamId] ?? []).length),
-    where: () => ({ count: () => count(0), get: async () => snap([]) }),
-  });
+  let milbTeamDocReads = 0;
+  const isMilb = (teamId: string) => TEAMS.find(([id]) => id === teamId)?.[1].league === 'MILB';
+  const promosOf = (teamId: string) => {
+    const read = async () => {
+      if (isMilb(teamId)) milbPromoReads += 1;
+      return snap(PROMOS[teamId] ?? []);
+    };
+    // where() chains (date range reads) count as reads of the club's promos.
+    const query: any = { where: () => query, orderBy: () => query, get: read, count: () => count(0) };
+    return { orderBy: () => ({ get: read }), count: () => count((PROMOS[teamId] ?? []).length), where: () => query };
+  };
   const db = {
     collection(name: string): any {
-      if (name === 'teams') return { get: async () => snap(TEAMS), doc: (id: string) => ({ collection: (c: string) => { if (c !== 'promos') throw new Error('unexpected ' + c); return promosOf(id); } }) };
+      if (name === 'teams') {
+        return {
+          get: async () => snap(TEAMS),
+          doc: (id: string) => ({
+            get: async () => {
+              if (isMilb(id)) milbTeamDocReads += 1;
+              const row = TEAMS.find(([t]) => t === id);
+              return row ? { exists: true, data: () => row[1] } : { exists: false, data: () => undefined };
+            },
+            collection: (c: string) => { if (c !== 'promos') throw new Error('unexpected ' + c); return promosOf(id); },
+          }),
+        };
+      }
+      if (name === 'venues' || name === 'games') {
+        const q: any = { where: () => q, orderBy: () => q, limit: () => q, get: async () => snap([]) };
+        return q;
+      }
       if (name === 'tnTeamMap') return { where: () => ({ get: async () => snap([]) }) };
       if (name === 'appConfig') {
         return {
@@ -67,7 +84,7 @@ export function makeFakeDb({ milbDoc }: { milbDoc: Data | Error | undefined }) {
       throw new Error(`unexpected collectionGroup ${name}`);
     },
   };
-  return { db, milbPromoReads: () => milbPromoReads };
+  return { db, milbPromoReads: () => milbPromoReads, milbTeamDocReads: () => milbTeamDocReads };
 }
 
 /** Stub every sitemap source that is not about teams, by resolved file URL. */

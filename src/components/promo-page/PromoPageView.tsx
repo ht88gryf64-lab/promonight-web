@@ -469,7 +469,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize, ticketTest = n
     // league hub, team page, this page (ruling 2026-11-08: the last crumb is
     // the page's own title, not a link).
     breadcrumbs: [
-      { name: team.league, url: `${SITE_URL}${leagueHref ?? '/'}` },
+      { name: leagueLabel(team.league), url: `${SITE_URL}${leagueHref ?? '/'}` },
       { name: teamName, url: `${SITE_URL}${teamHref}` },
       { name: shownName, url: canonical },
     ],

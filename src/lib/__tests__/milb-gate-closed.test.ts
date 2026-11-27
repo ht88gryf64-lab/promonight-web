@@ -45,3 +45,16 @@ test('closed gate: the hidden clubs are reported and their promos come off the s
   // collectionGroup count 10 = 7 pro + 2 durham + 1 st-paul; hidden 3 subtracted.
   assert.equal(await getPromoCount(), 7);
 });
+
+test('closed gate (review 2): /api/my-teams/promos drops a MILB slug before any read', async () => {
+  const { NextRequest } = await import('next/server');
+  const { GET } = await import('../../app/api/my-teams/promos/route');
+  const before = fake.milbPromoReads();
+  const res = await GET(new NextRequest('https://www.getpromonight.com/api/my-teams/promos?teams=durham-bulls,minnesota-twins&start=2026-01-01&end=2027-12-31'));
+  const body = (await res.json()) as { promos: { teamSlug: string }[]; venues: Record<string, unknown> };
+  assert.ok(!body.promos.some((p) => p.teamSlug === 'durham-bulls'), 'no MILB promo served');
+  assert.ok(!('durham-bulls' in body.venues), 'the MILB slug is not echoed back');
+  assert.ok('minnesota-twins' in body.venues, 'a pro slug is served as before');
+  assert.equal(fake.milbPromoReads(), before, 'no MILB promo read');
+  assert.equal(fake.milbTeamDocReads(), 0, 'no MILB team doc read');
+});
