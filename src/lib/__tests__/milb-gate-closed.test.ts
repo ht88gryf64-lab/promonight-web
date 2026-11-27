@@ -1,16 +1,15 @@
-// MiLB Phase 1, KNOWN-BAD (b): a MILB team doc exists in Firestore while the
-// gate is shut (no appConfig/milb doc at all). It must not appear in
-// getAllTeams, must not resolve by slug (so its team, promo and archive pages
-// 404), must not appear in the sitemap, and its promos must not count toward
-// the site-wide promo total. The real loaders and the real sitemap() run
-// against a fake Firestore; only the sitemap's unrelated sources are stubbed.
-// Its own file: node --test runs each file in its own process, so the team
-// loader's cache starts cold with this file's gate state.
+// KNOWN-BAD (c), MiLB G2b: the G1 gate-shut checks against the new paths.
+// MILB clubs exist in milbTeams with promos in milbPromos, and there is no
+// appConfig/milb doc. They must not appear in getAllTeams, resolve by slug,
+// appear in the sitemap, count toward the promo total or come back from the
+// my-teams API, and with the gate shut NO MILB PATH IS READ AT ALL. The real
+// loaders, sitemap() and route run against a fake Firestore; only the sitemap's
+// unrelated sources are stubbed. Own file: own process, cold team cache.
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeFakeDb, stubSitemapSources } from './milb-gate-fixtures';
 
-const fake = makeFakeDb({ milbDoc: undefined });
+const fake = makeFakeDb({ milbDoc: undefined, rogue: true });
 mock.module('server-only', { namedExports: {} });
 mock.module(new URL('../firebase.ts', import.meta.url).href, { namedExports: { db: fake.db } });
 stubSitemapSources(mock, import.meta.url);
@@ -26,6 +25,7 @@ test('closed gate: a MILB slug does not resolve, so its pages 404', async () => 
   const { getTeamBySlug } = await import('../data');
   assert.equal(await getTeamBySlug('durham-bulls'), null);
   assert.equal(await getTeamBySlug('st-paul-saints'), null);
+  assert.equal(await getTeamBySlug('rogue-in-teams'), null, 'a teams doc claiming MILB is served by nobody');
   assert.equal((await getTeamBySlug('minnesota-twins'))?.league, 'MLB');
 });
 
@@ -34,27 +34,34 @@ test('closed gate: the sitemap carries no MILB URL', async () => {
   const urls = (await sitemap()).map((e) => e.url);
   assert.ok(urls.includes('https://www.getpromonight.com/mlb/minnesota-twins'), 'MLB team present');
   assert.ok(urls.includes('https://www.getpromonight.com/nhl/toronto-maple-leafs'), 'NHL team present');
-  const milb = urls.filter((u) => /\/milb\/|durham-bulls|st-paul-saints/.test(u));
-  assert.deepEqual(milb, []);
-  assert.equal(fake.milbPromoReads(), 0, 'a shut gate reads no MILB promos for the sitemap');
+  assert.deepEqual(urls.filter((u) => /\/milb\/|durham-bulls|st-paul-saints|rogue/.test(u)), []);
 });
 
-test('closed gate: the hidden clubs are reported and their promos come off the site-wide count', async () => {
-  const { getGateHiddenTeamIds, getPromoCount } = await import('../data');
-  assert.deepEqual((await getGateHiddenTeamIds()).sort(), ['durham-bulls', 'st-paul-saints']);
-  // collectionGroup count 10 = 7 pro + 2 durham + 1 st-paul; hidden 3 subtracted.
-  assert.equal(await getPromoCount(), 7);
+test('closed gate: cross-team readers return no MILB row, and the promo count is the pro count', async () => {
+  const { getPromosFromDate, getPromosInDateRange, getPromosForDate, getPromoCount, getTeamPromos } = await import('../data');
+  const all = await getPromosFromDate('2026-01-01');
+  assert.ok(all.length > 0);
+  assert.ok(all.every((p) => p.team.league !== 'MILB'));
+  assert.ok(!all.some((p) => /Gnomes|Rogue|Opening Night|Fireworks/.test(p.title)));
+  assert.ok((await getPromosInDateRange('2027-05-01', '2027-06-30')).every((p) => p.team.id === 'minnesota-twins'));
+  assert.deepEqual(await getPromosForDate('2027-05-21'), []);
+  // A hidden slug resolves to the pro path (as any unknown slug always did):
+  // none of the club's milbPromos rows can come back through it.
+  assert.ok(!(await getTeamPromos('durham-bulls')).some((p) => /Gnomes|Opening Night/.test(p.title)));
+  // 7 pro promos + the rogue doc in a promos collection (counted as any stray
+  // promos doc always was); the 3 milbPromos docs are not counted.
+  assert.equal(await getPromoCount(), 8);
 });
 
-test('closed gate (review 2): /api/my-teams/promos drops a MILB slug before any read', async () => {
+test('closed gate: /api/my-teams/promos returns nothing for a MILB slug', async () => {
   const { NextRequest } = await import('next/server');
   const { GET } = await import('../../app/api/my-teams/promos/route');
-  const before = fake.milbPromoReads();
-  const res = await GET(new NextRequest('https://www.getpromonight.com/api/my-teams/promos?teams=durham-bulls,minnesota-twins&start=2026-01-01&end=2027-12-31'));
-  const body = (await res.json()) as { promos: { teamSlug: string }[]; venues: Record<string, unknown> };
-  assert.ok(!body.promos.some((p) => p.teamSlug === 'durham-bulls'), 'no MILB promo served');
-  assert.ok(!('durham-bulls' in body.venues), 'the MILB slug is not echoed back');
-  assert.ok('minnesota-twins' in body.venues, 'a pro slug is served as before');
-  assert.equal(fake.milbPromoReads(), before, 'no MILB promo read');
-  assert.equal(fake.milbTeamDocReads(), 0, 'no MILB team doc read');
+  const res = await GET(new NextRequest('https://www.getpromonight.com/api/my-teams/promos?teams=st-paul-saints,minnesota-twins&start=2026-01-01&end=2027-12-31'));
+  const body = (await res.json()) as { promos: { teamSlug: string; title: string }[] };
+  assert.equal(body.promos.filter((p) => p.teamSlug === 'minnesota-twins').length, 4);
+  assert.deepEqual(body.promos.filter((p) => p.teamSlug !== 'minnesota-twins'), []);
+});
+
+test('closed gate: after all of the above, not one MILB path was read', () => {
+  assert.deepEqual(fake.reads, { milbTeams: 0, milbPromos: 0 });
 });

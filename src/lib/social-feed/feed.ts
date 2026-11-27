@@ -3,8 +3,8 @@
 // only supplies the Firestore-backed loaders and the venue join.
 
 import 'server-only';
-import { db } from '@/lib/firebase';
-import { getAllTeams, getScoredPromosInDateRange, getTeamBySlug, getVenueForTeam, mapPromoDoc } from '@/lib/data';
+import { getAllTeams, getScoredPromosInDateRange, getTeamBySlug, getVenueForTeam, mapPromoDoc, promosColForTeamId, readPromoGroupDocs } from '@/lib/data';
+import { promosColRef } from '@/lib/team-paths';
 import { dedupePromos, isVisiblePromo, teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { promoPageHref } from '@/lib/promo-page-href';
 import { stampPromoPageCanonical } from '@/lib/promo-page-stamp';
@@ -59,20 +59,12 @@ async function readVisiblePromos(start: string, end: string): Promise<FeedPromo[
   const teamById = new Map(teams.map((t) => [t.id, t]));
   let docs: FirebaseFirestore.QueryDocumentSnapshot[];
   try {
-    const snapshot = await db
-      .collectionGroup('promos')
-      .where('date', '>=', start)
-      .where('date', '<=', end)
-      .orderBy('date', 'asc')
-      .get();
-    docs = snapshot.docs;
+    // The `promos` group, plus `milbPromos` while the MILB gate is open (src/lib/team-paths.ts).
+    docs = await readPromoGroupDocs((q) => q.where('date', '>=', start).where('date', '<=', end).orderBy('date', 'asc'));
   } catch {
     const perTeam = await Promise.all(
       teams.map(async (team) => {
-        const s = await db
-          .collection('teams')
-          .doc(team.id)
-          .collection('promos')
+        const s = await promosColRef(team.league, team.id)
           .where('date', '>=', start)
           .where('date', '<=', end)
           .get();
@@ -156,7 +148,8 @@ export async function getFeedRssItems(now: Date): Promise<{ items: RssItemInput[
 export async function findCardPromo(key: string): Promise<RssItemInput | null> {
   return resolveCard(key, {
     getPromo: async (teamId, promoId) => {
-      const doc = await db.collection('teams').doc(teamId).collection('promos').doc(promoId).get();
+      const promos = await promosColForTeamId(teamId);
+      const doc = await promos.doc(promoId).get();
       if (!doc.exists) return null;
       // No card for an NHL or NBA special-ticket row (WEB6 G2), nor for the
       // unflagged twin of one: when a same-date, same-title pair dedupes on the
@@ -169,7 +162,7 @@ export async function findCardPromo(key: string): Promise<RssItemInput | null> {
         // throw. resolveCard rejects a dateless row on its own (round 3).
         if (typeof data.date !== 'string' || data.date === '') return mapPromoDoc(doc);
         const key = String(data.title || '').trim().toLowerCase();
-        const sameDay = await db.collection('teams').doc(teamId).collection('promos').where('date', '==', data.date).get();
+        const sameDay = await promos.where('date', '==', data.date).get();
         const winner = sameDay.docs
           .filter((d) => d.data().tombstoned !== true && d.data().isPostseason !== true)
           .filter((d) => String(d.data().title || '').trim().toLowerCase() === key)

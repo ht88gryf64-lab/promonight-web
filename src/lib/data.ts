@@ -23,7 +23,8 @@ import type {
 import { SCORED_LEAGUES, isRegularSeasonGame } from './types';
 // (PROMO_SCORED_LEAGUES is passed in by its one caller, src/lib/seasons/ranked-rows.ts.)
 import { makeCollectionLoader, makeKeyedTtlCache, type CachedDoc } from './collection-cache';
-import { readMilbLive, teamVisibleUnderGate } from './milb-gate';
+import { isMilbLeague, readMilbLive, teamVisibleUnderGate } from './milb-gate';
+import { MILB_PATHS, PRO_PATHS, promoDocBelongs, promosColRef, recurringColRef } from './team-paths';
 import {
   buildWeekBuckets,
   selectWeekContext,
@@ -228,25 +229,103 @@ async function readTnHomeUnavailable(): Promise<Set<string>> {
 /** `list` is sorted exactly as the old getAllTeams sorted (league, then city),
  *  so every caller that relies on the shipped order — the team grid's index
  *  math in teams-browser.tsx, the sitemap's URL order — sees no change. */
-const loadTeams = makeCollectionLoader<{ list: Team[]; byId: Map<string, Team>; hiddenIds: string[] }>(async () => {
-  const [snapshot, tnHomeUnavailable, milbLive] = await Promise.all([db.collection('teams').get(), readTnHomeUnavailable(), readMilbLive()]);
-  // THE MILB GATE (src/lib/milb-gate.ts): while appConfig/milb.milbLive is not
-  // true, a MILB doc is dropped HERE, before list and byId exist, so neither
-  // getAllTeams nor getTeamBySlug can return it. In the same loader as the
-  // teams, so a club and the gate are one generation.
-  const all = snapshot.docs.map(mapTeamDoc);
-  const list = all.filter((t) => teamVisibleUnderGate(t.league, milbLive));
-  const hiddenIds = all.filter((t) => !teamVisibleUnderGate(t.league, milbLive)).map((t) => t.id);
+const loadTeams = makeCollectionLoader<{ list: Team[]; byId: Map<string, Team>; milbLive: boolean }>(async () => {
+  const [snapshot, tnHomeUnavailable, milbFlag] = await Promise.all([db.collection(PRO_PATHS.teams).get(), readTnHomeUnavailable(), readMilbLive()]);
+  // THE MILB GATE (src/lib/milb-gate.ts) AND THE MILB HOME (src/lib/team-paths.ts).
+  // MILB clubs live in milbTeams, never in teams. While appConfig/milb.milbLive
+  // is not true that collection is NOT READ AT ALL: no MILB team exists for
+  // getAllTeams or getTeamBySlug, and with no MILB team no reader reaches a
+  // milbPromos doc. In the same loader as the teams, so a club and the gate
+  // are one generation. A failed milbTeams read hides MILB (fail closed) and
+  // never fails the pro teams.
+  let milbDocs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+  let milbLive = milbFlag;
+  if (milbFlag) {
+    try {
+      milbDocs = (await db.collection(MILB_PATHS.teams).get()).docs;
+    } catch (err) {
+      console.error('[data] milbTeams read failed; MILB stays hidden for this generation', err);
+      milbLive = false;
+    }
+  }
+  // One club, one home: a `teams` doc claiming MILB, or a `milbTeams` doc that
+  // does not, is in the wrong collection and is served by neither.
+  const list = [
+    ...snapshot.docs.map(mapTeamDoc).filter((t) => !isMilbLeague(t.league)),
+    ...milbDocs.map(mapTeamDoc).filter((t) => isMilbLeague(t.league) && teamVisibleUnderGate(t.league, milbLive)),
+  ];
   // In the same loader, so a club and its flag are one generation.
   for (const t of list) if (tnHomeUnavailable.has(t.id)) t.tnHomeUnavailable = true;
   list.sort((a, b) => a.league.localeCompare(b.league) || a.city.localeCompare(b.city));
-  return { list, byId: new Map(list.map((t) => [t.id, t])), hiddenIds };
+  const generation = { list, byId: new Map(list.map((t) => [t.id, t])), milbLive };
+  servedTeams = generation;
+  return generation;
 });
 
-/** Team ids the MILB gate is hiding (empty when it is open or no MILB doc
- *  exists). For the one promo reader that counts without the team list. */
-export async function getGateHiddenTeamIds(): Promise<string[]> {
-  return [...(await loadTeams()).hiddenIds];
+// The loader's latest generation, for the ONE reader that must not add an
+// await before its Firestore read (getTeamPromos: its await shape is pinned,
+// see the note above it). Every caller of getTeamPromos has resolved its team
+// through the loader first, so the generation exists and knows the team; with
+// none yet (or an id it does not know) the league is undefined and the pro
+// path is read, as it always was.
+let servedTeams: { byId: Map<string, Team> } | null = null;
+function leagueOfServedTeam(teamId: string): string | undefined {
+  return servedTeams?.byId.get(teamId)?.league;
+}
+
+/** MILB promo docs for a cross-team read: the `milbPromos` collection group,
+ *  read ONLY while the gate is open ([] and no read otherwise). `build` adds
+ *  the same where/orderBy the caller's `promos` group query carries. */
+async function milbGroupDocs(
+  build: (q: FirebaseFirestore.Query) => FirebaseFirestore.Query,
+): Promise<FirebaseFirestore.QueryDocumentSnapshot[]> {
+  if (!(await loadTeams()).milbLive) return [];
+  return (await build(db.collectionGroup(MILB_PATHS.promos)).get()).docs;
+}
+
+/** `pro` followed by `milb`, re-sorted by date when there is anything to
+ *  merge. With no MILB docs (the gate shut) it is `pro` itself, untouched. */
+function mergeDocsByDate<T extends FirebaseFirestore.QueryDocumentSnapshot>(pro: T[], milb: T[]): T[] {
+  if (milb.length === 0) return pro;
+  return [...pro, ...milb].sort((a, b) => String(a.data().date).localeCompare(String(b.data().date)));
+}
+
+/** The team a collection-group promo doc belongs to, or undefined: its parent
+ *  team must be served AND the doc must sit where that team's league keeps
+ *  promos (src/lib/team-paths.ts promoDocBelongs). */
+function teamOfPromoDoc(doc: FirebaseFirestore.QueryDocumentSnapshot, teamById: Map<string, Team>): Team | undefined {
+  const team = teamById.get(doc.ref.parent.parent!.id);
+  return team && promoDocBelongs(doc, team.league) ? team : undefined;
+}
+
+/** A cross-team promo read for readers outside this module: the `promos`
+ *  group, plus the `milbPromos` group while the gate is open, in date order,
+ *  keeping only docs that sit where their team's league keeps promos (a doc
+ *  whose parent is not a served team is kept, as before, for the caller's own
+ *  team join to drop). With the gate shut it is the `promos` group's docs. */
+export async function readPromoGroupDocs(
+  build: (q: FirebaseFirestore.Query) => FirebaseFirestore.Query,
+): Promise<FirebaseFirestore.QueryDocumentSnapshot[]> {
+  const pro = (await build(db.collectionGroup(PRO_PATHS.promos)).get()).docs;
+  const milb = await milbGroupDocs(build);
+  if (milb.length === 0 && !(await loadTeams()).milbLive) return pro;
+  const { byId } = await loadTeams();
+  return mergeDocsByDate(pro, milb).filter((d) => {
+    const team = byId.get(d.ref.parent.parent?.id ?? '');
+    return !team || promoDocBelongs(d, team.league);
+  });
+}
+
+/** The recurringDeals collection of a served team, by id (as promosColForTeamId). */
+export async function recurringColForTeamId(teamId: string): Promise<FirebaseFirestore.CollectionReference> {
+  return recurringColRef((await loadTeams()).byId.get(teamId)?.league, teamId);
+}
+
+/** The promos collection of a served team, by id: milbTeams/{id}/milbPromos
+ *  for a MILB club the gate is serving, teams/{id}/promos for everything else
+ *  (an id the loader does not know reads the pro path, as it always did). */
+export async function promosColForTeamId(teamId: string): Promise<FirebaseFirestore.CollectionReference> {
+  return promosColRef((await loadTeams()).byId.get(teamId)?.league, teamId);
 }
 
 /** `docs` is in Firestore's `__name__` ascending order. That order is
@@ -348,10 +427,10 @@ function mapPromoDocNotingPackage(doc: FirebaseFirestore.DocumentSnapshot): Prom
 // main's own build does the same on 8 pages, a different 8 each build: the
 // metadata row's place in an on-demand render is a race, not this code.)
 export const getTeamPromos = cache(async (teamId: string): Promise<Promo[]> => {
-  const snapshot = await db
-    .collection('teams')
-    .doc(teamId)
-    .collection('promos')
+  // teams/{id}/promos, or milbTeams/{id}/milbPromos for a MILB club the gate
+  // is serving (src/lib/team-paths.ts). The league is read synchronously so
+  // this stays one read with nothing in front of it, as it has always been.
+  const snapshot = await promosColRef(leagueOfServedTeam(teamId), teamId)
     .orderBy('date', 'asc')
     .get();
   const rows = dedupePromos(snapshot.docs.map(mapPromoDocNotingPackage).filter(isVisiblePromo));
@@ -372,9 +451,8 @@ export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
       .where('date', '==', date)
       .get();
     const results: PromoWithTeam[] = [];
-    for (const doc of snapshot.docs) {
-      const teamRef = doc.ref.parent.parent!;
-      const team = teamById.get(teamRef.id);
+    for (const doc of mergeDocsByDate(snapshot.docs, await milbGroupDocs((q) => q.where('date', '==', date)))) {
+      const team = teamOfPromoDoc(doc, teamById);
       if (team) results.push(promoWithTeam(doc, team));
     }
     return withGameDisplay(linkPromoPages(dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id))), undefined, { gameIdLeagues: FUBO_LIVE_LEAGUES });
@@ -382,10 +460,7 @@ export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
     const all: PromoWithTeam[] = [];
     await Promise.all(
       teams.map(async (team) => {
-        const snapshot = await db
-          .collection('teams')
-          .doc(team.id)
-          .collection('promos')
+        const snapshot = await promosColRef(team.league, team.id)
           .where('date', '==', date)
           .get();
         for (const doc of snapshot.docs) {
@@ -448,9 +523,8 @@ export async function getPromosInDateRange(
       .get();
 
     const results: PromoWithTeam[] = [];
-    for (const doc of snapshot.docs) {
-      const teamRef = doc.ref.parent.parent!;
-      const team = teamById.get(teamRef.id);
+    for (const doc of mergeDocsByDate(snapshot.docs, await milbGroupDocs((q) => q.where('date', '>=', startDate).where('date', '<=', endDate).orderBy('date', 'asc')))) {
+      const team = teamOfPromoDoc(doc, teamById);
       if (team) {
         results.push(promoWithTeam(doc, team));
       }
@@ -460,10 +534,7 @@ export async function getPromosInDateRange(
     const allPromos: PromoWithTeam[] = [];
     await Promise.all(
       teams.map(async (team) => {
-        const snapshot = await db
-          .collection('teams')
-          .doc(team.id)
-          .collection('promos')
+        const snapshot = await promosColRef(team.league, team.id)
           .where('date', '>=', startDate)
           .where('date', '<=', endDate)
           .get();
@@ -491,9 +562,8 @@ export async function getPromosFromDate(startDate: string): Promise<PromoWithTea
       .get();
 
     const results: PromoWithTeam[] = [];
-    for (const doc of snapshot.docs) {
-      const teamRef = doc.ref.parent.parent!;
-      const team = teamById.get(teamRef.id);
+    for (const doc of mergeDocsByDate(snapshot.docs, await milbGroupDocs((q) => q.where('date', '>=', startDate).orderBy('date', 'asc')))) {
+      const team = teamOfPromoDoc(doc, teamById);
       if (team) {
         results.push(promoWithTeam(doc, team));
       }
@@ -503,10 +573,7 @@ export async function getPromosFromDate(startDate: string): Promise<PromoWithTea
     const allPromos: PromoWithTeam[] = [];
     await Promise.all(
       teams.map(async (team) => {
-        const snapshot = await db
-          .collection('teams')
-          .doc(team.id)
-          .collection('promos')
+        const snapshot = await promosColRef(team.league, team.id)
           .where('date', '>=', startDate)
           .get();
         for (const doc of snapshot.docs) {
@@ -536,18 +603,18 @@ export async function getPromoCount(): Promise<number> {
   // that club's own promos collection. Flagged rows are subtracted whether or
   // not they are tombstoned, because the total above holds both. The raw flag
   // on MLB, MLS and WNBA rows is ignored here as everywhere.
-  const [teams, hiddenIds] = await Promise.all([getAllTeams(), getGateHiddenTeamIds()]);
+  const [teams, milbLive] = await Promise.all([getAllTeams(), loadTeams().then((t) => t.milbLive)]);
   const packageClubs = teams.filter((t) => isTicketPackageLeague(t.league));
-  const [total, hidden, ...packages] = await Promise.all([
+  const [total, milb, ...packages] = await Promise.all([
     db.collectionGroup('promos').count().get(),
-    // The MILB gate (src/lib/milb-gate.ts): the group count sees every club's
-    // promos, so the clubs the gate hides are counted and taken back out.
-    Promise.all(hiddenIds.map((id) => db.collection('teams').doc(id).collection('promos').count().get())),
+    // MILB promos are not in any `promos` collection (src/lib/team-paths.ts):
+    // their own group is counted, and only while the gate is open.
+    milbLive ? db.collectionGroup(MILB_PATHS.promos).count().get() : Promise.resolve(null),
     ...packageClubs.map((t) =>
       db.collection('teams').doc(t.id).collection('promos').where('ticketPackageRequired', '==', true).count().get(),
     ),
   ]);
-  return total.data().count - hidden.reduce((n, s) => n + s.data().count, 0) - packages.reduce((n, s) => n + s.data().count, 0);
+  return total.data().count + (milb ? milb.data().count : 0) - packages.reduce((n, s) => n + s.data().count, 0);
 }
 
 // READ-COST NOTE. This resolves off the cached venues collection (148 docs)
@@ -1196,10 +1263,7 @@ async function getTeamPromosOnDates(teamId: string, dates: Set<string>, league: 
   const runs = mergeDateRuns(dates);
   const perRun = await Promise.all(
     runs.map(async ([start, end]) => {
-      const snapshot = await db
-        .collection('teams')
-        .doc(teamId)
-        .collection('promos')
+      const snapshot = await promosColRef(league, teamId)
         .where('date', '>=', start)
         .where('date', '<=', end)
         .orderBy('date', 'asc')

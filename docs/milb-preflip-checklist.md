@@ -70,3 +70,11 @@ pages and in PostHog after the flip, not by a source grep (CLAUDE.md).
 - [ ] JSON-LD Events need a `location`, or the Event is left out.
 - [ ] Read a real MILB team page after the first execute: game times on cards and sheets (the preview fixture carried none).
 
+## From MiLB G2b (milbTeams / milbPromos, 2026-11-27)
+
+- [ ] G4: `scripts/tn-event-links.js` (pipeline) picks TicketNetwork candidate games from `collectionGroup('promos')`; MILB promos are in `milbPromos` and need their own read there.
+- [ ] The apps: nothing under `milbTeams/**` is client-readable (firestore.rules has no match for it; the catch-all denies). Showing MiLB in the apps needs an app release AND a rules change, both deliberate.
+- [ ] `appConfig/milb` is readable by any signed-in client (`match /appConfig/{docId}`): the flag's value is not a secret, but nothing else may be stored on that doc.
+- [ ] Scored and league-hub readers (`fetchScoredPromos`, `getTopPromosPerTeam`, `getLeagueUpcomingPromoCounts`, `getLeagueHubSeason`) read the `promos` group only: MiLB has no rankings and no hub until those are built on purpose.
+- [ ] Sugar Land's promotions page title is stamped "2026 Promotions"; the MILB season window drops prior-season rows (no action, ruling 2026-11-27).
+
