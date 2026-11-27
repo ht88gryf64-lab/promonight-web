@@ -4638,3 +4638,12 @@ One line each. Seen on a local render of a fixture MILB team page with the gate 
 ## 140. One promo stored as two item rows (logged 2026-11-27)
 
 - **The web phase of the entity model must show one card per item.** Indiana Fever "Lucas Oil Family Night" stores the night and its hat as two rows on each of three dates (2026-06-18, 2026-07-17, 2026-08-28; titles "Lucas Oil Family Night" and "Lucas Oil Family Night Hat"), and both rows carry `kind: 'item'` after the backfill of 2026-11-27. A reader that lists items would show the same hat twice. Join on the derived game key (`promoGameKey`, team and date) and collapse rows that name the same item before rendering. Other pairs of the same shape seen in the backfill dry runs: New York Giants "Light Bands" and "Lightbands" (2026-11-12), Toronto Blue Jays "Youth Baseball Specialty Ticket" and "Blue Jays Youth Elbow Guard" (2026-08-12).
+
+
+## 141. Deferred from the entity kind backfill (logged 2026-11-27)
+
+One line each. The backfill (entity model phase 4) wrote `kind` on all six pro leagues on 2026-11-27; these are what it left.
+
+- **A package-flagged row whose title is a bare or unlisted noun and has no description classifies as event; it should go to review.** Seen on Penguins "Tote" and Blues "Louie Loot Bag" and "Louie Needlepoint Kit" (2026-11-27 NHL scan), all set to item by override. A classifier change (`lib/scanner/promo-kind.js`), for the MiLB thread or a later pass.
+- **Blues and Penguins package rows arrive from the scan with empty descriptions**, which leaves the title as the only evidence of what the package holds.
+- **Marlins "$1 Kids Tickets" classified inconsistently across dates**: an item on 2026-06-22, a deal (event) on its other three dates. Fixed by override for 06-22.
