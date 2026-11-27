@@ -25,7 +25,8 @@ import 'server-only';
 import { cache } from 'react';
 import { Timestamp } from 'firebase-admin/firestore';
 import { db } from './firebase';
-import { getAllTeams, getGamesForTeam, getTeamPromos, getVenueForTeam, isTicketPackagePromo, mapPromoDoc } from './data';
+import { getAllTeams, getGamesForTeam, getTeamPromos, getVenueForTeam, isTicketPackagePromo, mapPromoDoc, promosColForTeamId, readPromoGroupDocs } from './data';
+import { promosColRef } from './team-paths';
 import { applyGameDisplay, buildGameIndex, resolveShEventUrl, resolveTnEventUrl } from './promo-game-join';
 import { makeKeyedTtlCache, STATIC_TTL_MS } from './collection-cache';
 import { getVenueHub, getVenueHubForTeam, type TeamVenueHubLink } from './venue-hub';
@@ -119,7 +120,7 @@ interface TeamDoc {
 /** The team's whole promo subcollection, once per request. Postseason rows
  *  are left out here, as every regular reader leaves them out. */
 const loadTeamPromoDocs = cache(async (teamId: string): Promise<TeamDoc[]> => {
-  const snap = await db.collection('teams').doc(teamId).collection('promos').get();
+  const snap = await (await promosColForTeamId(teamId)).get();
   return snap.docs.map((d) => ({ id: d.id, data: d.data() })).filter((d) => d.data.isPostseason !== true);
 });
 
@@ -436,12 +437,13 @@ export interface IndexedPromo {
 
 async function readUpcomingDocs(today: string, teams: Team[]): Promise<{ teamId: string; id: string; data: FirebaseFirestore.DocumentData }[]> {
   try {
-    const snap = await db.collectionGroup('promos').where('date', '>=', today).orderBy('date', 'asc').get();
-    return snap.docs.map((d) => ({ teamId: d.ref.parent.parent?.id ?? '', id: d.id, data: d.data() }));
+    // The `promos` group, plus `milbPromos` while the MILB gate is open (src/lib/team-paths.ts).
+    const docs = await readPromoGroupDocs((q) => q.where('date', '>=', today).orderBy('date', 'asc'));
+    return docs.map((d) => ({ teamId: d.ref.parent.parent?.id ?? '', id: d.id, data: d.data() }));
   } catch {
     const perTeam = await Promise.all(
       teams.map(async (t) => {
-        const s = await db.collection('teams').doc(t.id).collection('promos').where('date', '>=', today).get();
+        const s = await promosColRef(t.league, t.id).where('date', '>=', today).get();
         return s.docs.map((d) => ({ teamId: t.id, id: d.id, data: d.data() }));
       }),
     );
@@ -733,12 +735,12 @@ export function pastPromosPath(sportSlug: string, teamId: string): string {
 
 async function readPastDocs(floor: string, today: string, teams: Team[]): Promise<{ teamId: string; id: string; data: FirebaseFirestore.DocumentData }[]> {
   try {
-    const snap = await db.collectionGroup('promos').where('date', '>=', floor).where('date', '<', today).orderBy('date', 'asc').get();
-    return snap.docs.map((d) => ({ teamId: d.ref.parent.parent?.id ?? '', id: d.id, data: d.data() }));
+    const docs = await readPromoGroupDocs((q) => q.where('date', '>=', floor).where('date', '<', today).orderBy('date', 'asc'));
+    return docs.map((d) => ({ teamId: d.ref.parent.parent?.id ?? '', id: d.id, data: d.data() }));
   } catch {
     const perTeam = await Promise.all(
       teams.map(async (t) => {
-        const s = await db.collection('teams').doc(t.id).collection('promos').where('date', '>=', floor).where('date', '<', today).get();
+        const s = await promosColRef(t.league, t.id).where('date', '>=', floor).where('date', '<', today).get();
         return s.docs.map((d) => ({ teamId: t.id, id: d.id, data: d.data() }));
       }),
     );

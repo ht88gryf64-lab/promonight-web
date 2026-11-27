@@ -2,6 +2,7 @@ import 'server-only';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { db } from './firebase';
 import { getGamesForTeam, getTeamBySlug } from './data';
+import { promosColRef } from './team-paths';
 import { getVenueHub, getVenueHubForTeam } from './venue-hub';
 import { resolvePromoPage } from './promo-pages';
 import { cleanText, promoPagePath, quantityLine } from './promo-page-copy';
@@ -116,7 +117,7 @@ export interface ScheduleResult {
 export async function scheduleReminderForSignup(input: { subscriberId: string; teamId: string; promoId: string; now: Date }): Promise<ScheduleResult> {
   const team = await getTeamBySlug(input.teamId);
   if (!team) return { outcome: 'none' };
-  const snap = await db.collection('teams').doc(team.id).collection('promos').doc(input.promoId).get();
+  const snap = await promosColRef(team.league, team.id).doc(input.promoId).get();
   const data = snap.exists ? snap.data() : undefined;
   const pageSlug = str(data?.pageSlug);
   if (!data || data.tombstoned === true || data.isPostseason === true || !pageSlug) return { outcome: 'none' };
@@ -284,12 +285,12 @@ export function firestoreReminderDeps(now: Date): ReminderDeps {
       return snap.size;
     },
     async getRow(teamId, promoId) {
-      const doc = await db.collection('teams').doc(teamId).collection('promos').doc(promoId).get();
+      const doc = await promosColRef((await getTeamBySlug(teamId))?.league, teamId).doc(promoId).get();
       const d = doc.exists ? doc.data() : undefined;
       return d ? toRow(doc.id, d) : null;
     },
     async getTeamRows(teamId) {
-      const snap = await db.collection('teams').doc(teamId).collection('promos').get();
+      const snap = await promosColRef((await getTeamBySlug(teamId))?.league, teamId).get();
       return snap.docs.map((d) => toRow(d.id, d.data()));
     },
     async zoneFor(teamId, gameDate) {

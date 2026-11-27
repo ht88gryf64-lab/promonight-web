@@ -70,3 +70,15 @@ pages and in PostHog after the flip, not by a source grep (CLAUDE.md).
 - [ ] JSON-LD Events need a `location`, or the Event is left out.
 - [ ] Read a real MILB team page after the first execute: game times on cards and sheets (the preview fixture carried none).
 
+## From MiLB G2b (milbTeams / milbPromos, 2026-11-27)
+
+- [ ] G4: `scripts/tn-event-links.js` (pipeline) picks TicketNetwork candidate games from `collectionGroup('promos')`; MILB promos are in `milbPromos` and need their own read there.
+- [ ] The apps: nothing under `milbTeams/**` is client-readable (firestore.rules has no match for it; the catch-all denies). Showing MiLB in the apps needs an app release AND a rules change, both deliberate.
+- [ ] `appConfig/milb` is readable by any signed-in client (`match /appConfig/{docId}`): the flag's value is not a secret, but nothing else may be stored on that doc.
+- [ ] Scored and league-hub readers (`fetchScoredPromos`, `getTopPromosPerTeam`, `getLeagueUpcomingPromoCounts`, `getLeagueHubSeason`) read the `promos` group only: MiLB has no rankings and no hub until those are built on purpose.
+- [ ] Sugar Land's promotions page title is stamped "2026 Promotions"; the MILB season window drops prior-season rows (no action, ruling 2026-11-27).
+- [ ] **BLOCKER: a collection-group index on `milbPromos.date`.** `firestore.indexes.json` (app repo) carries a COLLECTION_GROUP override for `promos.date` only. Without the same for `milbPromos`, every filtered `collectionGroup('milbPromos')` read fails once the gate is open. The readers fail soft (MILB rows are dropped and logged; pro leagues unaffected), so the symptom is a live gate with no MiLB on boards, feeds, promo pages or X. Add the override, deploy indexes, and confirm one filtered read before the flip (adversarial review 2026-11-27, finding 1).
+- [ ] Venue hubs: `src/lib/venue-hub.ts:928` and `:981` run `getTeamBySlug` and `getTeamPromos` in one `Promise.all`, so `getTeamPromos`' synchronous league peek can run before the loader has resolved. Harmless while no venue hub lists a MILB tenant (venues are out of scope); await the team first before one does (review finding 5).
+- [ ] My Teams: `fetchVenueForTeam` in `src/app/api/my-teams/promos/route.ts` reads `teams/{slug}`, so a MILB club gets no venue there (review finding 6; venues out of scope).
+- [ ] A stray doc at `teams/{milbSlug}/promos` would still be read by `getTeamPromos(slug)` called directly and counted by `getPromoCount`; nothing writes there (the pipeline refuses it by name, and production held none on 2026-11-27). Re-check with one read before the flip.
+

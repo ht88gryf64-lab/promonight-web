@@ -2,13 +2,15 @@
 //
 // appConfig/milb.milbLive is the one switch for Minor League Baseball on the
 // site. Until it is exactly `true`, a MILB team doc does not exist as far as the
-// site is concerned: the team loader (src/lib/data.ts loadTeams) drops it from
-// getAllTeams AND getTeamBySlug, so no MILB team page, promo page or archive
-// page resolves (404), and nothing built from the team list can name a MILB club
-// or its promotions: the sitemap, league hubs, best promos, team rankings, the
-// weekly digest, the social feed, the today/this-week boards, coverage counts.
-// The one reader that counts promos without the team list (getTotalPromoCount)
-// subtracts the hidden clubs explicitly.
+// site is concerned. MILB clubs live in milbTeams and their promos in
+// milbPromos (src/lib/team-paths.ts), and while the gate is shut the team
+// loader (src/lib/data.ts loadTeams) does not read milbTeams at all: getAllTeams
+// AND getTeamBySlug know no MILB club, so no MILB team page, promo page or
+// archive page resolves (404), nothing built from the team list can name a
+// MILB club or its promotions (the sitemap, league hubs, best promos, team
+// rankings, the weekly digest, the social feed, the today/this-week boards,
+// coverage counts), and no reader touches a milbPromos doc. The promo count
+// adds the milbPromos group only while the gate is open.
 //
 // FAIL CLOSED. Absent doc, absent field, any value but `true`, or a failed read
 // all mean "not live". A gate that opened on a read error would publish 120

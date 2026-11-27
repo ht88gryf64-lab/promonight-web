@@ -7,7 +7,7 @@
 
 import 'server-only';
 import { cache } from 'react';
-import { db } from './firebase';
+import { recurringColForTeamId } from './data';
 
 export type RecurringDealCategory = 'food' | 'drink' | 'kids' | 'ticket' | 'music';
 
@@ -64,11 +64,9 @@ const isVisibleRecurring = (d: RecurringDeal): boolean => d.tombstoned !== true;
 // with no recurring deals, which the section component renders as nothing.
 export const getRecurringDealsForTeam = cache(
   async (teamId: string): Promise<RecurringDeal[]> => {
-    const snapshot = await db
-      .collection('teams')
-      .doc(teamId)
-      .collection('recurringDeals')
-      .get();
+    // teams/{id}/recurringDeals, or milbTeams/{id}/recurringDeals for a MILB
+    // club the gate is serving (src/lib/team-paths.ts).
+    const snapshot = await (await recurringColForTeamId(teamId)).get();
     return snapshot.docs.map(mapRecurringDealDoc).filter(isVisibleRecurring);
   },
 );
