@@ -4628,3 +4628,8 @@ One line each. Seen on a local render of a fixture MILB team page with the gate 
 - **A club with few promotions reads thin**: the theme-nights section restates the cards, and three of four hero tiles read 0. The template's behavior, first visible on MiLB.
 - **The page's app reminder claims** depend on the app ruling at MiLB Phase 1 G2 (apps must not show MILB before the flip). Pre-flip blocker.
 
+
+
+## 139. MiLB promo rows carry no entity kind (logged 2026-11-27)
+
+- **Classify MiLB with its own validation sample before milbLive.** The promo writer mints `kind` (item, event, fixture) on the six pro leagues only; a MILB row is written with no `kind`, by ruling 2026-11-27 (pipeline `c37d716b`, `lib/scanner/promo-writer.js`). The classifier (`lib/scanner/promo-kind.js`) was judged on blind samples of MLB, NBA, NHL, NFL, MLS and WNBA rows and has never been measured on MiLB copy, and its club, cup and fixture rules read `team-configs` of those six leagues. Before the MiLB flip: draw a blind sample of MILB rows, measure it against the same 95 percent bar, then remove the MILB skip in the writer and add MILB to the backfill (`scripts/backfill-entity-kind.js`, which reads `teams` only and so never sees `milbTeams`). Until then any reader of `kind` must treat a MILB row as it treats an absent kind.
