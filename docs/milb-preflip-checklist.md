@@ -81,3 +81,4 @@ pages and in PostHog after the flip, not by a source grep (CLAUDE.md).
 - [ ] Venue hubs: `src/lib/venue-hub.ts:928` and `:981` run `getTeamBySlug` and `getTeamPromos` in one `Promise.all`, so `getTeamPromos`' synchronous league peek can run before the loader has resolved. Harmless while no venue hub lists a MILB tenant (venues are out of scope); await the team first before one does (review finding 5).
 - [ ] My Teams: `fetchVenueForTeam` in `src/app/api/my-teams/promos/route.ts` reads `teams/{slug}`, so a MILB club gets no venue there (review finding 6; venues out of scope).
 - [ ] A stray doc at `teams/{milbSlug}/promos` would still be read by `getTeamPromos(slug)` called directly and counted by `getPromoCount`; nothing writes there (the pipeline refuses it by name, and production held none on 2026-11-27). Re-check with one read before the flip.
+
