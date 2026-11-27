@@ -60,3 +60,13 @@ pages and in PostHog after the flip, not by a source grep (CLAUDE.md).
 - [ ] Coverage copy: `coverageFromTeams` derives the league list from the
   team docs, so "across MLB, NBA, ..." gains "MiLB" at the flip. Read the
   homepage, /about, /teams and the aggregator leads on the served pages.
+
+## From the ux-review of the MiLB page (2026-11-27, known issues 138)
+
+- [ ] Get Tickets: real Ticketmaster links for MILB, or no Ticketmaster CTA (TicketNetwork is the default partner, G4).
+- [ ] FAQ venue sentences must not state venue facts for a club with no venue doc.
+- [ ] SpotHero and Expedia CTAs need a place, or are left off MILB pages.
+- [ ] `/teams?league=MILB` needs a MiLB filter.
+- [ ] JSON-LD Events need a `location`, or the Event is left out.
+- [ ] Read a real MILB team page after the first execute: game times on cards and sheets (the preview fixture carried none).
+

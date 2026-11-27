@@ -4614,3 +4614,17 @@ One line each. The promo page's "Remind me" email block and the day-before remin
 ## 137. MLS postseason bracket feed not run for 2026 (logged 2026-11-27)
 
 - **Revisit the MLS feed with the 2027 playoff build.** The pipeline feed for `postseasonBrackets/MLS_2026` was built and merged (pipeline `baf11d8a`) but not enabled for 2026, by ruling 2026-11-27: nothing on the site reads it (`/playoffs` covers MLB and WNBA only, no MLS page). The staleness tripwire reports it as "skipped by ruling 2026-11-27" (`POSTSEASON_RULINGS` in pipeline `staleness-check/lib/write-recency.js`; delete the entry to re-arm). `formats/mls-2026.json` and the runbook MLS section are kept; there is still no `seeds/mls-2026.json`.
+
+
+## 138. Deferred from feature/milb-scanner: the MiLB team page before the flip (logged 2026-11-27)
+
+One line each. Seen on a local render of a fixture MILB team page with the gate open in the local fake only (ux-review 2026-11-27, docs/ux-review/2026-11-27-feature-milb-scanner.md). None is served while `appConfig/milb.milbLive` is false; each is on docs/milb-preflip-checklist.md.
+
+- **Get Tickets goes to a Ticketmaster 404.** A MILB doc carries no `ticketmasterSlug`, and the derived link (`/hudson-valley-renegades-tickets`) does not exist. Pre-flip blocker: real Ticketmaster links, or no Ticketmaster CTA on MILB (TicketNetwork is the default partner, G4).
+- **The FAQ states venue facts with no venue behind them** ("their home stadium is in Hudson Valley", lower case; "Most major-league venues are served by bus or rail"; "Several hotels sit within walking distance"). False copy for a club with no venue doc. Pre-flip blocker.
+- **SpotHero and Expedia CTAs have no place** (SpotHero home page; Expedia searching "Hudson Valley Renegades, Hudson Valley"). Pre-flip.
+- **"All MiLB teams" lands on /teams with no MiLB filter.** Pre-flip.
+- **The JSON-LD Events carry no `location`.** Pre-flip.
+- **A club with few promotions reads thin**: the theme-nights section restates the cards, and three of four hero tiles read 0. The template's behavior, first visible on MiLB.
+- **The page's app reminder claims** depend on the app ruling at MiLB Phase 1 G2 (apps must not show MILB before the flip). Pre-flip blocker.
+
