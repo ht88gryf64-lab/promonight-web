@@ -1,5 +1,6 @@
 'use client';
 
+import { leagueLabel } from '@/lib/league-label';
 import { useState } from 'react';
 import Link from 'next/link';
 import type { PromoWithTeam } from '@/lib/types';
@@ -59,7 +60,7 @@ function PastBobbleheadRow({ p, withResale }: { p: PromoWithTeam; withResale: bo
           <span className="truncate">
             {teamDisplayName(p.team)}
             {promoDisplayOpponent(p) && <span className="text-rd-ink-faint"> vs {promoDisplayOpponent(p)}</span>}
-            <span className="text-rd-ink-faint"> · {p.team.league}</span>
+            <span className="text-rd-ink-faint"> · {leagueLabel(p.team.league)}</span>
           </span>
         </div>
         {withResale && (

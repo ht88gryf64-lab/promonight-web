@@ -1,5 +1,6 @@
 import { OG_IMAGE_ALT } from '@/lib/og';
 import type { Metadata } from 'next';
+import { milbTeamIndexable } from '@/lib/milb-gate';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -243,9 +244,13 @@ export async function generateMetadata({
   }
   const description = truncateAtWord(rawDescription, DESC_MAX);
 
+  // MILB gate, live mode (src/lib/milb-gate.ts): a MILB page with no upcoming
+  // promotion is served but not indexed. Every other league: no robots key.
+  const milbIndexable = milbTeamIndexable(team.league, promos.filter((p) => isUpcomingPromo(p, todayStr)).length);
   return {
     title: { absolute: title },
     description,
+    ...(milbIndexable ? {} : { robots: { index: false, follow: true } }),
     alternates: {
       canonical: `https://www.getpromonight.com/${team.sportSlug}/${team.id}`,
     },

@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next';
-import { getAllTeams, getPlayoffConfig, getStillAlivePlayoffTeamIds, getTeamScanStamps } from '@/lib/data';
+import { getAllTeams, getPlayoffConfig, getStillAlivePlayoffTeamIds, getTeamPromos, getTeamScanStamps } from '@/lib/data';
+import { isMilbLeague, milbTeamIndexable } from '@/lib/milb-gate';
+import { isUpcomingPromo } from '@/lib/promo-helpers';
 import { getPlayoffsSitemapEntries } from '@/lib/postseason/data';
 import { getIndexableCfbSchoolIds } from '@/lib/cfb/data';
 import { getAllMatchupSlugs } from '@/lib/cfb/matchups';
@@ -38,7 +40,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     playoffsActive ? getStillAlivePlayoffTeamIds(playoffConfig!) : [],
   );
 
-  const teamPages = teams.map((t) => {
+  // MILB gate, live mode (src/lib/milb-gate.ts): a MILB club with no upcoming
+  // promotion stays out of the sitemap (its page is noindex). Closed gate: no
+  // MILB team is in `teams`, so this reads nothing and filters nothing.
+  const today = siteTodayYmd();
+  const milbUpcoming = new Map(
+    await Promise.all(
+      teams.filter((t) => isMilbLeague(t.league)).map(async (t) => [t.id, (await getTeamPromos(t.id)).filter((p) => isUpcomingPromo(p, today)).length] as const),
+    ),
+  );
+  const teamPages = teams.filter((t) => milbTeamIndexable(t.league, milbUpcoming.get(t.id) ?? 0)).map((t) => {
     // lastmod = the team's most recent promo update: the scan stamp for the
     // team (scannerState/{LEAGUE}/hashes/{team}.updatedAt, written when a
     // scan's write plan was last applied), falling back to the playoff

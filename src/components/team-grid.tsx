@@ -1,5 +1,6 @@
 'use client';
 
+import { leagueLabel } from '@/lib/league-label';
 import { useEffect, useMemo, useState } from 'react';
 import { TeamCard } from './team-card';
 import type { Team } from '@/lib/types';
@@ -202,7 +203,7 @@ export function TeamGrid({
         </button>
         {leagueOrder.map((league) => (
           <button key={league} onClick={() => switchTab(league)} className={tabClass(activeLeague === league)}>
-            {league}
+            {leagueLabel(league)}
           </button>
         ))}
         {cfbLive && (

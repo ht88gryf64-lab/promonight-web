@@ -1,3 +1,4 @@
+import { leagueLabel } from '@/lib/league-label';
 import type { ScoredPromoWithTeam, TeamScoreWithTeam } from '@/lib/types';
 import { SPORT_ICONS } from '@/lib/types';
 import { teamDisplayName } from '@/lib/promo-helpers';
@@ -44,7 +45,7 @@ export function TeamRankingRow({ rank, teamScore, topPromo, variant = 'dark' }: 
         <div aria-hidden="true" className="h-12 w-1 shrink-0 rounded-full" style={{ backgroundColor: team.primaryColor }} />
         <div className="min-w-0 flex-1">
           <div className="font-rd text-[10px] uppercase tracking-[0.08em] text-rd-ink-faint">
-            {SPORT_ICONS[team.league]} {team.league}
+            {SPORT_ICONS[team.league]} {leagueLabel(team.league)}
           </div>
           <div className="truncate text-base font-bold leading-tight text-rd-ink transition-colors group-hover:text-rd-red">
             {teamName}
@@ -84,7 +85,7 @@ export function TeamRankingRow({ rank, teamScore, topPromo, variant = 'dark' }: 
       />
       <div className="flex-1 min-w-0">
         <div className="font-mono text-[10px] tracking-[1px] uppercase text-text-muted">
-          {SPORT_ICONS[team.league]} {team.league}
+          {SPORT_ICONS[team.league]} {leagueLabel(team.league)}
         </div>
         <div className="font-outfit font-extrabold text-base text-white group-hover:text-accent-red transition-colors leading-tight truncate">
           {teamName}

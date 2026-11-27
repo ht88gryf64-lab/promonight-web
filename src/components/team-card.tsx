@@ -1,5 +1,6 @@
 'use client';
 
+import { leagueLabel } from '@/lib/league-label';
 import Link from 'next/link';
 import type { Team } from '@/lib/types';
 import { SPORT_ICONS } from '@/lib/types';
@@ -84,7 +85,7 @@ export function TeamCard({
               border: `1px solid ${team.primaryColor}30`,
             }}
           >
-            {SPORT_ICONS[team.league]} {team.league}
+            {SPORT_ICONS[team.league]} {leagueLabel(team.league)}
           </span>
           {promoCount !== undefined && (
             <span className={light ? 'text-rd-ink-faint text-[11px] font-mono' : 'text-text-dim text-[11px] font-mono'}>

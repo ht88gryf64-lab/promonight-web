@@ -1,3 +1,4 @@
+import { leagueLabel } from '@/lib/league-label';
 import Link from 'next/link';
 import {
   IconTrophy,
@@ -36,7 +37,7 @@ export function ExploreCard({ team, className = '' }: ExploreCardProps) {
     { href: '/promos/food-deals', label: 'Food deals', Icon: IconCup },
     // League-scoped so the label is honest: /teams reads ?league= client-side
     // and pre-selects the pill (the SSR grid stays the full All view).
-    { href: `/teams?league=${team.league}`, label: `All ${team.league} teams`, Icon: IconList },
+    { href: `/teams?league=${team.league}`, label: `All ${leagueLabel(team.league)} teams`, Icon: IconList },
   ];
 
   return (

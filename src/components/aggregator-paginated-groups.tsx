@@ -1,5 +1,6 @@
 'use client';
 
+import { leagueLabel } from '@/lib/league-label';
 import { useState } from 'react';
 import Link from 'next/link';
 import type { PromoWithTeam } from '@/lib/types';
@@ -106,7 +107,7 @@ export function AggregatorPaginatedGroups({ groups }: { groups: AggregatorGroup[
                           {promoDisplayOpponent(p) && (
                             <span className="text-text-dim"> vs {promoDisplayOpponent(p)}</span>
                           )}
-                          <span className="text-text-dim"> &middot; {p.team.league}</span>
+                          <span className="text-text-dim"> &middot; {leagueLabel(p.team.league)}</span>
                         </div>
                       </div>
                     </div>

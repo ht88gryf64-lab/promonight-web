@@ -1,3 +1,4 @@
+import { leagueLabel } from '@/lib/league-label';
 import Link from 'next/link';
 import type { Team, Venue, PromoType } from '@/lib/types';
 import { SPORT_ICONS, PROMO_TYPE_LABELS } from '@/lib/types';
@@ -39,7 +40,7 @@ export function TeamHero({ team, venue, promoCount, promoCounts, labelDay }: Tea
         <div className="flex items-center gap-2 text-text-muted text-xs font-mono tracking-[0.5px] mb-6">
           <Link href="/teams" className="hover:text-white transition-colors">Teams</Link>
           <span>/</span>
-          <Link href={`/teams?league=${team.league}`} className="hover:text-white transition-colors">{team.league}</Link>
+          <Link href={`/teams?league=${team.league}`} className="hover:text-white transition-colors">{leagueLabel(team.league)}</Link>
           <span>/</span>
           <span className="text-text-secondary">{displayName}</span>
         </div>
@@ -54,7 +55,7 @@ export function TeamHero({ team, venue, promoCount, promoCounts, labelDay }: Tea
               border: `1px solid ${team.primaryColor}40`,
             }}
           >
-            {SPORT_ICONS[team.league]} {team.league} &middot; {team.division}
+            {SPORT_ICONS[team.league]} {leagueLabel(team.league)} &middot; {team.division}
           </span>
         </div>
 
