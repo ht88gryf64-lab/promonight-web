@@ -23,6 +23,7 @@ import type {
 import { SCORED_LEAGUES, isRegularSeasonGame } from './types';
 // (PROMO_SCORED_LEAGUES is passed in by its one caller, src/lib/seasons/ranked-rows.ts.)
 import { makeCollectionLoader, makeKeyedTtlCache, type CachedDoc } from './collection-cache';
+import { readMilbLive, teamVisibleUnderGate } from './milb-gate';
 import {
   buildWeekBuckets,
   selectWeekContext,
@@ -227,14 +228,26 @@ async function readTnHomeUnavailable(): Promise<Set<string>> {
 /** `list` is sorted exactly as the old getAllTeams sorted (league, then city),
  *  so every caller that relies on the shipped order — the team grid's index
  *  math in teams-browser.tsx, the sitemap's URL order — sees no change. */
-const loadTeams = makeCollectionLoader<{ list: Team[]; byId: Map<string, Team> }>(async () => {
-  const [snapshot, tnHomeUnavailable] = await Promise.all([db.collection('teams').get(), readTnHomeUnavailable()]);
-  const list = snapshot.docs.map(mapTeamDoc);
+const loadTeams = makeCollectionLoader<{ list: Team[]; byId: Map<string, Team>; hiddenIds: string[] }>(async () => {
+  const [snapshot, tnHomeUnavailable, milbLive] = await Promise.all([db.collection('teams').get(), readTnHomeUnavailable(), readMilbLive()]);
+  // THE MILB GATE (src/lib/milb-gate.ts): while appConfig/milb.milbLive is not
+  // true, a MILB doc is dropped HERE, before list and byId exist, so neither
+  // getAllTeams nor getTeamBySlug can return it. In the same loader as the
+  // teams, so a club and the gate are one generation.
+  const all = snapshot.docs.map(mapTeamDoc);
+  const list = all.filter((t) => teamVisibleUnderGate(t.league, milbLive));
+  const hiddenIds = all.filter((t) => !teamVisibleUnderGate(t.league, milbLive)).map((t) => t.id);
   // In the same loader, so a club and its flag are one generation.
   for (const t of list) if (tnHomeUnavailable.has(t.id)) t.tnHomeUnavailable = true;
   list.sort((a, b) => a.league.localeCompare(b.league) || a.city.localeCompare(b.city));
-  return { list, byId: new Map(list.map((t) => [t.id, t])) };
+  return { list, byId: new Map(list.map((t) => [t.id, t])), hiddenIds };
 });
+
+/** Team ids the MILB gate is hiding (empty when it is open or no MILB doc
+ *  exists). For the one promo reader that counts without the team list. */
+export async function getGateHiddenTeamIds(): Promise<string[]> {
+  return [...(await loadTeams()).hiddenIds];
+}
 
 /** `docs` is in Firestore's `__name__` ascending order. That order is
  *  load-bearing: getVenueForTeam takes the FIRST doc matching a team name
@@ -523,15 +536,18 @@ export async function getPromoCount(): Promise<number> {
   // that club's own promos collection. Flagged rows are subtracted whether or
   // not they are tombstoned, because the total above holds both. The raw flag
   // on MLB, MLS and WNBA rows is ignored here as everywhere.
-  const teams = await getAllTeams();
+  const [teams, hiddenIds] = await Promise.all([getAllTeams(), getGateHiddenTeamIds()]);
   const packageClubs = teams.filter((t) => isTicketPackageLeague(t.league));
-  const [total, ...packages] = await Promise.all([
+  const [total, hidden, ...packages] = await Promise.all([
     db.collectionGroup('promos').count().get(),
+    // The MILB gate (src/lib/milb-gate.ts): the group count sees every club's
+    // promos, so the clubs the gate hides are counted and taken back out.
+    Promise.all(hiddenIds.map((id) => db.collection('teams').doc(id).collection('promos').count().get())),
     ...packageClubs.map((t) =>
       db.collection('teams').doc(t.id).collection('promos').where('ticketPackageRequired', '==', true).count().get(),
     ),
   ]);
-  return total.data().count - packages.reduce((n, s) => n + s.data().count, 0);
+  return total.data().count - hidden.reduce((n, s) => n + s.data().count, 0) - packages.reduce((n, s) => n + s.data().count, 0);
 }
 
 // READ-COST NOTE. This resolves off the cached venues collection (148 docs)

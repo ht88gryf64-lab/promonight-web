@@ -1,3 +1,4 @@
+import { leagueLabel } from '@/lib/league-label';
 import { IconChartBar } from '@tabler/icons-react';
 import type { Promo, PromoType, Team, Venue } from '@/lib/types';
 import { seasonSpan, scheduledPeriodPhrase, remainingPeriodPhrase } from '@/lib/season-label';
@@ -142,7 +143,7 @@ export function AuthorityStats({
     // turns a record into a notice of emptiness. The hold emits nothing either,
     // reproducing the original paragraph exactly.
     sentences.push(
-      `The ${teamName} have ${stats.length} promotional events scheduled across ${homeGames} ${team.league} home ${homeGames === 1 ? 'game' : 'games'} ${period}, averaging ${ratio} promos per home game. Roughly ${pctHomeGames}% of home dates at ${venueName} have at least one scheduled promotion.`,
+      `The ${teamName} have ${stats.length} promotional events scheduled across ${homeGames} ${leagueLabel(team.league)} home ${homeGames === 1 ? 'game' : 'games'} ${period}, averaging ${ratio} promos per home game. Roughly ${pctHomeGames}% of home dates at ${venueName} have at least one scheduled promotion.`,
     );
     if (season && season.upcomingCount > 0) {
       sentences.push(

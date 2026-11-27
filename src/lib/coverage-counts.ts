@@ -1,3 +1,4 @@
+import { leagueLabel } from './league-label';
 import type { Team } from '@/lib/types';
 import { LEAGUE_ORDER, SCORED_LEAGUES } from '@/lib/types';
 
@@ -76,9 +77,10 @@ export function coverageFromTeams(teams: readonly Team[], cfbSchoolCount: number
   const leagues: string[] = LEAGUE_ORDER.filter((l) => per.has(l));
   for (const league of per.keys()) if (!leagues.includes(league)) leagues.push(league);
   const leagueBreakdown = leagues.map((l) => [l, per.get(l) as number] as [string, number]);
+  // Display names (leagueLabel: MILB is shown "MiLB"), sorted on the codes.
   const leagueNamesBySize = [...per.keys()].sort(
     (a, b) => (per.get(b) as number) - (per.get(a) as number) || a.localeCompare(b),
-  );
+  ).map(leagueLabel);
   const scored = SCORED_LEAGUES as ReadonlySet<string>;
   const rankedLeagues = leagues.filter((l) => scored.has(l));
   const rankedTeamCount = teams.filter((t) => scored.has(t.league)).length;
@@ -86,7 +88,7 @@ export function coverageFromTeams(teams: readonly Team[], cfbSchoolCount: number
     teamCount: teams.length,
     leagueCount: leagues.length,
     leagues,
-    leagueList: joinList(leagues),
+    leagueList: joinList(leagues.map(leagueLabel)),
     leagueBreakdown,
     leagueNamesBySize,
     cfbSchoolCount,
@@ -99,5 +101,5 @@ export function coverageFromTeams(teams: readonly Team[], cfbSchoolCount: number
 /** Sentence fragment for "how many teams" answers: "30 MLB teams, 30 NBA
  *  teams, ..., and 15 WNBA teams". */
 export function leagueSplit(breakdown: ReadonlyArray<readonly [string, number]>): string {
-  return joinList(breakdown.map(([l, n]) => `${n} ${l} teams`));
+  return joinList(breakdown.map(([l, n]) => `${n} ${leagueLabel(l)} teams`));
 }

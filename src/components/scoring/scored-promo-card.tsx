@@ -1,3 +1,5 @@
+import { LeagueName } from '@/components/LeagueName';
+import { leagueLabel } from '@/lib/league-label';
 import { promoDisplayTitle } from '@/lib/promo-display-title';
 import { IconFlame } from '@tabler/icons-react';
 import type { ScoredPromoWithTeam } from '@/lib/types';
@@ -133,7 +135,7 @@ export function ScoredPromoCard({
             <div className="mt-1 truncate font-rd text-xs text-rd-ink-soft">
               {teamName}
               {displayOpponent && <span className="text-rd-ink-faint"> vs {displayOpponent}</span>}
-              <span className="text-rd-ink-faint"> · {team.league}</span>
+              <span className="text-rd-ink-faint"> · <LeagueName league={team.league} /></span>
             </div>
             {(quantityCap || sponsor) && (
               <div className="mt-1.5 font-rd text-[11px] text-rd-ink-faint">
@@ -207,7 +209,7 @@ export function ScoredPromoCard({
             {displayOpponent && (
               <span className="text-text-dim"> vs {displayOpponent}</span>
             )}
-            <span className="text-text-dim"> · {team.league}</span>
+            <span className="text-text-dim"> · <LeagueName league={team.league} /></span>
           </div>
           {(quantityCap || sponsor) && (
             <div className="text-text-muted text-[11px] font-mono mt-1.5">

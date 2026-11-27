@@ -1,3 +1,4 @@
+import { leagueLabel } from '@/lib/league-label';
 import type { PromoWithTeam } from '@/lib/types';
 import { LEAGUE_HUB_REGISTRY, getLeagueHub } from '@/lib/league-hubs';
 import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
@@ -44,7 +45,7 @@ export function groupPromosByLeague(promos: PromoWithTeam[]): LeagueGroup[] {
     list.sort(sortWithinLeague);
     return {
       league,
-      label: hub?.label ?? league,
+      label: hub?.label ?? leagueLabel(league),
       accent: hub?.accent ?? '#6f665a',
       hubHref: hub?.live ? hub.href : null,
       promos: list,

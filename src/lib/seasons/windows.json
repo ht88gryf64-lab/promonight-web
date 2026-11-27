@@ -12,6 +12,14 @@
       "provisional": "End is a placeholder: the 2027 postseason schedule is not published, and the CBA expires 2026-12-01 with a lockout expected, so both dates may move. The postseasonBrackets final game replaces the end once MLB_2027 is final."
     }
   },
+  "MILB": {
+    "2027": {
+      "start": "2027-03-26",
+      "end": "2027-09-19",
+      "source": "Minor League Baseball, all four levels (Triple-A, Double-A, High-A, Single-A): first and last regular-season game in the MLB Stats API schedule (statsapi.mlb.com/api/v1/schedule?sportId=11,12,13,14&season=2027&gameType=R, read 2026-11-27: 8,279 games, 2027-03-26 to 2027-09-19).",
+      "provisional": "End is the last regular-season game. The MiLB postseason (late September) is not in this window and is not scanned. Revisit when the 2027 postseason schedule is published."
+    }
+  },
   "MLS": {
     "2026": {
       "start": "2026-02-21",
