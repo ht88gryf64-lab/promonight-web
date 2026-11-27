@@ -82,3 +82,11 @@ pages and in PostHog after the flip, not by a source grep (CLAUDE.md).
 - [ ] My Teams: `fetchVenueForTeam` in `src/app/api/my-teams/promos/route.ts` reads `teams/{slug}`, so a MILB club gets no venue there (review finding 6; venues out of scope).
 - [ ] A stray doc at `teams/{milbSlug}/promos` would still be read by `getTeamPromos(slug)` called directly and counted by `getPromoCount`; nothing writes there (the pipeline refuses it by name, and production held none on 2026-11-27). Re-check with one read before the flip.
 
+
+## Entity kind on MiLB rows (rulings 2026-11-27, known issues 139)
+
+MILB promo rows carry no `kind`: the promo writer skips them (`lib/scanner/promo-writer.js`, the `isMilb` check), and the backfill reads `teams/{slug}/promos` only. Before `milbLive` flips, in this order. No build now.
+
+- [ ] Draw a MiLB validation sample: 30 stored MILB rows, seeded, judged blind (the classifier's answer hidden), against the same 95 percent bar the six pro leagues met. Report every disagreement and every cannot-tell row. If it misses, say what rule would close the gap; do not tune against the sample and re-report it as a pass.
+- [ ] Backfill `kind` on `milbTeams/{slug}/milbPromos` with the same gates as the pro leagues: snapshot of prior values first, dry run by default, execute only with the plan hash a dry run printed. The script (`scripts/backfill-entity-kind.js`) reads `teams` only today, so it needs a MILB path through `lib/scanner/team-paths.js`, tested, before it can see these rows.
+- [ ] Remove the MILB skip from the promo writer, so MILB scans mint `kind` on new and changed rows as the pro scans do, and delete the "MILB rows get no kind" test with it.
