@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { gameWindowFloorYmd, getAllTeams, getTeamBySlug, promosColForTeamId, withGameDisplay } from '@/lib/data';
+import { gameWindowFloorYmd, getAllTeams, getTeamBySlug, withGameDisplay } from '@/lib/data';
+import { promosColRef } from '@/lib/team-paths';
 import { STATIC_TTL_MS } from '@/lib/collection-cache';
 import { resolveIcon } from '@/lib/promo-helpers';
 import { promoPageHref } from '@/lib/promo-page-href';
@@ -80,11 +81,13 @@ async function fetchPromosForTeam(
   end: string,
 ): Promise<StarredPromo[] | null> {
   try {
+    // The served team, when the cached loader knows it (null on a miss or a
+    // failed lookup; the league read below covers both, as it always did).
+    const served = await getTeamBySlug(teamSlug).catch(() => null);
     const [snapshot, league, team] = await Promise.all([
       // teams/{slug}/promos, or milbTeams/{slug}/milbPromos for a MILB club the
-      // gate is serving (src/lib/team-paths.ts). A slug the gate hides is not a
-      // served team, so it resolves to the pro path, where no MILB doc lives.
-      (await promosColForTeamId(teamSlug))
+      // gate is serving (src/lib/team-paths.ts).
+      promosColRef(served?.league, teamSlug)
         .where('date', '>=', start)
         .where('date', '<=', end)
         .get(),
@@ -101,6 +104,12 @@ async function fetchPromosForTeam(
     // (date, then doc id), so the unflagged twin of a package never shows here
     // when the team page lists that pair as the package. Other leagues are
     // read exactly as before.
+    // THE MILB GATE (src/lib/milb-gate.ts). A slug the loader does not serve is
+    // answered only when `teams/{slug}` exists as a pro club (a club added
+    // inside the loader's cache window). No such doc (a MILB slug the gate
+    // hides: its club lives in milbTeams) or one claiming MILB (the wrong home)
+    // gets nothing, whatever sits under teams/{slug}/promos.
+    if (!served && (league === '' || league === 'MILB')) return [];
     const dropPackages = isTicketPackageLeague(league);
     // Visibility filter on the raw docs before shaping: only tombstoned:true
     // and isPostseason:true are hidden; absent and false pass. App-code

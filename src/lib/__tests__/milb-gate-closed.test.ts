@@ -56,10 +56,12 @@ test('closed gate: cross-team readers return no MILB row, and the promo count is
 test('closed gate: /api/my-teams/promos returns nothing for a MILB slug', async () => {
   const { NextRequest } = await import('next/server');
   const { GET } = await import('../../app/api/my-teams/promos/route');
-  const res = await GET(new NextRequest('https://www.getpromonight.com/api/my-teams/promos?teams=st-paul-saints,minnesota-twins&start=2026-01-01&end=2027-12-31'));
+  const res = await GET(new NextRequest('https://www.getpromonight.com/api/my-teams/promos?teams=st-paul-saints,durham-bulls,rogue-in-teams,minnesota-twins&start=2026-01-01&end=2027-12-31'));
   const body = (await res.json()) as { promos: { teamSlug: string; title: string }[] };
   assert.equal(body.promos.filter((p) => p.teamSlug === 'minnesota-twins').length, 4);
   assert.deepEqual(body.promos.filter((p) => p.teamSlug !== 'minnesota-twins'), []);
+  // durham-bulls has a stray doc at teams/durham-bulls/promos (the rogue fixture):
+  // a slug that is not a served team is answered with nothing, whatever sits there.
 });
 
 test('closed gate: after all of the above, not one MILB path was read', () => {

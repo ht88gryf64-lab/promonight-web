@@ -280,7 +280,15 @@ async function milbGroupDocs(
   build: (q: FirebaseFirestore.Query) => FirebaseFirestore.Query,
 ): Promise<FirebaseFirestore.QueryDocumentSnapshot[]> {
   if (!(await loadTeams()).milbLive) return [];
-  return (await build(db.collectionGroup(MILB_PATHS.promos)).get()).docs;
+  try {
+    return (await build(db.collectionGroup(MILB_PATHS.promos)).get()).docs;
+  } catch (err) {
+    // A failed milbPromos read (a missing collection-group index on
+    // milbPromos.date, say) costs the MILB rows only: it must never push the
+    // pro leagues onto their per-team fallback.
+    console.error('[data] milbPromos group read failed; serving without MILB rows', err);
+    return [];
+  }
 }
 
 /** `pro` followed by `milb`, re-sorted by date when there is anything to
