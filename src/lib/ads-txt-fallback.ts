@@ -3,8 +3,8 @@
  * fetch in `src/app/ads.txt/route.ts` cannot produce a usable body.
  *
  * Source: https://ads.adthrive.com/sites/6a9989924f70265a058c50b1/ads.txt
- * Captured: 2026-09-15T17:54:38Z, 4538 bytes, their version v2.74-auto
- * sha256: 88688112e5e185dc291a8cd1ecbce2f9d9772ab30975ba73449314342e573d47
+ * Captured: 2026-11-27T13:30:15Z, 4662 bytes, their version v2.76-auto
+ * sha256: 7e1dd2feb35a61fe4cf18edfa87475da3763a6152dc5fac7b29eef22b401b183
  *
  * This is the upstream bytes exactly — no trailing newline, no reordering, and
  * the three ads.txt VARIABLES (managerdomain, contact, ownerdomain) and the
@@ -28,9 +28,9 @@ export const ADS_TXT_SOURCE_URL =
 export const ADS_TXT_REVALIDATE_SECONDS = 3600;
 
 export const ADS_TXT_FALLBACK_SHA256 =
-  '88688112e5e185dc291a8cd1ecbce2f9d9772ab30975ba73449314342e573d47';
+  '7e1dd2feb35a61fe4cf18edfa87475da3763a6152dc5fac7b29eef22b401b183';
 
-export const ADS_TXT_FALLBACK = `#Raptive ads.txt (CafeMedia/AdThrive) v2.74-auto
+export const ADS_TXT_FALLBACK = `#Raptive ads.txt (CafeMedia/AdThrive) v2.76-auto
 managerdomain=cafemedia.com
 contact=info@raptive.com
 google.com, pub-8501674430909082, DIRECT, f08c47fec0942fa0 #video, banner
@@ -42,7 +42,7 @@ indexexchange.com, 182496, DIRECT, 50b1c356f2c5c8fc #banner, video
 kargo.com, 8482, DIRECT #banner, video
 pubmatic.com, 157347, DIRECT, 5d62403b186f2ace #banner, video
 sharethrough.com, rn56Ocs3, DIRECT, d53b998a7bd4ecd2 #banner, video
-smartadserver.com, 5339, DIRECT, 060d053dcf45cbf4 #banner, video
+smartadserver.com, 5339, DIRECT, 060d053dcf45cbf3 #banner, video
 teads.tv, 17002, DIRECT, 15a9c44f6d26cbe1 #banner, video
 appnexus.com, 3561, DIRECT, f5ab79cb980f11d1 #banner, video
 themediagrid.com, 6FUJEI, DIRECT, 9fac4a4a87c2a44f #banner, video
@@ -64,6 +64,8 @@ sharethrough.com, 4006-OB, DIRECT, d53b998a7bd4ecd2 #banner, video
 onetag.com, 7d614f4ac7b0a56, DIRECT #banner, #video
 smartadserver.com, 4006, DIRECT, 060d053dcf45cbf3 #banner, #video
 media.net, 8CANQT4AI, DIRECT #banner, #video
+rubiconproject.com, 28869, DIRECT, 0bfd66d529a55807 #banner, #video
+yieldmo.com, 3956262547673260438, DIRECT #banner, video
 #TAM
 aps.amazon.com, 4fbba76f-7987-4fa2-9733-c27eb3a2170b, DIRECT #banner, video
 blis.com,1222,DIRECT,61453ae19a4b73f4 #banner, video
