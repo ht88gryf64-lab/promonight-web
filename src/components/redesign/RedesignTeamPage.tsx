@@ -245,7 +245,7 @@ export function RedesignTeamPage({
           {leagueLabel(team.league)}
         </Link>
       ) : (
-        team.league
+        leagueLabel(team.league)
       )}
       {team.division ? <> · {team.division}</> : null}
     </>
