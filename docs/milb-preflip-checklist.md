@@ -82,3 +82,11 @@ pages and in PostHog after the flip, not by a source grep (CLAUDE.md).
 - [ ] My Teams: `fetchVenueForTeam` in `src/app/api/my-teams/promos/route.ts` reads `teams/{slug}`, so a MILB club gets no venue there (review finding 6; venues out of scope).
 - [ ] A stray doc at `teams/{milbSlug}/promos` would still be read by `getTeamPromos(slug)` called directly and counted by `getPromoCount`; nothing writes there (the pipeline refuses it by name, and production held none on 2026-11-27). Re-check with one read before the flip.
 
+
+## Pre-cron blocker (ruled 2026-11-27, after G3b)
+
+- [ ] No MILB workflow may be enabled until an execute run writes exactly what
+  its gating dry run showed. At G3b the gating dry run planned 354 promos with
+  14 rows without a kind; the execute, which extracts again, wrote 372 with 28
+  (pipeline main 4afe97b7, run 0b6d25fd). A gate read on a dry run does not
+  hold for the write that follows it while that is true.
