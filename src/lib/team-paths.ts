@@ -27,6 +27,18 @@ export interface LeaguePaths {
 export const PRO_PATHS: LeaguePaths = Object.freeze({ teams: 'teams', promos: 'promos', recurring: 'recurringDeals' });
 export const MILB_PATHS: LeaguePaths = Object.freeze({ teams: 'milbTeams', promos: 'milbPromos', recurring: 'recurringDeals' });
 
+// THE MILB SCHEDULE (MiLB Phase 1 G4b, ruled 2026-11-27/28): a top-level
+// collection, one doc per game, doc id = the Stats API gamePk. Never `games`:
+// every installed app reads that collection. firestore.rules matches nothing
+// under milbGames, so its catch-all denies every client. The site reads it
+// with the Admin SDK, through milbGamesColRef and nowhere else, and only while
+// the gate is open (getGamesForTeam in src/lib/data.ts).
+export const MILB_GAMES_COLLECTION = 'milbGames';
+
+export function milbGamesColRef(): FirebaseFirestore.CollectionReference {
+  return db.collection(MILB_GAMES_COLLECTION);
+}
+
 export function pathsForLeague(league: string | null | undefined): LeaguePaths {
   return league === 'MILB' ? MILB_PATHS : PRO_PATHS;
 }

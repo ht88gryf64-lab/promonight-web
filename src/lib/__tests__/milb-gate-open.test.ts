@@ -59,6 +59,110 @@ test('open gate: /api/my-teams/promos serves a MILB club from milbPromos', async
   assert.deepEqual(body.promos.map((p) => p.title), ['Mountain Gnomes']);
 });
 
+// MiLB G4b: the schedule and the ticket link come from milbGames.
+test('open gate: a MILB team page reads its schedule from milbGames: home and away, in order, tombstones dropped', async () => {
+  const { getGamesForTeam } = await import('../data');
+  const before = fake.reads.milbGames;
+  const games = await getGamesForTeam('durham-bulls', 'milb');
+  assert.ok(fake.reads.milbGames > before, 'milbGames was read');
+  assert.deepEqual(games.map((g) => g.id), ['860001', '860002', '860003', '860004', '860006', '860008', '860007']);
+  assert.ok(games.every((g) => g.league === 'milb'));
+  // The building is the HOME club's official one, from its team doc: Durham's for a Durham home game, St. Paul's for the away game.
+  assert.deepEqual([...new Set(games.filter((g) => g.homeTeamSlug === 'durham-bulls').map((g) => g.venueName))], ['Durham Bulls Athletic Park']);
+  assert.deepEqual(games.filter((g) => g.homeTeamSlug === 'st-paul-saints').map((g) => g.venueName), ['CHS Field']);
+  const by = Object.fromEntries(games.map((g) => [g.id, g]));
+  // Home and away; the official date; the venue's clock from the official start; a start to be announced.
+  assert.deepEqual([by['860001'].homeTeamSlug, by['860001'].awayTeamSlug, by['860004'].homeTeamSlug], ['durham-bulls', 'st-paul-saints', 'st-paul-saints']);
+  assert.deepEqual([by['860001'].date, by['860001'].gameTime, by['860001'].gameTimeTz, by['860001'].gameTimeZoneAbbrev], ['2027-05-21', '23:05', 'America/New_York', 'EDT']);
+  assert.deepEqual([by['860004'].timeTbd, by['860004'].gameTime], [true, '']);
+  assert.deepEqual([by['860006'].status, by['860001'].status], ['postponed', 'scheduled']);
+  // A doubleheader: game 1 before game 2, though game 2's UTC clock ("01:35") sorts first as text.
+  assert.deepEqual([by['860008'].doubleheaderGame, by['860007'].doubleheaderGame, by['860001'].doubleheaderGame], [1, 2, undefined]);
+});
+
+test('open gate: the TicketNetwork link exists only when tnEventDate is the official date, and is built from the id alone', async () => {
+  const { getGamesForTeam } = await import('../data');
+  const by = Object.fromEntries((await getGamesForTeam('durham-bulls', 'milb')).map((g) => [g.id, g]));
+  assert.equal(by['860001'].tnEventUrl, 'https://www.ticketnetwork.com/tickets/8000001');
+  assert.equal(by['860002'].tnEventUrl, undefined, 'the game moved after it was mapped: no link');
+  assert.equal(by['860003'].tnEventUrl, undefined, 'a stored tnEventUrl on a MILB doc is never read');
+  assert.equal(by['860004'].tnEventUrl, undefined);
+});
+
+test('open gate: nothing of TicketNetwork or StubHub but that one URL reaches a Game (RSC payload rule)', async () => {
+  const { getGamesForTeam } = await import('../data');
+  const games = await getGamesForTeam('durham-bulls', 'milb');
+  const json = JSON.stringify(games);
+  assert.doesNotMatch(json, /tnEventId|tnEventDate|shEvent|stubhub|Wrong Park|tnVenueName|tnTime|venueId|homeId|awayId|statusCode/);
+  const allowed = new Set(['id', 'league', 'date', 'gameTime', 'gameTimeTz', 'gameTimeZoneAbbrev', 'homeTeamSlug', 'awayTeamSlug', 'venueName', 'status', 'timeTbd', 'doubleheaderGame', 'tnEventUrl']);
+  for (const g of games) for (const k of Object.keys(g)) assert.ok(allowed.has(k), `${g.id} carries ${k}`);
+});
+
+test('open gate: only a MILB club the gate serves reads milbGames; a pro club under "milb" and a MILB club under "mlb" do not', async () => {
+  const { getGamesForTeam, mapMilbGameDoc } = await import('../data');
+  const before = fake.reads.milbGames;
+  assert.deepEqual(await getGamesForTeam('minnesota-twins', 'milb'), []);
+  assert.deepEqual(await getGamesForTeam('rogue-in-teams', 'milb'), []);
+  assert.deepEqual(await getGamesForTeam('durham-bulls', 'mlb'), [], 'the games collection holds no MILB game');
+  assert.equal(fake.reads.milbGames, before);
+  const snap = (data: Record<string, unknown> | undefined) => ({ id: '1', data: () => data }) as unknown as FirebaseFirestore.DocumentSnapshot;
+  assert.equal(mapMilbGameDoc(snap(undefined)), null);
+  assert.equal(mapMilbGameDoc(snap({ date: 'soon', homeTeamSlug: 'durham-bulls' })), null);
+  assert.equal(mapMilbGameDoc(snap({ date: '2027-05-21' })), null);
+  assert.equal(mapMilbGameDoc(snap({ date: '2027-05-21', homeTeamSlug: 'durham-bulls', tnEventId: '8000001', tnEventDate: '2027-05-21' }))?.tnEventUrl, undefined, 'an id that is not a number links nothing');
+});
+
+test('open gate: no slug-built TicketNetwork link for a MILB club; only a matched event page links (ruling 2026-11-28)', async () => {
+  const { getTeamBySlug, getGamesForTeam } = await import('../data');
+  const { buildTicketNetworkLink, ticketNetworkLandingUrl, TN_NO_PERFORMER_PAGE } = await import('../affiliates');
+  const durham = (await getTeamBySlug('durham-bulls'))!;
+  assert.equal(durham.ticketNetworkSlug, TN_NO_PERFORMER_PAGE);
+  assert.equal(ticketNetworkLandingUrl(durham), null);
+  // Team-level, and a game with no matched event: nothing. Never .../durham-bulls-tickets.
+  assert.equal(buildTicketNetworkLink({ team: durham, surface: 'web_team_page' }), null);
+  const by = Object.fromEntries((await getGamesForTeam('durham-bulls', 'milb')).map((g) => [g.id, g]));
+  assert.equal(buildTicketNetworkLink({ team: durham, surface: 'web_team_page', eventUrl: by['860002'].tnEventUrl }), null);
+  assert.equal(buildTicketNetworkLink({ team: durham, surface: 'web_team_page', eventUrl: 'https://www.ticketnetwork.com/performers/durham-bulls-tickets' }), null);
+  // A matched game links its own event page, and nothing built from the slug.
+  const link = buildTicketNetworkLink({ team: durham, surface: 'web_team_page', eventUrl: by['860001'].tnEventUrl });
+  assert.match(link ?? '', /u=https%3A%2F%2Fwww\.ticketnetwork\.com%2Ftickets%2F8000001&/);
+  assert.doesNotMatch(link ?? '', /durham-bulls-tickets|performers/);
+  // The digest builds its link from a two-field team: the value survives that too.
+  const { toDigestTeam } = (await import('../digest')) as unknown as { toDigestTeam?: (t: unknown) => { id: string; ticketNetworkSlug?: string } };
+  const two = toDigestTeam ? toDigestTeam(durham) : { id: durham.id, ticketNetworkSlug: durham.ticketNetworkSlug };
+  assert.equal(buildTicketNetworkLink({ team: { id: two.id, ticketNetworkSlug: two.ticketNetworkSlug }, surface: 'web_team_page' }), null);
+  // A pro club is what it was.
+  const twins = (await getTeamBySlug('minnesota-twins'))!;
+  assert.equal(twins.ticketNetworkSlug, undefined);
+  assert.match(buildTicketNetworkLink({ team: twins, surface: 'web_team_page' }) ?? '', /minnesota-twins-tickets/);
+});
+
+test('open gate: a doc with no zone shows no clock, and the status follows the Stats API code', async () => {
+  const { mapMilbGameDoc } = await import('../data');
+  const snap = (data: Record<string, unknown>) => ({ id: '1', data: () => ({ date: '2027-05-21', homeTeamSlug: 'durham-bulls', ...data }) }) as unknown as FirebaseFirestore.DocumentSnapshot;
+  const noZone = mapMilbGameDoc(snap({ startTimeUtc: '2027-05-21T23:05:00.000Z', timeZone: null }));
+  assert.deepEqual([noZone?.gameTime, noZone?.gameTimeTz, noZone?.gameTimeZoneAbbrev], ['', '', undefined]);
+  const st = (statusCode: unknown, status: unknown) => mapMilbGameDoc(snap({ statusCode, status }))?.status;
+  assert.deepEqual([st('S', 'Scheduled'), st('P', 'Pre-Game'), st('I', 'In Progress'), st('T', 'Suspended')], ['scheduled', 'scheduled', 'scheduled', 'scheduled']);
+  assert.deepEqual([st('DR', 'Postponed'), st('DI', 'Postponed'), st('DD', 'Postponed: Rain')], ['postponed', 'postponed', 'postponed']);
+  assert.deepEqual([st('CR', 'Cancelled'), st('CO', 'Cancelled: Other')], ['canceled', 'canceled']);
+  assert.deepEqual([st('F', 'Final'), st('FR', 'Completed Early'), st('O', 'Game Over'), st('FT', 'Final: Tied')], ['completed', 'completed', 'completed', 'completed']);
+  // No code on the doc: the wording decides, as before.
+  assert.deepEqual([st(undefined, 'Cancelled'), st(undefined, 'Completed Early'), st(undefined, 'Something New')], ['canceled', 'completed', 'scheduled']);
+});
+
+test('the schedule list rules for MILB: the named season only, canceled games dropped, a lone postponed game only while the season is live', async () => {
+  const { regularSeasonContexts } = await import('../schedule-months');
+  const ctx = (id: string, date: string, status: string, league = 'milb') => ({ game: { id, league, date, gameTime: '23:05', gameTimeTz: 'America/New_York', homeTeamSlug: 'durham-bulls', awayTeamSlug: 'st-paul-saints', venueName: '', status }, isHome: true, opponentTeam: null, promos: [] }) as never;
+  const all = [ctx('a', '2027-04-06', 'completed'), ctx('b', '2027-05-21', 'scheduled'), ctx('c', '2027-06-01', 'canceled'), ctx('d', '2027-06-03', 'postponed'), ctx('e', '2028-04-04', 'scheduled')];
+  const ids = (today?: string) => regularSeasonContexts(all, today).map((c: { game: { id: string } }) => c.game.id);
+  assert.deepEqual(ids('2027-05-01'), ['a', 'b', 'd'], 'in season: canceled and next season dropped, the postponed game kept');
+  assert.deepEqual(ids('2027-10-01'), ['a', 'b'], 'season over: the lone postponed game is dropped too');
+  // An MLB list is what it was: the MILB rules key on the league string.
+  const mlb = [ctx('m1', '2026-06-01', 'completed', 'mlb'), ctx('m2', '2026-06-02', 'canceled', 'mlb')];
+  assert.deepEqual(regularSeasonContexts(mlb, '2026-06-10').map((c: { game: { id: string } }) => c.game.id), ['m1']);
+});
+
 test('open gate: the MILB paths were read', () => {
-  assert.ok(fake.reads.milbTeams > 0 && fake.reads.milbPromos > 0);
+  assert.ok(fake.reads.milbTeams > 0 && fake.reads.milbPromos > 0 && fake.reads.milbGames > 0);
 });

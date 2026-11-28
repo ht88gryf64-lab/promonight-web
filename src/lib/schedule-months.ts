@@ -60,6 +60,12 @@ import { siteTodayYmd } from './site-today';
  */
 export function regularSeasonContexts(contexts: readonly GameContext[], today?: string): GameContext[] {
   const isMlb = (c: GameContext) => c.game.league === 'mlb';
+  // MILB (MiLB G4b) takes the MLB season and status rules: a game counts only
+  // in the season the page names, a canceled game is not listed, and a lone
+  // postponed game is listed only while the season is live. It does NOT take
+  // the mlbGameId dedupe: milbGames holds one doc per game by construction.
+  // No MILB game exists while the gate is shut, so this changes no page today.
+  const isMilb = (c: GameContext) => c.game.league === 'milb';
   // The season the page names, per league, from the windows (season rollover,
   // ruling 2026-11-05). A game belongs to it when its date sits in that
   // season's window; MLB and the split-season leagues are filtered on it.
@@ -80,6 +86,7 @@ export function regularSeasonContexts(contexts: readonly GameContext[], today?: 
     (c) =>
       c.game.isPostseason !== true &&
       (!isMlb(c) || inNamedSeason('MLB', c.game.date)) &&
+      (!isMilb(c) || inNamedSeason('MILB', c.game.date)) &&
       (!isSplitSeasonLeague(c.game.league) ||
         (c.game.seasonType !== 'preseason' && inNamedSeason(c.game.league, c.game.date))),
   );
@@ -98,9 +105,9 @@ export function regularSeasonContexts(contexts: readonly GameContext[], today?: 
   // Is anything still to be played? Decides the lone postponed doc. No clock
   // read means no claim that the season is live.
   const seasonLive =
-    today !== undefined && kept.some((c) => isMlb(c) && c.game.status === 'scheduled' && c.game.date >= today);
+    today !== undefined && kept.some((c) => (isMlb(c) || isMilb(c)) && c.game.status === 'scheduled' && c.game.date >= today);
   return kept.filter((c) => {
-    if (!isMlb(c)) return true;
+    if (!isMlb(c) && !isMilb(c)) return true;
     if (c.game.status === 'canceled') return false;
     if (c.game.status === 'postponed') return seasonLive;
     return true;

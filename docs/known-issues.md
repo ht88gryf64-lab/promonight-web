@@ -4647,3 +4647,8 @@ One line each. The backfill (entity model phase 4) wrote `kind` on all six pro l
 - **A package-flagged row whose title is a bare or unlisted noun and has no description classifies as event; it should go to review.** Seen on Penguins "Tote" and Blues "Louie Loot Bag" and "Louie Needlepoint Kit" (2026-11-27 NHL scan), all set to item by override. A classifier change (`lib/scanner/promo-kind.js`), for the MiLB thread or a later pass.
 - **Blues and Penguins package rows arrive from the scan with empty descriptions**, which leaves the title as the only evidence of what the package holds.
 - **Marlins "$1 Kids Tickets" classified inconsistently across dates**: an item on 2026-06-22, a deal (event) on its other three dates. Fixed by override for 06-22.
+
+
+## 142. Two cfb-rivalry-jsonld tests fail on main (logged 2026-11-28)
+
+- **`src/lib/__tests__/cfb-rivalry-jsonld.test.ts` fails 2 of 17 on main as of 2026-11-28**: "verified game with confirmed network emits kickoff and BroadcastEvent" (`TypeError: Cannot read properties of undefined (reading '@type')`) and "the verify gate covers the description too: an unverified stored time never rides into the SportsEvent prose". Seen while running the suite for MiLB G4b, which touches none of it; the same two fail on a clean main checkout. Deferred to its own small fix task. First thing to check: date dependence. The failures appeared during Rivalry Week (games on 2026-11-27 and 2026-11-28), so a fixture game that has now been played, or a clock read with no injected "today", is the likely cause. Until it is fixed, a web suite run reports these two as known failures.
