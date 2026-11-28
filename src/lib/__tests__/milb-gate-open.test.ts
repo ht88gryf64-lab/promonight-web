@@ -109,6 +109,32 @@ test('open gate: only a MILB club the gate serves reads milbGames; a pro club un
   assert.equal(mapMilbGameDoc(snap({ date: '2027-05-21', homeTeamSlug: 'durham-bulls', tnEventId: '8000001', tnEventDate: '2027-05-21' }))?.tnEventUrl, undefined, 'an id that is not a number links nothing');
 });
 
+test('open gate: a doc with no zone shows no clock, and the status follows the Stats API code', async () => {
+  const { mapMilbGameDoc } = await import('../data');
+  const snap = (data: Record<string, unknown>) => ({ id: '1', data: () => ({ date: '2027-05-21', homeTeamSlug: 'durham-bulls', ...data }) }) as unknown as FirebaseFirestore.DocumentSnapshot;
+  const noZone = mapMilbGameDoc(snap({ startTimeUtc: '2027-05-21T23:05:00.000Z', timeZone: null }));
+  assert.deepEqual([noZone?.gameTime, noZone?.gameTimeTz, noZone?.gameTimeZoneAbbrev], ['', '', undefined]);
+  const st = (statusCode: unknown, status: unknown) => mapMilbGameDoc(snap({ statusCode, status }))?.status;
+  assert.deepEqual([st('S', 'Scheduled'), st('P', 'Pre-Game'), st('I', 'In Progress'), st('T', 'Suspended')], ['scheduled', 'scheduled', 'scheduled', 'scheduled']);
+  assert.deepEqual([st('DR', 'Postponed'), st('DI', 'Postponed'), st('DD', 'Postponed: Rain')], ['postponed', 'postponed', 'postponed']);
+  assert.deepEqual([st('CR', 'Cancelled'), st('CO', 'Cancelled: Other')], ['canceled', 'canceled']);
+  assert.deepEqual([st('F', 'Final'), st('FR', 'Completed Early'), st('O', 'Game Over'), st('FT', 'Final: Tied')], ['completed', 'completed', 'completed', 'completed']);
+  // No code on the doc: the wording decides, as before.
+  assert.deepEqual([st(undefined, 'Cancelled'), st(undefined, 'Completed Early'), st(undefined, 'Something New')], ['canceled', 'completed', 'scheduled']);
+});
+
+test('the schedule list rules for MILB: the named season only, canceled games dropped, a lone postponed game only while the season is live', async () => {
+  const { regularSeasonContexts } = await import('../schedule-months');
+  const ctx = (id: string, date: string, status: string, league = 'milb') => ({ game: { id, league, date, gameTime: '23:05', gameTimeTz: 'America/New_York', homeTeamSlug: 'durham-bulls', awayTeamSlug: 'st-paul-saints', venueName: '', status }, isHome: true, opponentTeam: null, promos: [] }) as never;
+  const all = [ctx('a', '2027-04-06', 'completed'), ctx('b', '2027-05-21', 'scheduled'), ctx('c', '2027-06-01', 'canceled'), ctx('d', '2027-06-03', 'postponed'), ctx('e', '2028-04-04', 'scheduled')];
+  const ids = (today?: string) => regularSeasonContexts(all, today).map((c: { game: { id: string } }) => c.game.id);
+  assert.deepEqual(ids('2027-05-01'), ['a', 'b', 'd'], 'in season: canceled and next season dropped, the postponed game kept');
+  assert.deepEqual(ids('2027-10-01'), ['a', 'b'], 'season over: the lone postponed game is dropped too');
+  // An MLB list is what it was: the MILB rules key on the league string.
+  const mlb = [ctx('m1', '2026-06-01', 'completed', 'mlb'), ctx('m2', '2026-06-02', 'canceled', 'mlb')];
+  assert.deepEqual(regularSeasonContexts(mlb, '2026-06-10').map((c: { game: { id: string } }) => c.game.id), ['m1']);
+});
+
 test('open gate: the MILB paths were read', () => {
   assert.ok(fake.reads.milbTeams > 0 && fake.reads.milbPromos > 0 && fake.reads.milbGames > 0);
 });

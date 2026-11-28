@@ -1189,7 +1189,18 @@ const MILB_STATUS: Record<string, GameStatus> = {
   Final: 'completed',
   'Completed Early': 'completed',
   'Game Over': 'completed',
+  Forfeit: 'completed',
 };
+/** The Stats API status code first (D* postponed, C* canceled, F* or O*
+ *  played: its first letter is stable where the wording carries reasons),
+ *  then the wording; anything else is still to be played. */
+function milbStatus(code: unknown, state: unknown): GameStatus {
+  const c = typeof code === 'string' ? code.charAt(0) : '';
+  if (c === 'D') return 'postponed';
+  if (c === 'C') return 'canceled';
+  if (c === 'F' || c === 'O') return 'completed';
+  return MILB_STATUS[typeof state === 'string' ? state : ''] ?? 'scheduled';
+}
 const YMD_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** A milbGames doc as a Game, or null for a tombstoned or malformed doc. */
@@ -1201,19 +1212,21 @@ export function mapMilbGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game | 
   const tbd = d.startTimeTbd === true;
   // The start as the Game type carries it: HH:MM in UTC beside the venue's
   // zone and the venue-local date (format-game-time.ts renders venue time).
-  const utc = !tbd && typeof d.startTimeUtc === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(d.startTimeUtc) ? d.startTimeUtc.slice(11, 16) : '';
+  // No zone, no clock: a UTC time with no venue zone would print as "23:05".
+  const zone = typeof d.timeZone === 'string' ? d.timeZone : '';
+  const utc = zone && !tbd && typeof d.startTimeUtc === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(d.startTimeUtc) ? d.startTimeUtc.slice(11, 16) : '';
   const game: Game = {
     id: doc.id,
     league: MILB_SPORT,
     date: d.date,
     gameTime: utc,
-    gameTimeTz: typeof d.timeZone === 'string' ? d.timeZone : '',
+    gameTimeTz: zone,
     homeTeamSlug: d.homeTeamSlug,
     awayTeamSlug: typeof d.awayTeamSlug === 'string' ? d.awayTeamSlug : '',
     // No venue name is stored or shown from this doc (ruling): the building
     // is the club's own, named by the team page.
     venueName: '',
-    status: MILB_STATUS[typeof d.status === 'string' ? d.status : ''] ?? 'scheduled',
+    status: milbStatus(d.statusCode, d.status),
   };
   if (game.gameTimeTz && game.gameTime) {
     const abbrev = gameZoneAbbrev(game.gameTimeTz, game.gameTime, game.date);
