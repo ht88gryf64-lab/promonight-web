@@ -85,11 +85,23 @@ pages and in PostHog after the flip, not by a source grep (CLAUDE.md).
 
 ## Pre-cron blocker (ruled 2026-11-27, after G3b)
 
-- [ ] No MILB workflow may be enabled until an execute run writes exactly what
+- [x] No MILB workflow may be enabled until an execute run writes exactly what
   its gating dry run showed. At G3b the gating dry run planned 354 promos with
   14 rows without a kind; the execute, which extracts again, wrote 372 with 28
   (pipeline main 4afe97b7, run 0b6d25fd). A gate read on a dry run does not
   hold for the write that follows it while that is true.
+
+  CLOSED 2026-11-28 (Write Gate W1, pipeline main 68021b6e). MILB extraction
+  is deterministic (no model call for API rows) and a MILB `--execute` refuses
+  unless its plan hashes to the `--expect-plan-hash` of its gating dry run.
+  Evidence: the replace run's gating dry run and its execute (run 59d8d2a4)
+  both hashed to `c42b748e...12aa6752` and the execute wrote that plan: 351
+  upserts, 39 tombstones, 7 recurring deals. An ordinary production-baseline
+  dry run straight after showed 0 upserts, 0 holds and 0 tombstones, and with
+  re-extraction forced 351 no-ops. Read-back: 351 live `milbPromos`, 39
+  tombstoned, 7 `recurringDeals`, `teams/*/promos` still 7,693.
+  This closes the blocker only. A MILB workflow is still added by ruling, with
+  the staleness suppression above in the same change.
 
 ## G4 rulings (TicketNetwork mapping, ruled 2026-11-27)
 
