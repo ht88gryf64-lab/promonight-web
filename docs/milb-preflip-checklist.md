@@ -90,3 +90,34 @@ pages and in PostHog after the flip, not by a source grep (CLAUDE.md).
   14 rows without a kind; the execute, which extracts again, wrote 372 with 28
   (pipeline main 4afe97b7, run 0b6d25fd). A gate read on a dry run does not
   hold for the write that follows it while that is true.
+
+## G4 rulings (TicketNetwork mapping, ruled 2026-11-27)
+
+The G4 dry run matched 5,523 of 8,279 official 2027 home games and wrote
+nothing (pipeline branch `feature/milb-tn-mapping`). G4b (the `milbGames`
+build and the `tnEventId` write) is not approved yet; it follows the
+deterministic extraction build (Option A).
+
+- [ ] Venues, approved: the 25 TicketNetwork venue ids whose name is the same,
+  differs only in the city's spelling, or carries a suffix or longer sponsor
+  name. They go on the named approval list.
+- [ ] Venues, held for a check at G4b: the 7 with a different name (Richmond,
+  Chattanooga, Hillsboro, Columbia, Lynchburg, Wilson, Oklahoma City). Confirm
+  for each whether the 2027 Stats API venue is a new building or a rename, and
+  whether TicketNetwork's event pages for 2027 games point at the right
+  building.
+- [ ] IronPigs hold released: TN 7837 maps to Stats API venue 3230 (Jefferson
+  Park; the 2027 rename of Coca-Cola Park is confirmed by the club's release
+  of 2026-09-10 and by the Stats API's 2027 venue name).
+- [ ] Aliases: allowed only when the Stats API shows the alias as a prior name
+  of the same MLBAM id. Expected to qualify: Scranton Wilkes-Barre RailRiders,
+  Springfield Cardinals. Wichita "Turbo Tubs": verify the same way or it stays
+  a miss. Greenville: a miss. No Clingstones alias for 445 (a separate club,
+  6325).
+- [ ] Storage: `tnEventId` and `tnEventDate` go on a new top-level `milbGames`
+  collection (doc id = Stats API gamePk), seeded from the official 2027
+  schedule, client-denied by the existing catch-all rule, never in `games/`.
+  `tnEventDate` is guard data (it must equal the official date) and is never
+  rendered.
+- [ ] Extraction: Option A approved. MILB extraction becomes deterministic
+  (model off for MILB), which is how the pre-cron blocker above is met.
