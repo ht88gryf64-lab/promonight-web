@@ -49,7 +49,7 @@ import type { SeasonEligible } from './seasons/season-window';
 import { hubLabelDay, leadInStart, nextSeasonNotYetOpen, seasonLabel, seasonOfDate } from './seasons/season-window';
 import { groupLeagueTeams, leagueSuperGroups, type HubSuperGroup, type HubTeamGroup } from './hub-grouping';
 import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
-import { ticketNetworkEventIdUrlFor, ticketNetworkEventLinkFor } from './affiliates';
+import { TN_NO_PERFORMER_PAGE, ticketNetworkEventIdUrlFor, ticketNetworkEventLinkFor } from './affiliates';
 import { FUBO_LIVE_LEAGUES } from './affiliates/fubo';
 
 function tsToIso(v: unknown): string | null {
@@ -229,7 +229,7 @@ async function readTnHomeUnavailable(): Promise<Set<string>> {
 /** `list` is sorted exactly as the old getAllTeams sorted (league, then city),
  *  so every caller that relies on the shipped order — the team grid's index
  *  math in teams-browser.tsx, the sitemap's URL order — sees no change. */
-const loadTeams = makeCollectionLoader<{ list: Team[]; byId: Map<string, Team>; milbLive: boolean }>(async () => {
+const loadTeams = makeCollectionLoader<{ list: Team[]; byId: Map<string, Team>; milbLive: boolean; milbVenueNames: Map<string, string> }>(async () => {
   const [snapshot, tnHomeUnavailable, milbFlag] = await Promise.all([db.collection(PRO_PATHS.teams).get(), readTnHomeUnavailable(), readMilbLive()]);
   // THE MILB GATE (src/lib/milb-gate.ts) AND THE MILB HOME (src/lib/team-paths.ts).
   // MILB clubs live in milbTeams, never in teams. While appConfig/milb.milbLive
@@ -252,12 +252,22 @@ const loadTeams = makeCollectionLoader<{ list: Team[]; byId: Map<string, Team>; 
   // does not, is in the wrong collection and is served by neither.
   const list = [
     ...snapshot.docs.map(mapTeamDoc).filter((t) => !isMilbLeague(t.league)),
-    ...milbDocs.map(mapTeamDoc).filter((t) => isMilbLeague(t.league) && teamVisibleUnderGate(t.league, milbLive)),
+    // No slug-built TicketNetwork performer page for a MILB club (ruling
+    // 2026-11-28; TN_NO_PERFORMER_PAGE in src/lib/affiliates.ts).
+    ...milbDocs.map(mapTeamDoc).filter((t) => isMilbLeague(t.league) && teamVisibleUnderGate(t.league, milbLive)).map((t) => ({ ...t, ticketNetworkSlug: TN_NO_PERFORMER_PAGE })),
   ];
+  // The official name of each served MILB club's ballpark (the Stats API venue
+  // name on its team doc), for its home games (getGamesForTeam). Kept beside
+  // the teams, not on the Team object: it is read on the server only.
+  const milbVenueNames = new Map<string, string>();
+  for (const d of milbDocs) {
+    const v = d.data()?.statsApiVenueName;
+    if (isMilbLeague(d.data()?.league) && typeof v === 'string' && v.trim()) milbVenueNames.set(d.id, v.trim());
+  }
   // In the same loader, so a club and its flag are one generation.
   for (const t of list) if (tnHomeUnavailable.has(t.id)) t.tnHomeUnavailable = true;
   list.sort((a, b) => a.league.localeCompare(b.league) || a.city.localeCompare(b.city));
-  const generation = { list, byId: new Map(list.map((t) => [t.id, t])), milbLive };
+  const generation = { list, byId: new Map(list.map((t) => [t.id, t])), milbLive, milbVenueNames };
   servedTeams = generation;
   return generation;
 });
@@ -1223,8 +1233,9 @@ export function mapMilbGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game | 
     gameTimeTz: zone,
     homeTeamSlug: d.homeTeamSlug,
     awayTeamSlug: typeof d.awayTeamSlug === 'string' ? d.awayTeamSlug : '',
-    // No venue name is stored or shown from this doc (ruling): the building
-    // is the club's own, named by the team page.
+    // No venue name is stored on this doc, and none from a ticket partner is
+    // ever read. getMilbGamesForTeam fills it from the HOME club's team doc
+    // (statsApiVenueName, the official name; ruling 2026-11-28).
     venueName: '',
     status: milbStatus(d.statusCode, d.status),
   };
@@ -1240,11 +1251,12 @@ export function mapMilbGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game | 
 }
 
 async function getMilbGamesForTeam(teamSlug: string): Promise<Game[]> {
-  const { milbLive, byId } = await loadTeams();
+  const { milbLive, byId, milbVenueNames } = await loadTeams();
   if (!milbLive || !isMilbLeague(byId.get(teamSlug)?.league ?? '')) return [];
   const col = milbGamesColRef();
   const [homeSnap, awaySnap] = await Promise.all([col.where('homeTeamSlug', '==', teamSlug).get(), col.where('awayTeamSlug', '==', teamSlug).get()]);
   const games = [...homeSnap.docs, ...awaySnap.docs].map(mapMilbGameDoc).filter((g): g is Game => g !== null);
+  for (const g of games) g.venueName = milbVenueNames.get(g.homeTeamSlug) ?? '';
   games.sort((a, b) => a.date.localeCompare(b.date) || (a.doubleheaderGame ?? 0) - (b.doubleheaderGame ?? 0) || (a.gameTime || '').localeCompare(b.gameTime || '') || a.id.localeCompare(b.id));
   return games;
 }

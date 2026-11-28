@@ -287,6 +287,17 @@ const TICKETNETWORK = {
 // slug and/or the path segment when TicketNetwork lists a team differently.
 // Populate from audit/validate-ticketnetwork-links.ts, which HTTP-checks the
 // default-rule landing for every team and flags any that need an override.
+// NO PERFORMER PAGE (MiLB G4b, ruling 2026-11-28). The value of
+// Team.ticketNetworkSlug for a club whose TicketNetwork performer page must
+// not be guessed from its slug. Every MILB club carries it (set by the team
+// loader, src/lib/data.ts): a MILB game links TicketNetwork only through its
+// own matched event page, and a game without one gets no TicketNetwork link
+// at all. It is a slug VALUE, not a second field, because every caller that
+// builds a link already carries ticketNetworkSlug (the digest passes a
+// two-field team), so no call site can drop it. Until a club has a verified
+// performer link (pre-flip checklist), this is what it has.
+export const TN_NO_PERFORMER_PAGE = '__no-performer-page__';
+
 const TICKETNETWORK_OVERRIDES: Record<string, { slug?: string; path?: string }> = {
   // The Athletics are listed as 'athletics' under /performers/ (no /e/ segment).
   'oakland-athletics': { slug: 'athletics', path: '/performers/' },
@@ -297,6 +308,10 @@ const TICKETNETWORK_OVERRIDES: Record<string, { slug?: string; path?: string }> 
 // callers never emit a broken ticket link. Exported for the validate-on-build
 // script, which HTTP-checks these landing URLs.
 export function ticketNetworkLandingUrl(team: Pick<Team, 'id' | 'ticketNetworkSlug'>): string | null {
+  // A club with no performer page we may link (TN_NO_PERFORMER_PAGE): no
+  // landing page, so every caller renders no TicketNetwork link for it unless
+  // it holds a real event URL.
+  if (team.ticketNetworkSlug === TN_NO_PERFORMER_PAGE) return null;
   const override = TICKETNETWORK_OVERRIDES[team.id];
   // Slug precedence mirrors ticketmasterSlug: an explicit ticketNetworkSlug on
   // the Team (e.g. a CFB school's full football slug) wins over the id-based

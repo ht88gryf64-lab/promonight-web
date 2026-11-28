@@ -66,7 +66,10 @@ test('open gate: a MILB team page reads its schedule from milbGames: home and aw
   const games = await getGamesForTeam('durham-bulls', 'milb');
   assert.ok(fake.reads.milbGames > before, 'milbGames was read');
   assert.deepEqual(games.map((g) => g.id), ['860001', '860002', '860003', '860004', '860006', '860008', '860007']);
-  assert.ok(games.every((g) => g.league === 'milb' && g.venueName === ''));
+  assert.ok(games.every((g) => g.league === 'milb'));
+  // The building is the HOME club's official one, from its team doc: Durham's for a Durham home game, St. Paul's for the away game.
+  assert.deepEqual([...new Set(games.filter((g) => g.homeTeamSlug === 'durham-bulls').map((g) => g.venueName))], ['Durham Bulls Athletic Park']);
+  assert.deepEqual(games.filter((g) => g.homeTeamSlug === 'st-paul-saints').map((g) => g.venueName), ['CHS Field']);
   const by = Object.fromEntries(games.map((g) => [g.id, g]));
   // Home and away; the official date; the venue's clock from the official start; a start to be announced.
   assert.deepEqual([by['860001'].homeTeamSlug, by['860001'].awayTeamSlug, by['860004'].homeTeamSlug], ['durham-bulls', 'st-paul-saints', 'st-paul-saints']);
@@ -107,6 +110,31 @@ test('open gate: only a MILB club the gate serves reads milbGames; a pro club un
   assert.equal(mapMilbGameDoc(snap({ date: 'soon', homeTeamSlug: 'durham-bulls' })), null);
   assert.equal(mapMilbGameDoc(snap({ date: '2027-05-21' })), null);
   assert.equal(mapMilbGameDoc(snap({ date: '2027-05-21', homeTeamSlug: 'durham-bulls', tnEventId: '8000001', tnEventDate: '2027-05-21' }))?.tnEventUrl, undefined, 'an id that is not a number links nothing');
+});
+
+test('open gate: no slug-built TicketNetwork link for a MILB club; only a matched event page links (ruling 2026-11-28)', async () => {
+  const { getTeamBySlug, getGamesForTeam } = await import('../data');
+  const { buildTicketNetworkLink, ticketNetworkLandingUrl, TN_NO_PERFORMER_PAGE } = await import('../affiliates');
+  const durham = (await getTeamBySlug('durham-bulls'))!;
+  assert.equal(durham.ticketNetworkSlug, TN_NO_PERFORMER_PAGE);
+  assert.equal(ticketNetworkLandingUrl(durham), null);
+  // Team-level, and a game with no matched event: nothing. Never .../durham-bulls-tickets.
+  assert.equal(buildTicketNetworkLink({ team: durham, surface: 'web_team_page' }), null);
+  const by = Object.fromEntries((await getGamesForTeam('durham-bulls', 'milb')).map((g) => [g.id, g]));
+  assert.equal(buildTicketNetworkLink({ team: durham, surface: 'web_team_page', eventUrl: by['860002'].tnEventUrl }), null);
+  assert.equal(buildTicketNetworkLink({ team: durham, surface: 'web_team_page', eventUrl: 'https://www.ticketnetwork.com/performers/durham-bulls-tickets' }), null);
+  // A matched game links its own event page, and nothing built from the slug.
+  const link = buildTicketNetworkLink({ team: durham, surface: 'web_team_page', eventUrl: by['860001'].tnEventUrl });
+  assert.match(link ?? '', /u=https%3A%2F%2Fwww\.ticketnetwork\.com%2Ftickets%2F8000001&/);
+  assert.doesNotMatch(link ?? '', /durham-bulls-tickets|performers/);
+  // The digest builds its link from a two-field team: the value survives that too.
+  const { toDigestTeam } = (await import('../digest')) as unknown as { toDigestTeam?: (t: unknown) => { id: string; ticketNetworkSlug?: string } };
+  const two = toDigestTeam ? toDigestTeam(durham) : { id: durham.id, ticketNetworkSlug: durham.ticketNetworkSlug };
+  assert.equal(buildTicketNetworkLink({ team: { id: two.id, ticketNetworkSlug: two.ticketNetworkSlug }, surface: 'web_team_page' }), null);
+  // A pro club is what it was.
+  const twins = (await getTeamBySlug('minnesota-twins'))!;
+  assert.equal(twins.ticketNetworkSlug, undefined);
+  assert.match(buildTicketNetworkLink({ team: twins, surface: 'web_team_page' }) ?? '', /minnesota-twins-tickets/);
 });
 
 test('open gate: a doc with no zone shows no clock, and the status follows the Stats API code', async () => {

@@ -133,3 +133,34 @@ deterministic extraction build (Option A).
   rendered.
 - [ ] Extraction: Option A approved. MILB extraction becomes deterministic
   (model off for MILB), which is how the pre-cron blocker above is met.
+
+## G4b rulings (milbGames and the TicketNetwork mapping, ruled 2026-11-28)
+
+- [ ] Re-check the four held TicketNetwork venue listings before the flip:
+  Richmond (TN "The Diamond - VA"; the club plays at CarMax Park, Stats API
+  7257), Chattanooga (TN "AT&T Field"; Erlanger Park, 7255), Hillsboro (TN
+  "Ron Tonkin Field"; Hops Ballpark, 7256) and Wilson (TN "Wilson Stadium -
+  NC"; Wilson Ballpark, 7254). Each club moved to a new building and
+  TicketNetwork still lists the old one, so none of their games is mapped
+  (pipeline `data/tn-milb-venue-approvals.json`, held). A listing that names
+  the right building goes back for a ruling; it is never mapped on its own.
+- [ ] A verified TicketNetwork performer link per MILB club before any MILB
+  fallback link exists: the performer id from the catalog, checked live, club
+  by club. Until then no MILB link is built from a slug: a game without a
+  matched `tnEventId` shows no TicketNetwork link, and a MILB club's
+  `ticketNetworkSlug` is `TN_NO_PERFORMER_PAGE` (src/lib/affiliates.ts, set by
+  the team loader).
+- [ ] The Ticketmaster half of "Get Tickets" is still the open item above
+  (known issues 138): the ruling is that a MILB game without a matched
+  `tnEventId` renders no ticket button, and the TicketNetwork side of that is
+  built. Read the ticket block on an open-gate preview before the flip and
+  remove any Ticketmaster button that still renders for a MILB club.
+- Columbia (Segra Park), Lynchburg (Bank of the James Stadium) and Oklahoma
+  City (Chickasaw Field at Bricktown) are approved: the same building under an
+  older or variant name (Stats API venue ids 4980, 2803, 2843, unchanged).
+- Wichita "Turbo Tubs" is not an alias (an alternate identity, in no Stats API
+  team history) and stays a miss. A TicketNetwork event id that differs from
+  the one stored for the same date is reported as a conflict and not
+  overwritten, as on the pro leagues.
+- A MILB home game's venue name is the home club's `statsApiVenueName` (team
+  doc); `milbGames` stores no venue name and no ticket-partner name is read.

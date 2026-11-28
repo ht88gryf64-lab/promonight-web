@@ -19,8 +19,8 @@ function buildDocs(rogue: boolean): Map<string, Data> {
   const m = new Map<string, Data>([
     ['teams/minnesota-twins', { league: 'MLB', city: 'Minnesota', name: 'Twins', abbreviation: 'MIN', primaryColor: 0xff002b5c, secondaryColor: 0xffd31145 }],
     ['teams/toronto-maple-leafs', { league: 'NHL', city: 'Toronto', name: 'Maple Leafs', abbreviation: 'TOR', primaryColor: 0xff00205b, secondaryColor: 0xffffffff }],
-    ['milbTeams/durham-bulls', { league: 'MILB', city: 'Durham', name: 'Bulls', abbreviation: 'DUR', division: 'International League East', level: 'AAA', parentTeamId: 'tampa-bay-rays', apiId: 234, primaryColor: 0xff1f2937, secondaryColor: 0xffffffff, colorsPlaceholder: true }],
-    ['milbTeams/st-paul-saints', { league: 'MILB', city: 'St. Paul', name: 'Saints', abbreviation: 'STP', division: 'International League West', level: 'AAA', parentTeamId: 'minnesota-twins', apiId: 1960, primaryColor: 0xff1f2937, secondaryColor: 0xffffffff, colorsPlaceholder: true }],
+    ['milbTeams/durham-bulls', { league: 'MILB', city: 'Durham', name: 'Bulls', abbreviation: 'DUR', division: 'International League East', level: 'AAA', parentTeamId: 'tampa-bay-rays', apiId: 234, statsApiVenueId: 2536, statsApiVenueName: 'Durham Bulls Athletic Park', primaryColor: 0xff1f2937, secondaryColor: 0xffffffff, colorsPlaceholder: true }],
+    ['milbTeams/st-paul-saints', { league: 'MILB', city: 'St. Paul', name: 'Saints', abbreviation: 'STP', division: 'International League West', level: 'AAA', parentTeamId: 'minnesota-twins', apiId: 1960, statsApiVenueId: 5472, statsApiVenueName: 'CHS Field', primaryColor: 0xff1f2937, secondaryColor: 0xffffffff, colorsPlaceholder: true }],
     ['teams/minnesota-twins/promos/t1', promo('2026-06-01', 'A')],
     ['teams/minnesota-twins/promos/t2', promo('2026-06-02', 'B')],
     ['teams/minnesota-twins/promos/t3', promo('2026-06-03', 'C')],
