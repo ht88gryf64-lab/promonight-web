@@ -32,6 +32,20 @@ function buildDocs(rogue: boolean): Map<string, Data> {
     ['milbTeams/durham-bulls/milbPromos/d2', promo('2027-05-21', 'Mountain Gnomes')],
     ['milbTeams/st-paul-saints/milbPromos/s1', promo('2026-04-01', 'Fireworks')],
   ]);
+  // The MILB schedule (MiLB G4b): milbGames/{gamePk}, as the pipeline's sync writes it.
+  const milbGame = (pk: number, date: string, home: string, away: string, over: Data = {}): [string, Data] => [`milbGames/${pk}`, { gamePk: pk, league: 'milb', season: 2027, date, startTimeUtc: `${date}T23:05:00.000Z`, startTimeLocal: '19:05', startTimeTbd: false, timeZone: 'America/New_York', homeId: 1, awayId: 2, homeTeamSlug: home, awayTeamSlug: away, venueId: 2536, status: 'Scheduled', statusCode: 'S', doubleHeader: 'N', gameNumber: 1, rescheduledFromDate: null, ...over }];
+  for (const [k, v] of [
+    milbGame(860001, '2027-05-21', 'durham-bulls', 'st-paul-saints', { tnEventId: 8000001, tnEventDate: '2027-05-21' }),
+    // Mapped, then the game moved a day: the stored event date is no longer the game's.
+    milbGame(860002, '2027-05-23', 'durham-bulls', 'st-paul-saints', { tnEventId: 8000002, tnEventDate: '2027-05-22' }),
+    // Fields no MILB doc should carry; none may reach a Game.
+    milbGame(860003, '2027-05-24', 'durham-bulls', 'st-paul-saints', { tnEventUrl: 'https://www.ticketnetwork.com/tickets/durham-bulls-tickets-mon-may-24-2027-some-park', shEventUrl: 'https://www.stubhub.com/x/event/1', shEventId: 1, shEventDate: '2027-05-24', venueName: 'Wrong Park', tnVenueName: 'Wrong Park', tnTime: '19:00' }),
+    milbGame(860004, '2027-06-01', 'st-paul-saints', 'durham-bulls', { startTimeTbd: true, startTimeUtc: null, startTimeLocal: null }),
+    milbGame(860005, '2027-06-02', 'durham-bulls', 'st-paul-saints', { tombstoned: true }),
+    milbGame(860006, '2027-06-03', 'durham-bulls', 'st-paul-saints', { status: 'Postponed', statusCode: 'DR' }),
+    milbGame(860007, '2027-06-04', 'durham-bulls', 'st-paul-saints', { doubleHeader: 'Y', gameNumber: 2, startTimeUtc: '2027-06-05T01:35:00.000Z' }),
+    milbGame(860008, '2027-06-04', 'durham-bulls', 'st-paul-saints', { doubleHeader: 'Y', gameNumber: 1, startTimeUtc: '2027-06-04T22:05:00.000Z' }),
+  ] as [string, Data][]) m.set(k, v);
   if (rogue) {
     m.set('teams/rogue-in-teams', { league: 'MILB', city: 'Rogue', name: 'One' });
     m.set('milbTeams/rogue-in-milb', { league: 'MLB', city: 'Rogue', name: 'Two' });
@@ -41,15 +55,16 @@ function buildDocs(rogue: boolean): Map<string, Data> {
 }
 
 const segs = (p: string) => p.split('/');
-const isMilbPath = (p: string) => p.startsWith('milbTeams');
+const isMilbPath = (p: string) => p.startsWith('milbTeams') || p.startsWith('milbGames');
 
 /** milbDoc: undefined = no appConfig/milb doc; an object = its data; an Error = the read throws. */
 export function makeFakeDb({ milbDoc, rogue = false }: { milbDoc: Data | Error | undefined; rogue?: boolean }) {
   const docs = buildDocs(rogue);
-  const reads = { milbTeams: 0, milbPromos: 0 };
+  const reads = { milbTeams: 0, milbPromos: 0, milbGames: 0 };
   const note = (path: string) => {
     if (!isMilbPath(path)) return;
-    if (path.includes('milbPromos')) reads.milbPromos += 1;
+    if (path.startsWith('milbGames')) reads.milbGames += 1;
+    else if (path.includes('milbPromos')) reads.milbPromos += 1;
     else reads.milbTeams += 1;
   };
   const docSnap = (path: string) => {
@@ -100,7 +115,7 @@ export function makeFakeDb({ milbDoc, rogue = false }: { milbDoc: Data | Error |
   });
   const db = {
     collection(name: string): any {
-      if (name === 'teams' || name === 'milbTeams') return colRef(name);
+      if (name === 'teams' || name === 'milbTeams' || name === 'milbGames') return colRef(name);
       if (name === 'tnTeamMap' || name === 'venues' || name === 'games') return query(name, () => []);
       if (name === 'appConfig') {
         return {

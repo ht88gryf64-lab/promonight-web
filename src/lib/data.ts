@@ -24,7 +24,7 @@ import { SCORED_LEAGUES, isRegularSeasonGame } from './types';
 // (PROMO_SCORED_LEAGUES is passed in by its one caller, src/lib/seasons/ranked-rows.ts.)
 import { makeCollectionLoader, makeKeyedTtlCache, type CachedDoc } from './collection-cache';
 import { isMilbLeague, readMilbLive, teamVisibleUnderGate } from './milb-gate';
-import { MILB_PATHS, PRO_PATHS, promoDocBelongs, promosColRef, recurringColRef } from './team-paths';
+import { MILB_PATHS, PRO_PATHS, milbGamesColRef, promoDocBelongs, promosColRef, recurringColRef } from './team-paths';
 import {
   buildWeekBuckets,
   selectWeekContext,
@@ -49,7 +49,7 @@ import type { SeasonEligible } from './seasons/season-window';
 import { hubLabelDay, leadInStart, nextSeasonNotYetOpen, seasonLabel, seasonOfDate } from './seasons/season-window';
 import { groupLeagueTeams, leagueSuperGroups, type HubSuperGroup, type HubTeamGroup } from './hub-grouping';
 import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
-import { ticketNetworkEventLinkFor } from './affiliates';
+import { ticketNetworkEventIdUrlFor, ticketNetworkEventLinkFor } from './affiliates';
 import { FUBO_LIVE_LEAGUES } from './affiliates/fubo';
 
 function tsToIso(v: unknown): string | null {
@@ -1166,7 +1166,78 @@ export async function getGameById(gameId: string): Promise<Game | null> {
   return snap.empty ? null : mapGameDoc(snap.docs[0]);
 }
 
+// ── MILB: the schedule lives in milbGames, never in games ────────────────────
+//
+// One doc per game, written by promo-pipeline scripts/sync-milb-games.js from
+// the official Stats API schedule (doc id = gamePk), with tnEventId and
+// tnEventDate added by the TicketNetwork mapping. Read through team-paths and
+// ONLY while the gate is open and the slug is a MILB club the gate is serving:
+// with the gate shut this returns [] without touching the collection.
+//
+// What leaves the mapper is the official schedule and one URL. The ticket link
+// is built from tnEventId and only when tnEventDate is the game's own date
+// (ticketNetworkEventIdUrlFor), so a game that moved after it was mapped links
+// nothing. No TicketNetwork or StubHub time, venue name or stored URL is read:
+// the doc carries none, and none is mapped if one ever appears. tnEventId and
+// tnEventDate themselves never reach a Game object (RSC payload rule).
+export const MILB_SPORT = 'milb';
+
+const MILB_STATUS: Record<string, GameStatus> = {
+  Postponed: 'postponed',
+  Cancelled: 'canceled',
+  Canceled: 'canceled',
+  Final: 'completed',
+  'Completed Early': 'completed',
+  'Game Over': 'completed',
+};
+const YMD_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A milbGames doc as a Game, or null for a tombstoned or malformed doc. */
+export function mapMilbGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game | null {
+  const d = doc.data();
+  if (!d || d.tombstoned === true) return null;
+  if (typeof d.date !== 'string' || !YMD_DAY_RE.test(d.date)) return null;
+  if (typeof d.homeTeamSlug !== 'string' || !d.homeTeamSlug) return null;
+  const tbd = d.startTimeTbd === true;
+  // The start as the Game type carries it: HH:MM in UTC beside the venue's
+  // zone and the venue-local date (format-game-time.ts renders venue time).
+  const utc = !tbd && typeof d.startTimeUtc === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(d.startTimeUtc) ? d.startTimeUtc.slice(11, 16) : '';
+  const game: Game = {
+    id: doc.id,
+    league: MILB_SPORT,
+    date: d.date,
+    gameTime: utc,
+    gameTimeTz: typeof d.timeZone === 'string' ? d.timeZone : '',
+    homeTeamSlug: d.homeTeamSlug,
+    awayTeamSlug: typeof d.awayTeamSlug === 'string' ? d.awayTeamSlug : '',
+    // No venue name is stored or shown from this doc (ruling): the building
+    // is the club's own, named by the team page.
+    venueName: '',
+    status: MILB_STATUS[typeof d.status === 'string' ? d.status : ''] ?? 'scheduled',
+  };
+  if (game.gameTimeTz && game.gameTime) {
+    const abbrev = gameZoneAbbrev(game.gameTimeTz, game.gameTime, game.date);
+    if (abbrev) game.gameTimeZoneAbbrev = abbrev;
+  }
+  if (tbd) game.timeTbd = true;
+  if (typeof d.doubleHeader === 'string' && d.doubleHeader !== 'N' && typeof d.gameNumber === 'number') game.doubleheaderGame = d.gameNumber;
+  const tnUrl = ticketNetworkEventIdUrlFor(d.tnEventId, d.tnEventDate, game.date);
+  if (tnUrl) game.tnEventUrl = tnUrl;
+  return game;
+}
+
+async function getMilbGamesForTeam(teamSlug: string): Promise<Game[]> {
+  const { milbLive, byId } = await loadTeams();
+  if (!milbLive || !isMilbLeague(byId.get(teamSlug)?.league ?? '')) return [];
+  const col = milbGamesColRef();
+  const [homeSnap, awaySnap] = await Promise.all([col.where('homeTeamSlug', '==', teamSlug).get(), col.where('awayTeamSlug', '==', teamSlug).get()]);
+  const games = [...homeSnap.docs, ...awaySnap.docs].map(mapMilbGameDoc).filter((g): g is Game => g !== null);
+  games.sort((a, b) => a.date.localeCompare(b.date) || (a.doubleheaderGame ?? 0) - (b.doubleheaderGame ?? 0) || (a.gameTime || '').localeCompare(b.gameTime || '') || a.id.localeCompare(b.id));
+  return games;
+}
+
 export const getGamesForTeam = cache(async (teamSlug: string, league: string): Promise<Game[]> => {
+  if (league === MILB_SPORT) return getMilbGamesForTeam(teamSlug);
   if (!GAME_LEAGUES.includes(league)) return [];
   const [homeSnap, awaySnap] = await Promise.all([
     db.collection('games')

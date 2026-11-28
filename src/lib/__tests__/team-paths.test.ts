@@ -42,3 +42,30 @@ test('promoDocBelongs: a promos doc is a pro team\'s, a milbPromos doc a MILB te
   assert.equal(promoDocBelongs({ ref: {} }, 'MLB'), true);
   assert.equal(promoDocBelongs({ ref: {} }, 'MILB'), false);
 });
+
+// MiLB G4b: the schedule collection.
+test('milbGames: a top-level collection of its own, addressed in one place', async () => {
+  const { MILB_GAMES_COLLECTION, milbGamesColRef } = await import('../team-paths');
+  assert.equal(MILB_GAMES_COLLECTION, 'milbGames');
+  assert.equal(milbGamesColRef().path, 'milbGames');
+  assert.notEqual(MILB_GAMES_COLLECTION, 'games');
+  // No file but team-paths.ts names the collection: every read goes through milbGamesColRef.
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const root = path.join(path.dirname(new URL(import.meta.url).pathname), '..', '..');
+  const hits: string[] = [];
+  const walk = (dir: string) => {
+    for (const name of fs.readdirSync(dir)) {
+      const p = path.join(dir, name);
+      if (fs.statSync(p).isDirectory()) { if (name !== '__tests__' && name !== 'node_modules') walk(p); continue; }
+      if (!/\.(ts|tsx)$/.test(name) || /\.test\.tsx?$/.test(name)) continue;
+      const code = fs.readFileSync(p, 'utf8').split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+      if (/['"`]milbGames['"`]/.test(code)) hits.push(path.relative(root, p));
+    }
+  };
+  walk(root);
+  assert.deepEqual(hits, ['lib/team-paths.ts']);
+  // And exactly one reader calls it.
+  const data = fs.readFileSync(path.join(root, 'lib', 'data.ts'), 'utf8');
+  assert.equal((data.match(/milbGamesColRef\(\)/g) || []).length, 1);
+});

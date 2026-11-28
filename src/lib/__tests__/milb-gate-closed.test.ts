@@ -64,6 +64,17 @@ test('closed gate: /api/my-teams/promos returns nothing for a MILB slug', async 
   // a slug that is not a served team is answered with nothing, whatever sits there.
 });
 
+// KNOWN-BAD, MiLB G4b: milbGames holds eight docs for these clubs (the
+// fixture), three of them mapped to TicketNetwork events. With the gate shut
+// the schedule reader returns nothing for a MILB slug under any league string,
+// and does not touch the collection.
+test('closed gate: no MILB schedule and no MILB ticket link, for any slug or league string', async () => {
+  const { getGamesForTeam } = await import('../data');
+  for (const [slug, league] of [['durham-bulls', 'milb'], ['st-paul-saints', 'milb'], ['durham-bulls', 'mlb'], ['durham-bulls', 'MILB'], ['minnesota-twins', 'milb'], ['rogue-in-teams', 'milb']] as const) {
+    assert.deepEqual(await getGamesForTeam(slug, league), [], `${slug} as ${league}`);
+  }
+});
+
 test('closed gate: after all of the above, not one MILB path was read', () => {
-  assert.deepEqual(fake.reads, { milbTeams: 0, milbPromos: 0 });
+  assert.deepEqual(fake.reads, { milbTeams: 0, milbPromos: 0, milbGames: 0 });
 });
